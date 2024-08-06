@@ -1409,3 +1409,1948 @@ def get_func_generator(self, params):
     self.apply_global_params(funcgenerator)
     funcgenerator.apply_properties(params)
     return funcgenerator
+
+def get_ideal_wfs(self, params):
+    """
+    Create an Ideal WFS processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    IdealWFS: Ideal WFS processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    n_subap_on_diameter = params.pop('subap_on_diameter')
+    sensor_npx = params.pop('sensor_npx')
+    sensor_fov = params.pop('sensor_fov')
+    subapdata_tag = self.extract(params, 'subapdata_tag', default=None)
+    energy_th = params.pop('energy_th')
+
+    lenslet = Lenslet(n_subap_on_diameter)
+    ideal_wfs = IdealWFS(lenslet)
+
+    self.apply_global_params(ideal_wfs)
+    ideal_wfs.apply_properties(params)
+
+    return ideal_wfs
+
+def get_ideal_wfs_slopec(self, params):
+    """
+    Create an Ideal WFS Slopec processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    IdealWFSSlopec: Ideal WFS Slopec processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    computation_time = self.extract(params, 'computation_time', default=None)
+    FoV = params.pop('sensor_fov')
+    obs = self.extract(params, 'obs', default=None)
+    pup_mask_tag = self.extract(params, 'pup_mask_tag', default=None)
+    if not pup_mask_tag:
+        pup_mask_tag = self.extract(params, 'pupil_mask_tag', default=None)
+    thr_value = self.extract(params, 'thr_value', default=None)
+    quadcell_mode = self.extract(params, 'quadcell_mode', default=None)
+    filtmat_tag = self.extract(params, 'filtmat_tag', default='')
+
+    good_pixels = None
+    if pup_mask_tag:
+        pupilstop = self._cm.read_pupilstop(pup_mask_tag)
+        if pupilstop is None:
+            raise ValueError(f'Pupil mask tag {pup_mask_tag} not found for ideal_wfs_slopec.')
+        good_pixels = pupilstop.A
+
+    sc = IdealWFSSlopec(self._main.pixel_pitch, FoV, obs=obs, good_pixels=good_pixels)
+
+    if filtmat_tag:
+        filtmat = self._cm.read_data(filtmat_tag)
+        sc.filtmat = filtmat
+
+    sc.set_property(cm=self._cm)
+
+    self.apply_global_params(sc)
+    sc.apply_properties(params)
+
+    return sc
+
+def get_int_control(self, params, offset=None):
+    """
+    Create an Int Control (Integrator) processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    offset: Offset value
+
+    Returns:
+    IntControl: Int Control processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    gain = params.pop('int_gain')
+    ff = self.extract(params, 'ff', default=None)
+    delay = self.extract(params, 'delay', default=None)
+    og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None)
+    og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
+
+    if params.get('opt_dt', 0) == 1:
+        intc = IntControlOpt(gain, ff=ff, delay=delay)
+    else:
+        intc = IntControl(gain, ff=ff, delay=delay)
+
+    if offset is not None:
+        intc.offset = offset
+    if og_shaper is not None:
+        intc.og_shaper = og_shaper
+
+    self.apply_global_params(intc)
+    intc.apply_properties(params)
+
+    return intc
+
+def get_int_control_autogain(self, params, offset=None):
+    """
+    Create an Int Control AutoGain (Integrator) processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    offset: Offset value
+
+    Returns:
+    IntControlAutoGain: Int Control AutoGain processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    gain_vect = params.pop('gain_vect')
+    ff = self.extract(params, 'ff', default=None)
+    delay = self.extract(params, 'delay', default=None)
+    og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None)
+    og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
+    stepsBeforeChange = self.extract(params, 'stepsBeforeChange', default=None)
+    gainLength = self.extract(params, 'gainLength', default=None)
+
+    intc = IntControlAutoGain(gain_vect, gainLength, stepsBeforeChange, ff=ff, delay=delay)
+
+    if offset is not None:
+        intc.offset = offset
+    if og_shaper is not None:
+        intc.og_shaper = og_shaper
+
+    self.apply_global_params(intc)
+    intc.apply_properties(params)
+
+    return intc
+
+def get_int_control_state(self, params, offset=None):
+    """
+    Create an Int Control State (Integrator) processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    offset: Offset value
+
+    Returns:
+    IntControlState: Int Control State processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    gain = params.pop('int_gain')
+    ff = self.extract(params, 'ff', default=None)
+    delay = self.extract(params, 'delay', default=None)
+    og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None)
+    og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
+
+    intc = IntControlState(gain, ff=ff, delay=delay)
+
+    if offset is not None:
+        intc.offset = offset
+    if og_shaper is not None:
+        intc.og_shaper = og_shaper
+
+    self.apply_global_params(intc)
+    intc.apply_properties(params)
+
+    return intc
+
+def get_iir_control(self, params, offset=None):
+    """
+    Create an IIR Control processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    offset: Offset value
+
+    Returns:
+    IIRControl: IIR Control processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    delay = self.extract(params, 'delay', default=None)
+    og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None)
+    og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
+    iir_tag = params.pop('iir_tag')
+    iirfilter = self._cm.read_iirfilter(iir_tag)
+
+    iirc = IIRControl(iirfilter, delay=delay)
+
+    if offset is not None:
+        iirc.offset = offset
+    if og_shaper is not None:
+        iirc.og_shaper = og_shaper
+
+    self.apply_global_params(iirc)
+    iirc.apply_properties(params)
+
+    return iirc
+
+def get_iir_control_state(self, params, offset=None):
+    """
+    Create an IIR Control State processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    offset: Offset value
+
+    Returns:
+    IIRControlState: IIR Control State processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    delay = self.extract(params, 'delay', default=None)
+    og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None)
+    og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
+    iir_tag = params.pop('iir_tag')
+    iirfilter = self._cm.read_iirfilter(iir_tag)
+
+    iirc = IIRControlState(iirfilter, delay=delay)
+
+    if offset is not None:
+        iirc.offset = offset
+    if og_shaper is not None:
+        iirc.og_shaper = og_shaper
+
+    self.apply_global_params(iirc)
+    iirc.apply_properties(params)
+
+    return iirc
+
+def get_lut_control(self, params, offset=None):
+    """
+    Create a LUT Control (Look-Up Table) processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    offset: Offset value
+
+    Returns:
+    LUTControl: LUT Control processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    nmodes = params.pop('nmodes')
+    xLut_tag = self.extract(params, 'xLut_tag', default=None)
+    yLut_tag = self.extract(params, 'yLut_tag', default=None)
+    xLut = self.extract(params, 'xLut', default=None)
+    yLut = self.extract(params, 'yLut', default=None)
+    delay = self.extract(params, 'delay', default=None)
+
+    if xLut_tag:
+        xLut = self._cm.read_data(xLut_tag)
+    if yLut_tag:
+        yLut = self._cm.read_data(yLut_tag)
+
+    lutc = LUTControl(nmodes, xLut, yLut, delay=delay)
+
+    if offset is not None:
+        lutc.offset = offset
+
+    self.apply_global_params(lutc)
+    lutc.apply_properties(params)
+
+    return lutc
+
+def get_mat_control(self, params, A=None, B=None, offset=None):
+    """
+    Create an Int Control Mat (Integrator) processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    A: A matrix
+    B: B matrix
+    offset: Offset value
+
+    Returns:
+    IntControlMat: Int Control Mat processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    A_tag = self.extract(params, 'A_tag', default=None)
+    B_tag = self.extract(params, 'B_tag', default=None)
+    gain = self.extract(params, 'int_gain', default=None)
+    ff = self.extract(params, 'ff', default=None)
+    delay = self.extract(params, 'delay', default=None)
+    og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None)
+    og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
+
+    if A_tag:
+        A = self._cm.read_data(A_tag)
+    if B_tag:
+        B = self._cm.read_data(B_tag)
+
+    if A is None and ff is not None:
+        A = np.diag(ff)
+    if B is None and gain is not None:
+        B = np.diag(gain)
+
+    intc = IntControlMat(A, B, delay=delay)
+
+    if offset is not None:
+        intc.offset = offset
+    if og_shaper is not None:
+        intc.og_shaper = og_shaper
+
+    self.apply_global_params(intc)
+    intc.apply_properties(params)
+
+    return intc
+
+def get_mat_filter(self, params):
+    """
+    Create a Mat Filter processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    MatFilter: Mat Filter processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    apply2comm = self.extract(params, 'apply2comm', default=None)
+    estimator_tag = params.pop('estimator_tag')
+    A_tag = params.pop('A_tag')
+
+    estimator = self._cm.read_data(estimator_tag)
+    A = self._cm.read_data(A_tag)
+
+    mat_filter = MatFilter(estimator, A)
+
+    self.apply_global_params(mat_filter)
+    mat_filter.apply_properties(params)
+
+    return mat_filter
+
+def get_kernel(self, params):
+    """
+    Create a Kernel processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    Kernel: Kernel processing object
+    """
+    if 'zenithAngleInDeg' in self._main:
+        airmass = 1.0 / np.cos(np.radians(self._main['zenithAngleInDeg']))
+    else:
+        airmass = 1.0
+
+    params = self.ensure_dictionary(params)
+
+    kernel = Kernel(cm=self._cm, airmass=airmass)
+    self.apply_global_params(kernel)
+    kernel.apply_properties(params)
+
+    return kernel
+
+def get_lgsfocus_container(self, pupil, dm_commands, dm_params, ifunc=None):
+    """
+    Create a processing container for LGS Focus correction.
+
+    Parameters:
+    pupil: Pupil EF
+    dm_commands: DM commands
+    dm_params (dict): Parameter dictionary for the DM object
+    ifunc: Influence function
+
+    Returns:
+    ProcessingContainer: Processing container with LGS Focus correction
+    """
+    container = ProcessingContainer()
+
+    dm = self.get_dm(dm_params, ifunc=ifunc)
+    dm.sign = 1
+
+    ef_prod = self.get_ef_product()
+
+    dm.in_command = dm_commands
+    ef_prod.in_ef1 = pupil
+    ef_prod.in_ef2 = dm.out_layer
+
+    container.add(ef_prod, name='ef_prod', output='out_ef')
+    container.add(dm, name='dm')
+
+    return container
+
+def get_lgstt_container(self, pupil, mod_params, dm_params, res_params=None, ifunc=None, phase2modes=None):
+    """
+    Create a processing container for LGS Tip-Tilt correction and residual.
+
+    Parameters:
+    pupil: Pupil EF
+    mod_params (dict): Parameter dictionary for the Modal Analysis object
+    dm_params (dict): Parameter dictionary for the DM object
+    res_params (dict, optional): Parameter dictionary for the Disturbance object
+    ifunc: Influence function
+    phase2modes: Phase to modes object
+
+    Returns:
+    ProcessingContainer: Processing container with LGS Tip-Tilt correction and residual
+    """
+    container = ProcessingContainer()
+
+    modalAnalysis = self.get_modalanalysis(mod_params, phase2modes=phase2modes)
+    ef_prod1 = self.get_ef_product()
+    dm = self.get_dm(dm_params, ifunc=ifunc)
+
+    if res_params:
+        ef_prod2 = self.get_ef_product()
+        res = self.get_disturbance(res_params)
+
+    modalAnalysis.in_ef = pupil
+    dm.in_command = modalAnalysis.out_modes
+    ef_prod1.in_ef1 = pupil
+    ef_prod1.in_ef2 = dm.out_layer
+
+    if res_params:
+        ef_prod2.in_ef1 = ef_prod1.out_ef
+        ef_prod2.in_ef2 = res.out_layer
+
+    container.add(modalAnalysis, name='modalAnalysis')
+    container.add(dm, name='dm')
+    if res_params:
+        container.add(ef_prod1, name='ef_prod1')
+        container.add(ef_prod2, name='ef_prod2', output='out_ef')
+        container.add(res, name='res')
+        container.add_output('res', 'output')
+    else:
+        container.add(ef_prod1, name='ef_prod1', output='out_ef')
+
+    return container
+
+def get_lift(self, params, params_lens, params_ref, params_control, mode_basis=None, pup_mask=None, GPU=None, display=None):
+    """
+    Create a LIFT processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    params_lens (dict): Dictionary of parameters for the single lens SH object
+    params_ref (dict): Dictionary of parameters for the reference aberration
+    params_control (dict): Dictionary of control parameters
+    mode_basis (array, optional): Array with modal basis for LIFT modal estimation
+    pup_mask (array, optional): Array with pupil mask
+    GPU (bool, optional): Use GPU if available
+    display (bool, optional): Display settings
+
+    Returns:
+    LIFT: LIFT processing object
+    """
+    useGPU = GPU if GPU is not None else self._gpu
+
+    params = self.ensure_dictionary(params)
+    params_lens = self.ensure_dictionary(params_lens)
+    params_ref = self.ensure_dictionary(params_ref)
+    params_control = self.ensure_dictionary(params_control)
+
+    nmodes_est = params.pop('nmodes_est')
+    computation_time = self.extract(params, 'computation_time', default=None)
+    subapdata_tag = self.extract(params, 'subapdata_tag', default='')
+    chrom_lambdas = self.extract(params, 'chrom_lambdas', default=None)
+    chrom_lambda0 = self.extract(params, 'chrom_lambda0', default=None)
+    chrom_photo = self.extract(params, 'chrom_photo', default=None)
+    regul = self.extract(params, 'regul', default=None)
+    ron = self.extract(params, 'ron', default=None)
+    nophotnoise = self.extract(params, 'nophotnoise', default=None)
+    n_iter = self.extract(params, 'n_iter', default=None)
+    ncrop = self.extract(params, 'ncrop', default=None)
+    ftccd = self.extract(params, 'ftccd', default=None)
+    thresh = self.extract(params, 'thresh', default=None)
+    display = self.extract(params, 'display', default=None)
+    silent = self.extract(params, 'silent', default=None)
+    fixed = self.extract(params, 'fixed', default=None)
+    flux = self.extract(params, 'flux', default=None)
+    noconv = self.extract(params, 'noconv', default=None)
+    estim_flux = self.extract(params, 'estim_flux', default=None)
+    padding = self.extract(params, 'padding', default=None)
+    corr = self.extract(params, 'corr', default=None)
+    lowsamp = self.extract(params, 'lowsamp', default=None)
+    gauss = self.extract(params, 'gauss', default=None)
+    tfdir = self.extract(params, 'tfdir', default=None)
+    pup_mask_tag = self.extract(params, 'pup_mask_tag', default=None)
+    modes_tag = self.extract(params, 'modes_tag', default=None)
+    bootstrap = self.extract(params, 'bootstrap', default=None)
+    gain = self.extract(params_control, 'int_gain', default=None)
+    ncutmodes = self.extract(params, 'ncutmodes', default=None)
+    fft_oversample = self.extract(params, 'fft_oversample', default=None)
+    norm = self.extract(params, 'norm', default=None)
+
+    if pup_mask_tag and pup_mask is not None:
+        print('WARNING: pup_mask_tag will be ignored in factory.get_lift, because pup_mask input is defined')
+    if modes_tag and mode_basis is not None:
+        print('WARNING: modes_tag will be ignored in factory.get_lift, because mode_basis input is defined')
+
+    if regul is not None:
+        regul = np.diag(regul)
+
+    if isinstance(chrom_lambdas, (list, np.ndarray)) and len(chrom_lambdas) == 1:
+        chrom_lambdas = chrom_lambdas[0]
+    if isinstance(chrom_lambda0, (list, np.ndarray)) and len(chrom_lambda0) == 1:
+        chrom_lambda0 = chrom_lambda0[0]
+    if isinstance(chrom_photo, (list, np.ndarray)) and len(chrom_photo) == 1:
+        chrom_photo = chrom_photo[0]
+    chrom = {'_lambdas': chrom_lambdas, '_lambda0': chrom_lambda0, '_photo': chrom_photo}
+
+    rad2asec = 3600.0 * 360.0 / (2 * np.pi)
+    wavelengthInM = params_lens['wavelengthInNm'] * 1e-9
+    if isinstance(wavelengthInM, (list, np.ndarray)) and len(wavelengthInM) == 1:
+        wavelengthInM = wavelengthInM[0]
+    diameterInM = self._main['pixel_pupil'] * self._main['pixel_pitch'] / params_lens['subap_on_diameter']
+    oversamp = (wavelengthInM / diameterInM * rad2asec) / (2 * params_lens['sensor_fov'] / params_lens['sensor_npx'])
+    nmodes_mb = max(nmodes_est, len(params_ref['constant']))
+
+    if pup_mask is None:
+        if pup_mask_tag:
+            pupilstop = self._cm.read_pupilstop(pup_mask_tag)
+            if pupilstop is None:
+                raise ValueError(f'Pupil mask tag {pup_mask_tag} not found in factory.get_lift.')
+            pup_mask = pupilstop.A
+        else:
+            if 'dm_obsratio' in params_ref:
+                diaratio = self.extract(params_ref, 'dm_diaratio', default=None)
+                pup_mask = make_mask(self._main['pixel_pupil'], obs=params_ref['dm_obsratio'], dia=diaratio)
+            elif 'pupil_mask_tag' in params_ref:
+                pup_mask = self._cm.read_pupilstop(params_ref['pupil_mask_tag'])
+                if pup_mask is None:
+                    raise ValueError(f'Pupil mask tag {params_ref["pupil_mask_tag"]} not found in factory.get_lift.')
+            else:
+                raise ValueError('factory.get_lift does not know how to build mask')
+
+    if mode_basis is None:
+        if not pup_mask_tag or not modes_tag:
+            mode_basis = zern2phi(self._main['pixel_pupil'], nmodes_mb, mask=pup_mask, no_round_mask=True)
+            mode_basis = mode_basis.reshape((nmodes_mb, self._main['pixel_pupil'] ** 2))
+        else:
+            pupdiam = pup_mask.shape[1]
+            ifunc = self._cm.read_ifunc(modes_tag)
+            ifuncMat = ifunc.influence_function
+            ifuncMask = ifunc.mask_inf_func
+            ifuncIdx = np.where(ifuncMask)
+            mode_basis = np.zeros((nmodes_mb, pupdiam ** 2), dtype=float)
+            for i in range(nmodes_mb):
+                mode_basis[i, ifuncIdx] = ifuncMat[i, :]
+
+    airefInRad = params_ref['constant'] / (wavelengthInM * 1e9) * 2 * np.pi
+    if gain is not None:
+        gain = gain[0]
+
+    lift = LIFT(
+        precision=self._main['precision'], oversamp=oversamp, airef=airefInRad,
+        ron=ron, chrom=chrom, nophotnoise=nophotnoise, nmodes_est=nmodes_est,
+        n_iter=n_iter, ncrop=ncrop, ftccd=ftccd, thresh=thresh,
+        display=display, silent=silent, fixed=fixed, flux=flux, noconv=noconv,
+        estim_flux=estim_flux, regul=regul, padding=padding, pup_mask=pup_mask,
+        mode_basis=mode_basis, corr=corr, lowsamp=lowsamp, gauss=gauss, tfdir=tfdir,
+        bootstrap=bootstrap, gain=gain, ncutmodes=ncutmodes, fft_oversample=fft_oversample,
+        pixel_pitch_mode_basis=self._main['pixel_pitch']
+    )
+
+    if subapdata_tag:
+        subapdata = self._cm.read_subaps(subapdata_tag)
+        lift.subapdata = subapdata
+
+    self.apply_global_params(lift)
+    lift.apply_properties(params)
+
+    return lift
+
+def get_lift_sh_slopec(self, params, mode_basis=None, pup_mask=None, GPU=None):
+    """
+    Create a LIFT SH Slopec processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    mode_basis (array, optional): Array with modal basis for LIFT modal estimation
+    pup_mask (array, optional): Array with pupil mask
+    GPU (bool, optional): Use GPU if available
+
+    Returns:
+    LIFT_SH_Slopec: LIFT SH Slopec processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    computation_time = self.extract(params, 'computation_time', default=None)
+    filtName = self.extract(params, 'filtName', default='')
+    display = self.extract(params, 'display', default=False)
+
+    single_modal_basis = self.extract(params, 'single_modal_basis', default=False)
+    substitute_nzern = self.extract(params, 'substitute_nzern', default=0)
+
+    sc = LIFT_SH_Slopec()
+
+    lift_list = []
+
+    modes_tag = self.extract(params, 'lift_modes_tag', default=None)
+    lift_params = {k[5:]: params.pop(k) for k in list(params.keys()) if k.startswith('lift_') or k.startswith('LIFT_')}
+    control_params = {'int_gain': params.pop('control_int_gain')[0]}
+    sh_params = {
+        'wavelengthInNm': params.pop('sh_wavelengthInNm')[0],
+        'subap_on_diameter': params.pop('sh_subap_on_diameter')[0],
+        'sensor_fov': params.pop('sh_sensor_fov')[0],
+        'sensor_npx': params.pop('sh_sensor_npx')[0]
+    }
+
+    if pup_mask is None:
+        pup_mask_tag = self.extract(lift_params, 'pup_mask_tag', default=None)
+        pupilstop = self._cm.read_pupilstop(pup_mask_tag)
+        if pupilstop is None:
+            raise ValueError(f'Pupil mask tag {pup_mask_tag} not found in factory.get_lift.')
+        pup_mask = pupilstop.A
+
+    pup_mask_diameter = pup_mask.shape[0]
+
+    aberr_map_tag = self.extract(params, 'aberr_map_tag', default='')
+    aberr_coeff = self.extract(params, 'aberr_constant', default='')
+    aberr_ifunc_tag = self.extract(params, 'aberr_ifunc_tag', default=None)
+    aberr_type = self.extract(params, 'aberr_type', default=None)
+    aberr_nzern = self.extract(params, 'aberr_nzern', default=None)
+    aberr_start_mode = self.extract(params, 'aberr_start_mode', default=None)
+    aberr_npixels = self.extract(params, 'aberr_npixels', default=None)
+    aberr_obsratio = self.extract(params, 'aberr_obsratio', default=None)
+    aberr_diaratio = self.extract(params, 'aberr_diaratio', default=None)
+    doNotPutOnGpu = self.extract(params, 'aberr_doNotPutOnGpu', default=None)
+
+    if aberr_map_tag:
+        map_aberr = self._cm.read_data(aberr_map_tag)
+    else:
+        nmodes_aberr = max([lift_params['nmodes_est'], len(aberr_coeff)])
+        ifunc_aberr = self.ifunc_restore(
+            tag=aberr_ifunc_tag, type=aberr_type, npixels=aberr_npixels, nmodes=nmodes_aberr,
+            nzern=aberr_nzern, obsratio=aberr_obsratio, diaratio=aberr_diaratio,
+            start_mode=aberr_start_mode, mask=pup_mask, doNotPutOnGpu=doNotPutOnGpu
+        )
+        ifuncMat_aberr = ifunc_aberr.influence_function
+        ifuncMask_aberr = ifunc_aberr.mask_inf_func
+        sMaskAber = ifuncMask_aberr.shape
+        ifuncIdx_aberr = np.where(ifuncMask_aberr)
+        map_aberr_2d = np.dot(aberr_coeff, ifuncMat_aberr)
+        map_aberr = np.zeros(sMaskAber, dtype=aberr_coeff.dtype)
+        map_aberr[ifuncIdx_aberr] = map_aberr_2d
+
+    subapdata = self._cm.read_subaps(params['subapdata_tag'])
+    if subapdata is None:
+        print(f'subapdata_tag: {subapdata_tag} is not valid in factory.get_lift.')
+
+    idxModalBaseAll = []
+    projMat = None
+
+    for i in range(subapdata['n_subaps']):
+        iSaMap = subapdata['map'][i] % subapdata['nx']
+        jSaMap = subapdata['map'][i] // subapdata['nx']
+        dimSaPup = self._main['pixel_pupil'] // subapdata['nx']
+        range_x = [iSaMap * dimSaPup, (iSaMap + 1) * dimSaPup]
+        range_y = [jSaMap * dimSaPup, (jSaMap + 1) * dimSaPup]
+
+        pup_mask_ith = pup_mask[range_x[0]:range_x[1], range_y[0]:range_y[1]]
+        idx_pup_mask_ith = np.where(pup_mask_ith)
+        if len(idx_pup_mask_ith[0]) == 0:
+            print(f'factory.get_lift_sh_slopec: mask is zero for i={i}')
+            continue
+
+        aberr_ith = map_aberr[range_x[0]:range_x[1], range_y[0]:range_y[1]]
+
+        if single_modal_basis or mode_basis is None:
+            if not modes_tag:
+                mode_basis_ith = zern2phi(dimSaPup, lift_params['nmodes_est'], mask=pup_mask_ith, no_round_mask=True)
+                mode_basis_ith = mode_basis_ith.reshape((lift_params['nmodes_est'], dimSaPup ** 2))
+                ifuncMask_diameter = dimSaPup
+            else:
+                ifunc = self._cm.read_ifunc(modes_tag)
+                ifuncMat = ifunc.influence_function
+                ifuncMask = ifunc.mask_inf_func
+                ifuncIdx = np.where(ifuncMask)
+                ifuncMask_diameter = ifuncMask.shape[0]
+                mode_basis_ith = np.zeros((lift_params['nmodes_est'], ifuncMask_diameter ** 2), dtype=ifuncMat.dtype)
+                for j in range(lift_params['nmodes_est']):
+                    mode_basis_ith[j, ifuncIdx] = ifuncMat[j, :]
+        else:
+            mode_basis_ith = mode_basis
+            ifuncMask = pup_mask
+            ifuncIdx = np.where(ifuncMask)
+            ifuncMask_diameter = ifuncMask.shape[0]
+
+        lift_params_ith = lift_params.copy()
+
+        if ifuncMask_diameter == self._main['pixel_pupil']:
+            ifuncMask = ifuncMask[range_x[0]:range_x[1], range_y[0]:range_y[1]]
+            ifuncIdx = np.where(ifuncMask)
+            mode_basis_ith = mode_basis_ith.reshape((lift_params['nmodes_est'], self._main['pixel_pupil'], self._main['pixel_pupil']))
+            mode_basis_ith = mode_basis_ith[:, range_x[0]:range_x[1], range_y[0]:range_y[1]]
+            mode_basis_temp = mode_basis_ith.reshape((lift_params['nmodes_est'], dimSaPup ** 2))
+
+            isItPiston = np.zeros(lift_params['nmodes_est'], dtype=int)
+            isItGood = np.zeros(lift_params['nmodes_est'], dtype=int)
+            for j in range(lift_params['nmodes_est']):
+                temp = mode_basis_ith[j, :, :][ifuncIdx]
+                if np.max(temp) != np.min(temp):
+                    yhist, xhist = np.histogram(temp, bins=int((np.max(temp) - np.min(temp)) * 0.01))
+                    idxYhistTemp = np.where(yhist > np.sum(yhist) * 1e-3)[0]
+                    if len(idxYhistTemp) == 1:
+                        isItPiston[j] = 2
+                    elif len(idxYhistTemp) == 2:
+                        isItPiston[j] = 1
+                else:
+                    isItPiston[j] = 2
+
+            idxPiston = np.where(isItPiston == 1)[0]
+            isItGood = (isItPiston <= 1).astype(int)
+            if len(idxPiston) == 2:
+                isItBad = np.zeros(len(idxPiston), dtype=bool)
+                for j in range(len(idxPiston)):
+                    for k in range(len(idxPiston)):
+                        if k > j:
+                            continue
+                        tempj = mode_basis_ith[idxPiston[j], :, :][ifuncIdx]
+                        tempk = mode_basis_ith[idxPiston[k], :, :][ifuncIdx]
+                        temp = tempj + tempk
+                        yhist, xhist = np.histogram(temp, bins=int((np.max(temp) - np.min(temp)) * 0.01))
+                        idxYhistTemp = np.where(yhist > np.max(yhist) * 1e-3)[0]
+                        if len(idxYhistTemp) == 1:
+                            if np.sum(tempj) > np.sum(tempk):
+                                isItBad[j] = True
+                            else:
+                                isItBad[k] = True
+                idxIsItBad = np.where(isItBad)[0]
+                if len(idxIsItBad) > 0:
+                    isItGood[idxPiston[idxIsItBad]] = 0
+
+            if len(idxPiston) == 3:
+                isItBad = np.zeros(len(idxPiston), dtype=bool)
+                for j in range(len(idxPiston)):
+                    for k in range(len(idxPiston)):
+                        for l in range(len(idxPiston)):
+                            if k > j or l > k:
+                                continue
+                            tempj = mode_basis_ith[idxPiston[j], :, :][ifuncIdx]
+                            tempk = mode_basis_ith[idxPiston[k], :, :][ifuncIdx]
+                            templ = mode_basis_ith[idxPiston[l], :, :][ifuncIdx]
+                            temp = tempj + tempk + templ
+                            if np.max(temp) == np.min(temp):
+                                isItBad[j] = True
+                idxIsItBad = np.where(isItBad)[0]
+                if len(idxIsItBad) > 0:
+                    isItGood[idxPiston[idxIsItBad]] = 0
+
+            idxTestMB = np.where(isItGood)[0]
+            print('countTestMB', len(idxTestMB))
+
+            lift_params_ith['nmodes_est'] = len(idxTestMB)
+            if len(idxTestMB) > 0:
+                idxModalBaseAll.append(idxTestMB)
+                mode_basis_ith = mode_basis_ith[idxModalBaseAll[i], :, :]
+            else:
+                print(f'factory.get_lift_sh_slopec: all modes are zero for i={i}')
+                continue
+
+            mode_basis_ith = mode_basis_ith.reshape((mode_basis_ith.shape[0], dimSaPup ** 2))
+
+        if substitute_nzern > 0:
+            mode_basis_temp = zern2phi(dimSaPup, substitute_nzern, mask=pup_mask_ith, no_round_mask=True)
+            mode_basis_ith[:substitute_nzern, :] = mode_basis_temp.reshape((substitute_nzern, dimSaPup ** 2))
+
+        n_mode_basis_ith = mode_basis_ith.shape[0]
+        mode_basis_ith_3d = mode_basis_ith.reshape((n_mode_basis_ith, dimSaPup, dimSaPup))
+        mode_basis_ith_2d_idx = np.zeros((n_mode_basis_ith, len(idx_pup_mask_ith[0])), dtype=mode_basis_ith.dtype)
+        for j in range(n_mode_basis_ith):
+            mode_basis_ith_2d_idx[j, :] = mode_basis_ith_3d[j, :, :].flatten()[idx_pup_mask_ith]
+
+        inv_mode_basis_ith = np.linalg.pinv(mode_basis_ith_2d_idx)
+
+        if mode_basis is not None:
+            projMatTemp = np.dot(mode_basis_ith_2d_idx, inv_mode_basis_ith)
+            if ifuncMask_diameter == self._main['pixel_pupil']:
+                if projMatTemp.shape[0] != lift_params['nmodes_est']:
+                    projMatIth = np.zeros((projMatTemp.shape[0], lift_params['nmodes_est']), dtype=projMatTemp.dtype)
+                    projMatIth[:, idxModalBaseAll[i]] = projMatTemp
+                else:
+                    projMatIth = projMatTemp
+            else:
+                projMatIth = projMatTemp
+            projMat = np.hstack((projMat, projMatIth)) if projMat is not None else projMatIth
+
+        aberr_coeff_ith = np.dot(inv_mode_basis_ith, aberr_ith[idx_pup_mask_ith])
+        wfs_aberr_params = {'constant': aberr_coeff_ith}
+
+        lift_list.append(
+            self.get_lift(
+                lift_params_ith, sh_params.copy(),
+                wfs_aberr_params.copy(), control_params.copy(),
+                mode_basis=mode_basis_ith.astype(float), pup_mask=pup_mask_ith.astype(float),
+                display=display
+            )
+        )
+
+    for i in range(lift_params['nmodes_est']):
+        normFact = sum(1 for j in idxModalBaseAll if np.min(np.abs(j - i)) == 0)
+        if normFact > 0:
+            projMat[:, i] /= normFact
+
+    sc.lift_list = lift_list
+    sc.projMat = projMat
+
+    sc.setproperty(cm=self._cm)
+    self.apply_global_params(sc)
+    sc.apply_properties(params)
+
+    return sc
+
+def get_loop_control(self):
+    """
+    Create a loop_control object.
+
+    Returns:
+    LoopControl: loop_control object
+    """
+    return LoopControl(run_time=self._main['total_time'], dt=self._main['time_step'])
+
+def get_m2crec(self, params):
+    """
+    Create a m2crec processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    M2CRec: m2crec processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    if 'm2c_tag' in params:
+        m2c_tag = params.pop('m2c_tag')
+        m2c = self._cm.read_m2c(m2c_tag)
+    else:
+        nmodes = params.pop('nmodes')
+        m2c = M2C()
+        m2c.set_m2c(np.identity(nmodes))
+
+    m2crec = M2CRec(m2c)
+
+    self.apply_global_params(m2crec)
+    m2crec.apply_properties(params)
+    return m2crec
+
+def get_modalanalysis(self, params, phase2modes=None):
+    """
+    Create a modalanalysis processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    phase2modes (optional): Phase to modes object
+
+    Returns:
+    ModalAnalysis: modalanalysis processing object
+    """
+    params = self.ensure_dictionary(params)
+
+    phase2modes_tag = self.extract(params, 'phase2modes_tag', default=None)
+    type_ = self.extract(params, 'type', default=None)
+    nmodes = self.extract(params, 'nmodes', default=None)
+    start_mode = self.extract(params, 'start_mode', default=None)
+    idx_modes = self.extract(params, 'idx_modes', default=None)
+    nzern = self.extract(params, 'nzern', default=None)
+    npixels = self.extract(params, 'npixels', default=None)
+    pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='')
+    obsratio = self.extract(params, 'obsratio', default=None)
+    diaratio = self.extract(params, 'diaratio', default=None)
+    doNotPutOnGpu = self.extract(params, 'doNotPutOnGpu', default=None)
+    zeroPad = self.extract(params, 'zeroPadp2m', default='')
+
+    if pupil_mask_tag:
+        if phase2modes_tag:
+            print('if phase2modes_tag is defined then pupil_mask_tag will not be used!')
+        pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=GPU)
+        if pupilstop is None:
+            raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
+        mask = pupilstop.A
+        if not npixels:
+            npixels = mask.shape[0]
+
+    if not phase2modes:
+        phase2modes = self.ifunc_restore(
+            tag=phase2modes_tag, type=type_, npixels=npixels, nmodes=nmodes,
+            nzern=nzern, obsratio=obsratio, diaratio=diaratio, start_mode=start_mode,
+            idx_modes=idx_modes, mask=mask, doNotPutOnGpu=doNotPutOnGpu,
+            return_inv=True, zeroPad=zeroPad
+        )
+        if phase2modes is None:
+            raise ValueError(f'Error reading influence function: {phase2modes_tag}')
+        print('phase2modes restored!')
+    else:
+        print('phase2modes already defined!')
+
+    modalanalysis = ModalAnalysis(phase2modes)
+
+    self.apply_global_params(modalanalysis)
+    modalanalysis.apply_properties(params)
+    return modalanalysis
+
+def get_modalanalysis_slopec(self):
+    """
+    Create a modalanalysis_slopec processing object.
+
+    Returns:
+    ModalAnalysisSlopec: modalanalysis_slopec object
+    """
+    return ModalAnalysisSlopec()
+
+def get_modalanalysis_wfs(self, params, phase2modes=None):
+    """
+    Create a modalanalysis_wfs processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    phase2modes (object, optional): ifunc object
+
+    Returns:
+    ModalAnalysisWFS: modalanalysis_wfs object
+    """
+    params = self.ensure_dictionary(params)
+
+    phase2modes_tag = self.extract(params, 'phase2modes_tag', default=None)
+    type_ = self.extract(params, 'type', default=None)
+    nmodes = self.extract(params, 'nmodes', default=None)
+    nzern = self.extract(params, 'nzern', default=None)
+    npixels = self.extract(params, 'npixels', default=None)
+    pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='')
+    obsratio = self.extract(params, 'obsratio', default=None)
+    diaratio = self.extract(params, 'diaratio', default=None)
+    zeroPad = self.extract(params, 'zeroPadp2m', default='')
+
+    if pupil_mask_tag:
+        if phase2modes_tag:
+            print('if phase2modes_tag is defined then pupil_mask_tag will not be used!')
+        pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=useGPU)
+        if pupilstop is None:
+            raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
+        mask = pupilstop.A
+        if npixels is None:
+            npixels = mask.shape[0]
+
+    if not phase2modes:
+        phase2modes = self.ifunc_restore(tag=phase2modes_tag, type=type_, npixels=npixels, nmodes=nmodes,
+                                         nzern=nzern, obsratio=obsratio, diaratio=diaratio,
+                                         mask=mask, return_inv=True, zeroPad=zeroPad)
+        print('phase2modes restored!')
+    else:
+        print('phase2modes already defined!')
+
+    if phase2modes is None:
+        raise ValueError(f'Error reading influence function: {phase2modes_tag}')
+
+    modalanalysis_wfs = ModalAnalysisWFS(phase2modes)
+    self.apply_global_params(modalanalysis_wfs)
+    modalanalysis_wfs.apply_properties(params)
+    return modalanalysis_wfs
+
+def get_modalrec(self, params, recmat=None, intmat=None):
+    """
+    Create a modalrec processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    recmat (optional): Reconstruction matrix
+    intmat (optional): Interaction matrix
+
+    Returns:
+    ModalRec: modalrec object
+    """
+    params = self.ensure_dictionary(params)
+
+    intmat_tag = self.extract(params, 'intmat_tag', default=None)
+    nmodes = self.extract(params, 'nmodes', default=None)
+    recmat_tag = self.extract(params, 'recmat_tag', default=None)
+    projmat_tag = self.extract(params, 'projmat_tag', default=None)
+    filtmat_tag = self.extract(params, 'filtmat_tag', default=None)
+
+    identity = self.extract(params, 'identity', default=False)
+    ncutmodes = self.extract(params, 'ncutmodes', default=None)
+    nSlopesToBeDiscarded = self.extract(params, 'nSlopesToBeDiscarded', default=None)
+    polc = self.extract(params, 'polc', default=False)
+    dmNumber = self.extract(params, 'dmNumber', default=None)
+    noProj = self.extract(params, 'noProj', default=False)
+
+    if params.get('mPCuRed_tag'):
+        return self.get_modalrec_cured(params)
+    if params.get('nn_python'):
+        return self.get_modalrec_nn_python(params)
+    if params.get('WeightsBiases_tag'):
+        return self.get_modalrec_nn(params)
+    if params.get('WeightsBiases1_tag'):
+        return self.get_modalrec_nn_multi(params)
+
+    if polc:
+        if identity:
+            raise ValueError('identity cannot be set with POLC.')
+        if ncutmodes is not None:
+            raise ValueError('ncutmodes cannot be set with POLC.')
+        if recmat is None:
+            recmat = self._cm.read_rec(recmat_tag, doNotPutOnGpu=doNotPutOnGpu)
+        if intmat is None:
+            intmat = self._cm.read_im(intmat_tag, doNotPutOnGpu=doNotPutOnGpu)
+        if intmat is None:
+            raise ValueError(f'WARNING: intmat is null. intmat_tag is: {intmat_tag}')
+    else:
+        if recmat is None:
+            if identity:
+                recmat = RecMat()
+                if nmodes is None:
+                    raise ValueError('modalrec nmodes key must be set!')
+                recmat.recmat = np.identity(nmodes)
+            else:
+                if recmat_tag and intmat_tag:
+                    intmat = self._cm.read_im(intmat_tag, doNotPutOnGpu=doNotPutOnGpu)
+                    if nmodes:
+                        nmodes_intmat = intmat.size[0]
+                        intmat.reduce_size(nmodes_intmat - nmodes)
+                    if nSlopesToBeDiscarded:
+                        intmat.reduce_slopes(nSlopesToBeDiscarded)
+                    recmat = RecMat()
+                    recmat.recmat = intmat.intmat
+                else:
+                    recmat = self._cm.read_rec(recmat_tag, doNotPutOnGpu=doNotPutOnGpu)
+
+        if ncutmodes:
+            if recmat is not None:
+                recmat.reduce_size(ncutmodes)
+            else:
+                print('recmat cannot be reduced because it is null.')
+
+    if projmat_tag and not noProj:
+        projmat = self._cm.read_rec(projmat_tag, doNotPutOnGpu=doNotPutOnGpu)
+
+    if recmat is None:
+        if projmat and recmat.proj_list and not noProj:
+            if dmNumber is not None:
+                if dmNumber <= 0:
+                    raise ValueError('dmNumber must be > 0')
+                projmat = RecMat()
+                projmat.recmat = recmat.proj_list[dmNumber - 1]
+            else:
+                raise ValueError('dmNumber (>0) must be defined if projmat_tag is not defined!')
+
+    if filtmat_tag:
+        filtmat = self._cm.read_data(filtmat_tag)
+        recmat_orig = recmat.recmat
+        recmat_new = np.matmul(recmat_orig, filtmat)
+        recmat.recmat = recmat_new
+        print('recmat updated with filmat!')
+        stop
+
+    modalrec = ModalRec(recmat, intmat=intmat, projmat=projmat, polc=polc)
+    self.apply_global_params(modalrec)
+    modalrec.apply_properties(params)
+    return modalrec
+
+def get_modalrec_nn(self, params):
+    """
+    Create a modalrec_nn processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    ModalRecNN: modalrec_nn object
+    """
+    params = self.ensure_dictionary(params)
+
+    WeightsBiases_tag = params.pop('WeightsBiases_tag')
+    noBias = self.extract(params, 'noBias', default=False)
+    nnFunc = self.extract(params, 'nnFunc', default='lin')
+    WeightsBiases_list = self._cm.read_data_ext(WeightsBiases_tag)
+    nEle = WeightsBiases_list.count() if noBias else WeightsBiases_list.count() // 2
+
+    layerWeights = []
+    layerBiases = [] if not noBias else None
+    for i in range(nEle):
+        if noBias:
+            layerWeights.append(WeightsBiases_list[i])
+        else:
+            layerWeights.append(WeightsBiases_list[2 * i])
+            layerBiases.append(WeightsBiases_list[2 * i + 1])
+
+    modalrec_nn = ModalRecNN(layerWeights, layerBiases, nnFunc, verbose=verbose)
+    self.apply_global_params(modalrec_nn)
+    modalrec_nn.apply_properties(params)
+    return modalrec_nn
+
+def get_modalrec_nn_multi(self, params):
+    """
+    Create a modalrec_nn_multi processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    ModalRecNNMulti: modalrec_nn_multi object
+    """
+    params = self.ensure_dictionary(params)
+
+    n = 1
+    while params.get(f'WeightsBiases{n}_tag'):
+        n += 1
+    n -= 1
+
+    layerWeights_list = []
+    layerBiases_list = []
+    nnFunc_list = []
+
+    for j in range(n):
+        str_j = str(j + 1)
+        WeightsBiases_tag = params.pop(f'WeightsBiases{str_j}_tag')
+        noBias = self.extract(params, f'noBias{str_j}', default=False)
+        nnFunc = self.extract(params, f'nnFunc{str_j}', default='lin')
+        WeightsBiases_list = self._cm.read_data_ext(WeightsBiases_tag)
+        nEle = WeightsBiases_list.count() if noBias else WeightsBiases_list.count() // 2
+
+        layerWeights = []
+        layerBiases = [] if not noBias else None
+        for i in range(nEle):
+            if noBias:
+                layerWeights.append(WeightsBiases_list[i])
+            else:
+                layerWeights.append(WeightsBiases_list[2 * i])
+                layerBiases.append(WeightsBiases_list[2 * i + 1])
+
+        layerWeights_list.append(layerWeights)
+        layerBiases_list.append(layerBiases)
+        nnFunc_list.append(nnFunc)
+
+    modalrec_nn_multi = ModalRecNNMulti(layerWeights_list, layerBiases_list, nnFunc_list, verbose=verbose)
+    self.apply_global_params(modalrec_nn_multi)
+    modalrec_nn_multi.apply_properties(params)
+    return modalrec_nn_multi
+
+def get_modalrec_nn_python(self, params):
+    """
+    Create a modalrec_nn_python processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    ModalRecNNPython: modalrec_nn_python object
+    """
+    params = self.ensure_dictionary(params)
+    params.pop('nn_python')
+
+    modalrec_nn_python = ModalRecNNPython(verbose=verbose)
+    self.apply_global_params(modalrec_nn_python)
+    modalrec_nn_python.apply_properties(params)
+    return modalrec_nn_python
+
+def get_modalrec_cured(self, params):
+    """
+    Create a modalrec_cured processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    ModalRecCured: modalrec_cured object
+    """
+    params = self.ensure_dictionary(params)
+
+    mPCuReD_tag = params.pop('mPCuReD_tag')
+    ifunc_tag = params.pop('ifunc_tag')
+    wfsLambda = params.pop('wfsLambda')
+    I_fried_tag = self.extract(params, 'I_fried_tag', default=None)
+    pupdata_tag = self.extract(params, 'pupdata_tag', default=None)
+    myGain = self.extract(params, 'myGain', default=None)
+    verbose = self.extract(params, 'verbose', default=None)
+
+    mPCuReD = self._cm.read_data(mPCuReD_tag)
+
+    if I_fried_tag is None:
+        pupdata = self._cm.read_pupils(pupdata_tag)
+
+        # Compute IFried from pupdata
+        pup2Dfull = np.zeros(pupdata.framesize, dtype=float)
+        pup2Dfull[pupdata.ind_pup[0, :]] = 1
+        idx1 = np.where(np.sum(pup2Dfull, axis=1) > 0)
+        idx2 = np.where(np.sum(pup2Dfull, axis=0) > 0)
+
+        pup2D = pup2Dfull[idx2[0][0]:idx2[0][-1] + 1, idx1[0][0]:idx1[0][-1] + 1]
+        sPup2D = pup2D.shape
+
+        I_fried = np.zeros((sPup2D[0] + 1, sPup2D[1] + 1), dtype=float)
+        I_fried[:-1, :-1] += pup2D
+        I_fried[1:, :-1] += pup2D
+        I_fried[:-1, 1:] += pup2D
+        I_fried[1:, 1:] += pup2D
+
+        I_fried = np.transpose(I_fried > 0)
+    else:
+        I_fried = self._cm.read_data(I_fried_tag)
+
+    ifunc_obj = self.ifunc_restore(tag=ifunc_tag)
+    ifunc = ifunc_obj.influence_function
+    ifunc_mask = ifunc_obj.mask_inf_func
+
+    diameter = self._main.pixel_pitch * self._main.pixel_pupil
+
+    modalrec_cured = ModalRecCured(I_fried, mPCuReD, ifunc, ifunc_mask,
+                                   wfsLambda, diameter, myGain, verbose=verbose)
+    self.apply_global_params(modalrec_cured)
+    modalrec_cured.apply_properties(params)
+    return modalrec_cured
+
+def get_modalrec_display(self, modalrec, window=None):
+    """
+    Create a modalrec_display processing object.
+
+    Parameters:
+    modalrec (objref): `modalrec` object to display
+    window (int, optional): Window number to use, will be incremented in output
+
+    Returns:
+    ModalRecDisplay: modalrec_display object
+    """
+    disp = ModalRecDisplay(modalrec=modalrec)
+    if window is not None:
+        disp.window = window
+        window += 1
+    self.apply_global_params(disp)
+    return disp
+
+def get_modes_display(self, modes, window=None):
+    """
+    Create a modes_display processing object.
+
+    Parameters:
+    modes (objref): A `base_value` object with the mode vector
+    window (int, optional): Window number to use, will be incremented in output
+
+    Returns:
+    ModesDisplay: modes_display object
+    """
+    disp = ModesDisplay(modes=modes)
+    if window is not None:
+        disp.window = window
+        window += 1
+    self.apply_global_params(disp)
+    return disp
+
+def get_removes_highfreq(self, pupil, mod_params, dm_params, phase2modes=None, ifunc=None):
+    """
+    Gets a processing container which removes high spatial frequency
+
+    Parameters:
+    pupil (objref): The pupil object
+    mod_params (dict): Dictionary of modal parameters
+    dm_params (dict): Dictionary of deformable mirror parameters
+    phase2modes (objref, optional): Phase to modes object
+    ifunc (objref, optional): Influence function object
+
+    Returns:
+    ProcessingContainer: A processing container
+    """
+    container = ProcessingContainer()
+
+    gain = self.extract(mod_params, 'gain', default=None)
+
+    modal_analysis = self.get_modalanalysis(mod_params, phase2modes=phase2modes)
+    dm = self.get_dm(dm_params, ifunc=ifunc)
+    dm.sign = 1
+
+    modal_analysis.in_ef = pupil
+    if gain is not None:
+        mult = BaseOperation(constant_mult=gain)
+        mult.in_value1 = modal_analysis.out_modes
+        dm.in_command = mult.out_value
+    else:
+        dm.in_command = modal_analysis.out_modes
+    
+    dm.out_layer.S0 = pupil.S0
+
+    container.add(modal_analysis, name='modalAnalysis')
+    if gain is not None:
+        container.add(mult, name='mult')
+    container.add(dm, name='dm', output='out_layer')
+
+    return container
+
+def get_sh(self, params, GPU=None):
+    """
+    Builds a `sh` or `sh_gpu` processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    GPU (bool, optional): Use GPU if available
+
+    Returns:
+    Sh or ShGpu: A new `sh` or `sh_gpu` processing object
+    """
+    useGPU = GPU if GPU is not None else self._gpu
+    params = self.ensure_dictionary(params)
+
+    convolGaussSpotSize = self.extract(params, 'convolGaussSpotSize', default=None)
+    useGPUfromParams = self.extract(params, 'useGPU', default=None)
+    if useGPUfromParams is not None:
+        useGPU = useGPUfromParams
+
+    if 'xyshift' in params:
+        sh = self.get_sh_shift(params, GPU=GPU)
+        return sh
+    if 'xytilt' in params:
+        sh = self.get_sh_tilt(params, GPU=GPU)
+        return sh
+
+    wavelengthInNm = params.pop('wavelengthInNm')
+    sensor_fov = params.pop('sensor_fov')
+    sensor_pxscale = params.pop('sensor_pxscale')
+    sensor_npx = params.pop('sensor_npx')
+    n_subap_on_diameter = params.pop('subap_on_diameter')
+    FoVres30mas = self.extract(params, 'FoVres30mas', default=None)
+    gkern = self.extract(params, 'gauss_kern', default=None)
+
+    subapdata_tag = self.extract(params, 'subapdata_tag', default=None)
+    energy_th = params.pop('energy_th')
+
+    lenslet = Lenslet(n_subap_on_diameter)
+
+    if useGPU:
+        sh = ShGpu(wavelengthInNm, lenslet, sensor_fov, sensor_pxscale, sensor_npx, FoVres30mas=FoVres30mas)
+    else:
+        sh = Sh(wavelengthInNm, lenslet, sensor_fov, sensor_pxscale, sensor_npx, FoVres30mas=FoVres30mas, gkern=gkern)
+
+    self.apply_global_params(sh)
+
+    xShiftPhInPixel = self.extract(params, 'xShiftPhInPixel', default=None)
+    yShiftPhInPixel = self.extract(params, 'yShiftPhInPixel', default=None)
+    aXShiftPhInPixel = self.extract(params, 'aXShiftPhInPixel', default=None)
+    aYShiftPhInPixel = self.extract(params, 'aYShiftPhInPixel', default=None)
+    rotAnglePhInDeg = self.extract(params, 'rotAnglePhInDeg', default=None)
+    aRotAnglePhInDeg = self.extract(params, 'aRotAnglePhInDeg', default=None)
+
+    if xShiftPhInPixel is not None:
+        sh.xShiftPhInPixel = xShiftPhInPixel
+    if yShiftPhInPixel is not None:
+        sh.yShiftPhInPixel = yShiftPhInPixel
+    if aXShiftPhInPixel is not None:
+        sh.aXShiftPhInPixel = aXShiftPhInPixel
+    if aYShiftPhInPixel is not None:
+        sh.aYShiftPhInPixel = aYShiftPhInPixel
+    if rotAnglePhInDeg is not None:
+        sh.rotAnglePhInDeg = rotAnglePhInDeg
+    if aRotAnglePhInDeg is not None:
+        sh.aRotAnglePhInDeg = aRotAnglePhInDeg
+
+    sh.apply_properties(params)
+
+    if convolGaussSpotSize is not None:
+        kernelobj = KernelGauss()
+        kernelobj.spotsize = convolGaussSpotSize
+        kernelobj.lenslet = sh.lenslet
+        kernelobj.cm = self._cm
+        sh.kernelobj = kernelobj
+
+    return sh
+
+def get_sh_shift(self, params, GPU=None):
+    """
+    Builds a `sh_shift` processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    GPU (bool, optional): Use GPU if available
+
+    Returns:
+    ShShift: A new `sh_shift` processing object
+    """
+    GPU = GPU if GPU is not None else self._gpu
+    params = self.ensure_dictionary(params)
+
+    shiftWavelengthInNm = params.pop('shiftWavelengthInNm')
+    xyshift = params.pop('xyshift')
+    qe_factor = params.pop('qe_factor_shift')
+    resize_fact = params.pop('resize_fact')
+
+    sh_shift = ShShift(params, self._main, shiftWavelengthInNm, xyshift, qe_factor, resize_fact, GPU=self._GPU)
+    return sh_shift
+
+def get_sh_tilt(self, params, GPU=None):
+    """
+    Builds a `sh_tilt` processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    GPU (bool, optional): Use GPU if available
+
+    Returns:
+    ShTilt: A new `sh_tilt` processing object
+    """
+    GPU = GPU if GPU is not None else self._gpu
+    params = self.ensure_dictionary(params)
+    params_tilt = {}
+
+    if 'dm_type' in params:
+        params_tilt['dm_type'] = params.pop('dm_type')
+        params_tilt['dm_npixels'] = params.pop('dm_npixels')
+        params_tilt['dm_obsratio'] = params.pop('dm_obsratio')
+        params_tilt['precision'] = self.extract(params, 'precision', default=None)
+
+    if 'ifunc_tag' in params:
+        params_tilt['influence_function'] = params.pop('ifunc_tag')
+    params_tilt['func_type'] = params.pop('func_type')
+    params_tilt['nmodes'] = self.extract(params, 'nmodes', default=2)
+    params_tilt['height'] = self.extract(params, 'height', default=0)
+
+    tiltWavelengthInNm = params.pop('tiltWavelengthInNm')
+    xyTilt = params.pop('xyTilt')
+    qe_factor = params.pop('qe_factor_tilt')
+
+    sh_tilt = ShTilt(params, params_tilt, self._main, tiltWavelengthInNm, xyTilt, qe_factor, GPU=self._GPU)
+    return sh_tilt
+
+def get_modulated_pyramid(self, params, GPU=None):
+    """
+    Builds a `modulated_pyramid` or `modulated_pyramid_gpu` processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    GPU (bool, optional): Use GPU if available
+
+    Returns:
+    ModulatedPyramid or ModulatedPyramidGpu: A new `modulated_pyramid` or `modulated_pyramid_gpu` processing object
+    """
+    if 'xyTilt' in params:
+        pyr = self.get_pyr_tilt(params, GPU=GPU)
+        return pyr
+
+    useGPU = GPU if GPU is not None else self._gpu
+    params = self.ensure_dictionary(params)
+
+    DpupPix = self._main.pixel_pupil
+    pixel_pitch = self._main.pixel_pitch
+    wavelengthInNm = params.pop('wavelengthInNm')
+    FoV = params.pop('FoV')
+    pup_diam = params.pop('pup_diam')
+    ccd_side = params.pop('output_resolution')
+    fov_errinf = self.extract(params, 'fov_errinf', default=None)
+    fov_errsup = self.extract(params, 'fov_errsup', default=None)
+    pup_dist = self.extract(params, 'pup_dist', default=None)
+    pup_margin = self.extract(params, 'pup_margin', default=None)
+    fft_res = self.extract(params, 'fft_res', default=3.0)
+    fp_obs = self.extract(params, 'fp_obs', default=None)
+    pyr_tlt_coeff = self.extract(params, 'pyr_tlt_coeff', default=None)
+    pyrEdgeDefLd = self.extract(params, 'pyrEdgeDefLd', default=None)
+    pyrTipDefLd = self.extract(params, 'pyrTipDefLd', default=None)
+    pyrTipMayaLd = self.extract(params, 'pyrTipMayaLd', default=None)
+    min_pup_dist = self.extract(params, 'min_pup_dist', default=None)
+
+    result = ModulatedPyramid.calc_geometry(DpupPix, pixel_pitch, wavelengthInNm, FoV, pup_diam, ccd_side,
+                                            fov_errinf=fov_errinf, fov_errsup=fov_errsup, pup_dist=pup_dist, pup_margin=pup_margin,
+                                            fft_res=fft_res, min_pup_dist=min_pup_dist, notest=True)
+
+    wavelengthInNm = result['wavelengthInNm']
+    fov_res = result['fov_res']
+    fp_masking = result['fp_masking']
+    fft_res = result['fft_res']
+    tilt_scale = result['tilt_scale']
+    fft_sampling = result['fft_sampling']
+    fft_padding = result['fft_padding']
+    fft_totsize = result['fft_totsize']
+    toccd_side = result['toccd_side']
+    final_ccd_side = result['final_ccd_side']
+
+    if useGPU:
+        pyr = ModulatedPyramidGpu(wavelengthInNm, fov_res, fp_masking, fft_res, tilt_scale,
+                                  fft_sampling, fft_padding, fft_totsize, toccd_side, final_ccd_side,
+                                  fp_obs=fp_obs, pyr_tlt_coeff=pyr_tlt_coeff,
+                                  pyrEdgeDefLd=pyrEdgeDefLd, pyrTipDefLd=pyrTipDefLd,
+                                  pyrTipMayaLd=pyrTipMayaLd)
+    else:
+        pyr = ModulatedPyramid(wavelengthInNm, fov_res, fp_masking, fft_res, tilt_scale,
+                               fft_sampling, fft_padding, fft_totsize, toccd_side, final_ccd_side,
+                               fp_obs=fp_obs, pyr_tlt_coeff=pyr_tlt_coeff,
+                               pyrEdgeDefLd=pyrEdgeDefLd, pyrTipDefLd=pyrTipDefLd,
+                               pyrTipMayaLd=pyrTipMayaLd)
+
+    pup_shifts_std = self.extract(params, 'pup_shifts_std', default=[0, 0])
+    pup_shifts_seed = self.extract(params, 'pup_shifts_seed', default=None)
+    pup_shifts_cons = self.extract(params, 'pup_shifts_cons', default=None)
+    pup_shifts = self.extract(params, 'pup_shifts', default=None)
+
+    if pup_shifts_std and any(pup_shifts_std):
+        pyr.pup_shifts = FuncGenerator('RANDOM', amp=pup_shifts_std, constant=pup_shifts_cons, seed=pup_shifts_seed)
+    elif pup_shifts and any(pup_shifts):
+        pyr.pup_shifts = FuncGenerator('RANDOM', amp=[0., 0.], constant=pup_shifts)
+
+    mod_amp = self.extract(params, 'mod_amp', default=None)
+    mod_step_original = self.extract(params, 'mod_step', default=None)
+    if mod_step_original:
+        mod_step = mod_step_original
+    else:
+        mod_step = round(max([1., mod_amp / 2. * 8.])) * 2.
+
+    if mod_step_original and mod_step_original < mod_step:
+        print(f' Attention mod_step={mod_step_original} is too low!')
+        print(f' Would you like to change it to {mod_step}? [y,n]')
+        ans = input()
+        if ans.lower() == 'y':
+            print(' mod_step changed.')
+        else:
+            mod_step = mod_step_original
+
+    pyr.mod_amp = mod_amp
+    pyr.mod_step = mod_step
+
+    self.apply_global_params(pyr)
+    pyr.apply_properties(params)
+
+    return pyr
+
+def get_pyr_tilt(self, params, GPU=None):
+    """
+    Builds a `pyr_tilt` processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    GPU (bool, optional): Use GPU if available
+
+    Returns:
+    PyrTilt: A new `pyr_tilt` processing object
+    """
+    GPU = GPU if GPU is not None else self._gpu
+    params = self.ensure_dictionary(params)
+    params_tilt = {}
+
+    if 'dm_type' in params:
+        params_tilt['dm_type'] = params.pop('dm_type')
+        params_tilt['dm_npixels'] = params.pop('dm_npixels')
+        params_tilt['dm_obsratio'] = params.pop('dm_obsratio')
+        params_tilt['precision'] = self.extract(params, 'precision', default=None)
+
+    if 'ifunc_tag' in params:
+        params_tilt['influence_function'] = params.pop('ifunc_tag')
+    params_tilt['func_type'] = params.pop('func_type')
+    params_tilt['nmodes'] = params.pop('nmodes')
+    params_tilt['height'] = params.pop('height')
+
+    tiltWavelengthInNm = params.pop('tiltWavelengthInNm')
+    xyTilt = params.pop('xyTilt')
+    qe_factor = params.pop('qe_factor_tilt')
+    pup_shifts = self.extract(params, 'pup_shifts', default=None)
+    delta_pup_dist = self.extract(params, 'delta_pup_dist', default=[0] * len(qe_factor))
+    pyr_tlt_coeff = self.extract(params, 'pyr_tlt_coeff', default=None)
+
+    pyr = PyrTilt(params, params_tilt, self._main, tiltWavelengthInNm,
+                  xyTilt, qe_factor, delta_pup_dist=delta_pup_dist,
+                  pup_shifts=pup_shifts, pyr_tlt_coeff=pyr_tlt_coeff, GPU=GPU)
+    return pyr
+
+def get_optgaincontrol(self, params):
+    """
+    Builds a `optgaincontrol` processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    OptGainControl: A new `optgaincontrol` processing object
+    """
+    params = self.ensure_dictionary(params)
+    gain = params.pop('gain')
+    optgaincontrol = OptGainControl(gain)
+    optgaincontrol.apply_properties(params)
+    return optgaincontrol
+
+def get_phase_display(self, phase, window=None):
+    """
+    Builds a `phase_display` processing object.
+
+    Parameters:
+    phase (objref): The `phase` object to display
+    window (int, optional): Window number to use, will be incremented in output
+
+    Returns:
+    PhaseDisplay: A new `phase_display` processing object
+    """
+    disp = PhaseDisplay(phase=phase)
+    if window is not None:
+        disp.window = window
+        window += 1
+    self.apply_global_params(disp)
+    return disp
+
+def get_sh_display(self, sh, pyr_style=None, window=None):
+    """
+    Builds a `sh_display` processing object.
+
+    Parameters:
+    sh (objref): The `sh` object to display
+    pyr_style (optional): Pyramid style
+    window (int, optional): Window number to use, will be incremented in output
+
+    Returns:
+    ShDisplay: A new `sh_display` processing object
+    """
+    disp = ShDisplay(sh=sh, pyr_style=pyr_style)
+    if window is not None:
+        disp.window = window
+        window += 1
+    self.apply_global_params(disp)
+    return disp
+
+def get_plot_display(self, value, window=None):
+    """
+    Builds a `plot_display` processing object.
+
+    Parameters:
+    value (objref): Object of type `base_value` to display
+    window (int, optional): Window number to use, will be incremented in output
+
+    Returns:
+    PlotDisplay: A new `plot_display` processing object
+    """
+    disp = PlotDisplay(value=value)
+    if window is not None:
+        disp.window = window
+        window += 1
+    self.apply_global_params(disp)
+    return disp
+
+def get_psf(self, params, GPU=None):
+    """
+    Builds a `psf` processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    GPU (bool, optional): Use GPU if available
+
+    Returns:
+    Psf or PsfGpu: A new `psf` processing object
+    """
+    useGPU = GPU if GPU is not None else self._gpu
+    params = self.ensure_dictionary(params)
+
+    wavelengthInNm = params.pop('wavelengthInNm')
+    nd = self.extract(params, 'nd', default=None)
+
+    if useGPU:
+        psf = PsfGpu(wavelengthInNm, nd=nd)
+    else:
+        psf = Psf(wavelengthInNm, nd=nd)
+    
+    self.apply_global_params(psf)
+    psf.apply_properties(params)
+    return psf
+
+def get_psf_display(self, psf, window=None):
+    """
+    Builds a `psf_display` processing object.
+
+    Parameters:
+    psf (objref): The `psf` object to display
+    window (int, optional): Window number to use, will be incremented in output
+
+    Returns:
+    PsfDisplay: A new `psf_display` processing object
+    """
+    disp = PsfDisplay(psf=psf)
+    if window is not None:
+        disp.window = window
+        window += 1
+    self.apply_global_params(disp)
+    return disp
+
+def get_pupilstop(self, params, GPU=None):
+    """
+    Builds a `pupilstop` processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    GPU (bool, optional): Use GPU if available
+
+    Returns:
+    PupilStop: A new `pupilstop` processing object
+    """
+    useGPU = GPU if GPU is not None else self._gpu
+    params = self.ensure_dictionary(params)
+
+    mask_diam = self.extract(params, 'mask_diam', default=1.)
+    obs_diam = self.extract(params, 'obs_diam', default=None)
+    pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='')
+
+    shiftXYinPixel = self.extract(params, 'shiftXYinPixel', default=None)
+    rotInDeg = self.extract(params, 'rotInDeg', default=None)
+    magnification = self.extract(params, 'magnification', default=None)
+
+    if pupil_mask_tag:
+        pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=useGPU)
+        if pupilstop is None:
+            raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
+    else:
+        dim = self._main.pixel_pupil
+        pixel_pitch = self._main.pixel_pitch
+        pupilstop = PupilStop(dim, dim, pixel_pitch, 0, GPU=useGPU, mask_diam=mask_diam, obs_diam=obs_diam)
+
+    if shiftXYinPixel is not None:
+        pupilstop.shiftXYinPixel = shiftXYinPixel
+    if rotInDeg is not None:
+        pupilstop.rotInDeg = rotInDeg
+    if magnification is not None:
+        pupilstop.magnification = magnification
+
+    return pupilstop
+
+def get_pyr_slopec(self, params):
+    """
+    Builds a `pyr_slopec` processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    PyrSlopec: A new `pyr_slopec` processing object
+    """
+    params = self.ensure_dictionary(params)
+    computation_time = self.extract(params, 'computation_time', default=None)
+    use_optg_sn = self.extract(params, 'use_optg_sn', default=None)
+
+    shlike = self.extract(params, 'shlike', default=None)
+    slopes_from_intensity = self.extract(params, 'slopes_from_intensity', default=None)
+    norm_factor = self.extract(params, 'norm_factor', default=None)
+    thr1 = self.extract(params, 'thr1', default=None)
+    thr2 = self.extract(params, 'thr2', default=None)
+    subap_norm = self.extract(params, 'subap_norm', default=None)    # old keyword to be removed!
+    filtmat_tag = self.extract(params, 'filtmat_tag', default='')
+
+    sc = PyrSlopec(shlike=shlike, norm_factor=norm_factor, slopes_from_intensity=slopes_from_intensity)
+
+    if filtmat_tag:
+        filtmat = self._cm.read_data(filtmat_tag)
+        sc.filtmat = filtmat
+
+    sc.setproperty(cm=self._cm)
+    self.apply_global_params(sc)
+    sc.apply_properties(params)
+
+    return sc
+
+def get_sh_slopec(self, params, GPU=None, recmat=None, device=None, mode_basis=None, pup_mask=None):
+    """
+    Builds a `sh_slopec` or `sh_slopec_gpu` processing object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+    GPU (bool, optional): Use GPU if available
+    recmat (objref, optional): Reconstruction matrix
+    device (optional): Device to use for GPU
+    mode_basis (objref, optional): Mode basis
+    pup_mask (objref, optional): Pupil mask
+
+    Returns:
+    ShSlopec or ShSlopecGpu: A new `sh_slopec` or `sh_slopec_gpu` processing object
+    """
+    params = self.ensure_dictionary(params)
+    lifted_sh = self.extract(params, 'lifted_sh', default=False)
+    
+    if lifted_sh:
+        sc = self.get_lift_sh_slopec(params, mode_basis=mode_basis, pup_mask=pup_mask, GPU=GPU)
+        return sc
+
+    computation_time = self.extract(params, 'computation_time', default=None)
+    template_tag = self.extract(params, 'template_tag', default=None)
+    intmat_tag = self.extract(params, 'intmat_tag', default='')
+    recmat_tag = self.extract(params, 'recmat_tag', default='')
+    filtmat_tag = self.extract(params, 'filtmat_tag', default='')
+    matched_tag = self.extract(params, 'matched_tag', default='')
+
+    filtName = self.extract(params, 'filtName', default='')
+
+    if matched_tag:
+        sc = ShMatchedSlopec()
+        sc.matched_filter = self._cm.read_data(matched_tag)
+    else:
+        useGPU = GPU if GPU is not None else False
+        if useGPU:
+            sc = ShSlopecGpu(device=device)
+        else:
+            sc = ShSlopec()
+
+    if intmat_tag:
+        intmat = self._cm.read_data(intmat_tag)
+        sc.intmat = intmat
+
+    if recmat is None and recmat_tag:
+        recmat = self._cm.read_rec(recmat_tag, doNotPutOnGpu=doNotPutOnGpu)
+        sc.recmat = recmat
+
+    if filtmat_tag:
+        filtmat = self._cm.read_data(filtmat_tag)
+        sc.filtmat = filtmat
+
+    sc.setproperty(cm=self._cm)
+    self.apply_global_params(sc)
+    if 'windowing' in params:
+        print('ATTENTION: SH SLOPEC windowing keyword is set!')
+    sc.apply_properties(params)
+
+    if template_tag:
+        sc.corr_template = self._cm.read_data(template_tag)
+
+    return sc
+
+def get_slopec_display(self, slopec, window=None):
+    """
+    Builds a `slopec_display` processing object.
+    Can display both Pyramid and SH slope computers.
+
+    Parameters:
+    slopec (objref): The `slopec` object to display
+    window (int, optional): Window number to use, will be incremented in output
+
+    Returns:
+    SlopecDisplay: A new `slopec_display` processing object
+    """
+    sc_disp = SlopecDisplay(slopec=slopec)
+    if window is not None:
+        sc_disp.window = window
+        window += 1
+    self.apply_global_params(sc_disp)
+    return sc_disp
+
+def get_source_field(self, params):
+    """
+    Builds a list of `source` objects arranged on a regular grid.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    list: A list of `source` objects.
+    """
+    params = self.ensure_dictionary(params)
+
+    field_width = params.pop('field_width')
+    sources_per_side = params.pop('sources_per_side')
+    field_center = params.pop('field_center')
+
+    height = self.extract(params, 'height', default=float('inf'))
+    if hasattr(self._main, 'zenithAngleInDeg'):
+        airmass = 1. / cos(self._main.zenithAngleInDeg / 180. * pi)
+    else:
+        airmass = 1.
+    height *= airmass
+    if 'verbose' in params and params['verbose']:
+        if airmass != 1.:
+            print(f'get_source_field: changing source height by airmass value ({airmass})')
+
+    magnitude = params.pop('magnitude')
+    wavelengthInNm = self.extract(params, 'wavelengthInNm', default=750)
+
+    x, y = make_xy(sources_per_side, field_width)
+    x += field_center[0]
+    y += field_center[1]
+
+    source_list = []
+    phi = np.degrees(np.arctan2(y, x))
+    r = np.sqrt(x**2 + y**2)
+
+    for i in range(len(x)):
+        p = {
+            'polar_coordinate': [r[i], phi[i]],
+            'height': height,
+            'magnitude': magnitude,
+            'wavelengthInNm': wavelengthInNm
+        }
+        source_list.append(self.get_source(p))
+
+    return source_list
+
+def get_source(self, params):
+    """
+    Builds a `source` object.
+
+    Parameters:
+    params (dict): Dictionary of parameters
+
+    Returns:
+    Source: A `source` object.
+    """
+    params = self.ensure_dictionary(params)
+
+    polar_coordinate = params.pop('polar_coordinate')
+    height = self.extract(params, 'height', default=float('inf'))
+    error_coord = self.extract(params, 'error_coord', default=[0., 0.])
+
+    polar_coordinate = np.add(polar_coordinate, error_coord)
+
+    if any(error_coord):
+        print(f'there is a desired error ({error_coord[0]},{error_coord[1]}) on source coordinates.')
+        print(f'final coordinates are: {polar_coordinate[0]},{polar_coordinate[1]}')
+
+    if hasattr(self._main, 'zenithAngleInDeg'):
+        airmass = 1. / cos(self._main.zenithAngleInDeg / 180. * pi)
+    else:
+        airmass = 1.
+    height *= airmass
+    if 'verbose' in params and params['verbose']:
+        if airmass != 1.:
+            print(f'get_source: changing source height by airmass value ({airmass})')
+
+    magnitude = params.pop('magnitude')
+    wavelengthInNm = params.pop('wavelengthInNm')
+    optSource = self.extract(params, 'optSource', default=None)
+
+    band = self.extract(params, 'band', default='')
+    zeroPoint = self.extract(params, 'zeroPoint', default=0)
+
+    source = Source(polar_coordinate, height, magnitude, wavelengthInNm,
+                    band=band, zeroPoint=zeroPoint)
+    self.apply_global_params(source)
+    source.apply_properties(params)
+    return source
+
+def get_cm(self):
+    """
+    Returns the calibration manager
+
+    Returns:
+    CalibrationManager: The calibration manager
+    """
+    return self._cm
+
+def gpu(self):
+    """
+    Returns the GPU acceleration flag.
+    If this flag is non-zero, GPU versions will be automatically returned
+    for objects of type `sh`, `modulated_pyramid` and `sh_slopec`.
+
+    Returns:
+    bool: GPU acceleration flag
+    """
+    return self._gpu
+
+def revision_track(self):
+    """
+    Returns the revision of the SVN
+
+    Returns:
+    str: SVN revision
+    """
+    return '$Rev$'
