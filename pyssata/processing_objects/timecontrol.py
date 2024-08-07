@@ -1,5 +1,71 @@
 import numpy as np
 
+def compute_comm(filter_obj, input, ist=None, ost=None):
+    nfilter = filter_obj.num.shape[1]
+    ninput = len(input)
+
+    if nfilter < ninput:
+        raise ValueError(f"Error: IIR filter needs no more than {nfilter} coefficients ({ninput} given)")
+
+    ordnum = np.sort(filter_obj.ordnum)
+    ordden = np.sort(filter_obj.ordden)
+    idx_onu = np.unique(ordnum, return_index=True)[1]
+    idx_odu = np.unique(ordden, return_index=True)[1]
+    onu = ordden[idx_onu]
+    odu = ordden[idx_odu]
+    output = np.zeros_like(input)
+
+    if len(onu) == 1 and len(odu) == 1:
+        idx_finite = np.isfinite(input)
+        temp_ist = ist[idx_finite, :]
+        temp_ost = ost[idx_finite, :]
+        output[idx_finite] = online_filter(filter_obj.num[idx_finite, :onu[0]],
+                                           filter_obj.den[idx_finite, :odu[0]], 
+                                           input[idx_finite], ost=temp_ost, ist=temp_ist)
+        ost[idx_finite, :] = temp_ost
+        ist[idx_finite, :] = temp_ist
+    else:
+        for j in idx_onu:
+            for k in idx_odu:
+                idx = np.where((filter_obj.ordnum == onu[j]) & (filter_obj.ordden == odu[k]))[0]
+                if len(idx) > 0:
+                    ord_num = onu[j]
+                    ord_den = odu[k]
+                    idx_finite = np.isfinite(input[idx])
+                    if np.any(idx_finite):
+                        idx = idx[idx_finite]
+                        temp_ist = ist[idx, :ord_num]
+                        temp_ost = ost[idx, :ord_den]
+                        output[idx] = online_filter(filter_obj.num[idx, :ord_num], 
+                                                    filter_obj.den[idx, :ord_den], 
+                                                    input[idx], ost=temp_ost, ist=temp_ist)
+                        ost[idx, :ord_den] = temp_ost
+                        ist[idx, :ord_num] = temp_ist
+
+    return output
+
+def online_filter(num, den, input, ost=None, ist=None):
+    # This function should implement the actual online filtering.
+    # The implementation will depend on how the filtering needs to be done.
+    # This is a placeholder implementation.
+    if ost is None:
+        ost = np.zeros_like(num)
+    if ist is None:
+        ist = np.zeros_like(den)
+    
+    # Example implementation of online filtering (not actual)
+    # Compute the new output
+    output = np.dot(num, input) - np.dot(den[1:], ost)
+    
+    # Update the states
+    ost = np.roll(ost, -1)
+    ost[-1] = output
+    ist = np.roll(ist, -1)
+    ist[-1] = input
+    
+    return output
+
+
 class TimeControl:
     def __init__(self, delay=0, n=None, type=None, total_length=None):
         self._delay = delay if delay is not None else 0
