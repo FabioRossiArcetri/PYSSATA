@@ -1,12 +1,12 @@
 import numpy as np
 
 from pyssata.base_processing_obj import BaseProcessingObj
-
+from pyssata.lib.make_xy import make_xy
 
 class ModulatedPyramid(BaseProcessingObj):
     def __init__(self, wavelength_in_nm, fov_res, fp_masking, fft_res, tilt_scale, fft_sampling, 
                  fft_padding, fft_totsize, toccd_side, final_ccd_side, fp_obs=None, pyr_tlt_coeff=None, 
-                 pyr_edge_def_ld=None, pyr_tip_def_ld=None, pyr_tip_maya_ld=None):
+                 pyr_edge_def_ld=0.0, pyr_tip_def_ld=0.0, pyr_tip_maya_ld=0.0):
         
         super().__init__()
 
@@ -15,6 +15,8 @@ class ModulatedPyramid(BaseProcessingObj):
 
         self._wavelength_in_nm = wavelength_in_nm
         self._fov_res = fov_res
+        self._mod_amp = 3
+        self._mod_steps = 16
         self._fp_masking = fp_masking
         self._fp_obsratio = fp_obsratio
         self._fft_res = fft_res
@@ -43,7 +45,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self._tilt_x = self.get_modulation_tilt(fft_sampling, X=True)
         self._tilt_y = self.get_modulation_tilt(fft_sampling, Y=True)
         self._fp_mask = self.get_fp_mask(fft_totsize, fp_masking, obsratio=fp_obsratio)
-
+        self._extended_source_in_on = False
         iu = 1j  # complex unit
         self._myexp = np.exp(-2 * np.pi * iu * self._pyr_tlt)
 
@@ -144,8 +146,9 @@ class ModulatedPyramid(BaseProcessingObj):
             print(f"Error: ccd_side (px) = {ccd_side} is not enough to hold the pupil geometry. Minimum allowed side is {min_ccd_side}")
             return 0
 
+        RAD2ARCSEC = 206265
         D = DpupPix * pixel_pitch
-        Fov_internal = lambda_ * 1e-9 / D * (D / pixel_pitch) * ModulatedPyramid.rad2arcsec
+        Fov_internal = lambda_ * 1e-9 / D * (D / pixel_pitch) * RAD2ARCSEC
 
         minfov = FoV * (1 - fov_errinf)
         maxfov = FoV * (1 + fov_errsup)
@@ -214,9 +217,9 @@ class ModulatedPyramid(BaseProcessingObj):
         self._extSource = source
         self._extended_source_in_on = True
 
-        self._ext_xtilt = self.zern(2, self.make_xy(self._fft_sampling, 1.0))
-        self._ext_ytilt = self.zern(3, self.make_xy(self._fft_sampling, 1.0))
-        self._ext_focus = self.zern(4, self.make_xy(self._fft_sampling, 1.0))
+        self._ext_xtilt = self.zern(2, make_xy(self._fft_sampling, 1.0))
+        self._ext_ytilt = self.zern(3, make_xy(self._fft_sampling, 1.0))
+        self._ext_focus = self.zern(4, make_xy(self._fft_sampling, 1.0))
 
         if source.npoints == 0:
             raise ValueError('ERROR: number of points of extended source is 0!')
@@ -245,8 +248,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self._flux_factor_vector = i
 
     def get_pyr_tlt(self, p, c):
-        A = (p + c) // 2
-
+        A = int((p + c) // 2)
         pyr_tlt = np.zeros((2 * A, 2 * A))
         tlt_basis = np.tile(np.arange(A), (A, 1))
 
@@ -270,7 +272,7 @@ class ModulatedPyramid(BaseProcessingObj):
             pyr_tlt[A:2*A, A:2*A] = 2 * A - 2 - tlt_basis - tlt_basis.T
             pyr_tlt[0:A, A:2*A] = A - 1 + tlt_basis - tlt_basis.T
 
-        xx, yy = self.make_xy(A * 2, A)
+        xx, yy = make_xy(A * 2, A)
 
         # distance from edge
         dx = np.sqrt(xx ** 2)
@@ -298,8 +300,8 @@ class ModulatedPyramid(BaseProcessingObj):
 
     def get_tlt_f(self, p, c):
         iu = 1j  # complex unit
-
-        xx, yy = self.make_xy(2 * p, p, quarter=True, zero_sampled=True)
+        p = int(p)
+        xx, yy = make_xy(2 * p, p, quarter=True, zero_sampled=True)
         tlt_g = xx + yy
 
         tlt_f = np.exp(-2 * np.pi * iu * tlt_g / (2 * (p + c)))
@@ -309,7 +311,8 @@ class ModulatedPyramid(BaseProcessingObj):
         return self.make_mask(totsize, diaratio=mask_ratio, obsratio=obsratio)
 
     def get_modulation_tilt(self, p, X=False, Y=False):
-        xx, yy = self.make_xy(p, p // 2)
+        p = int(p)
+        xx, yy = make_xy(p, p // 2)
         mm = self.minmax(xx)
         tilt_x = xx * np.pi / ((mm[1] - mm[0]) / 2)
         tilt_y = yy * np.pi / ((mm[1] - mm[0]) / 2)
@@ -320,7 +323,8 @@ class ModulatedPyramid(BaseProcessingObj):
             return tilt_y
 
     def calc_extobj_planes(self, p):
-        xx, yy = self.make_xy(p, 1.0)
+        p = int(p)
+        xx, yy = make_xy(p, 1.0)
         self._ext_xtilt = self.zern(2, xx, yy)
         self._ext_ytilt = self.zern(3, xx, yy)
         self._ext_focus = self.zern(4, xx, yy)
@@ -469,11 +473,6 @@ class ModulatedPyramid(BaseProcessingObj):
     def hdr(self, hdr):
         hdr['MODAMP'] = self._mod_amp
         hdr['MODSTEPS'] = self._mod_steps
-
-    @staticmethod
-    def make_xy(size, scale):
-        # Dummy implementation
-        return np.meshgrid(np.linspace(-scale, scale, size), np.linspace(-scale, scale, size))
 
     @staticmethod
     def minmax(array):

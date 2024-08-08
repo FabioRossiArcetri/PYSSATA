@@ -4,9 +4,14 @@ from collections import OrderedDict, defaultdict
 from scipy.io import savemat, loadmat
 import time
 
+from pyssata.base_processing_obj import BaseProcessingObj
+
+
 class Datastore(BaseProcessingObj):
+    '''Data storage object'''
+
     def __init__(self):
-        super().__init__('store', 'Storing object')
+        super().__init__()
         self._items = {}
         self._storage = {}
         self._decimation_t = 0

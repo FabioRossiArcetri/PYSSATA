@@ -3,7 +3,7 @@ from scipy.ndimage import convolve
 from scipy.stats import poisson, gamma, norm
 
 from pyssata.base_processing_obj import BaseProcessingObj
-
+from pyssata.data_objects.pixels import Pixels
 
 class CCD(BaseProcessingObj):
     '''Simple CCD from intensity field'''
