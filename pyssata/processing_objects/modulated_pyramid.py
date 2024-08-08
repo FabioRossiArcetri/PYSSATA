@@ -112,30 +112,103 @@ class ModulatedPyramid(BaseProcessingObj):
     def rot_angle_ph_in_deg(self, value):
         self._rotAnglePhInDeg = value
 
-    def calc_geometry(self):
-        nx = self._n_pix_x
-        ny = self._n_pix_y
+    @staticmethod
+    def calc_geometry(
+        DpupPix,                # number of pixels of input phase array
+        pixel_pitch,            # pixel sampling [m] of DpupPix
+        lambda_,                # working lambda of the sensor [nm]
+        FoV,                    # requested FoV in arcsec
+        pup_diam,               # pupil diameter in subapertures
+        ccd_side,               # requested output ccd side, in pixels
+        fov_errinf=0.1,         # accepted error in reducing FoV, default = 0.1 (-10%)
+        fov_errsup=0.5,         # accepted error in enlarging FoV, default = 0.5 (+50%)
+        pup_dist=None,          # pupil distance in subapertures, optional
+        pup_margin=2,           # zone of respect around pupils for margins, optional, default=2px
+        fft_res=3.0,            # requested minimum PSF sampling, 1.0 = 1 pixel / PSF, default=3.0
+        min_pup_dist=None,
+        NOTEST=False            # skip the time estimation done with a test pyramid
+    ):
+        # Calculate pup_distance if not given, using the pup_margin
+        if pup_dist is None:
+            pup_dist = pup_diam + pup_margin * 2
 
-        if self._verbose:
-            print('pyr eff. pixels = ', nx, ny)
+        if min_pup_dist is None:
+            min_pup_dist = pup_diam + pup_margin * 2
 
-        self._pixels = Pixels(nx, ny)
+        if pup_dist < min_pup_dist:
+            print(f"Error: pup_dist (px) = {pup_dist} is not enough to hold the pupil geometry. Minimum allowed distance is {min_pup_dist}")
+            return 0
 
-        side = self._mod
-        wsize = self._geom['wsize']
+        min_ccd_side = pup_dist + pup_diam + pup_margin * 2
+        if ccd_side < min_ccd_side:
+            print(f"Error: ccd_side (px) = {ccd_side} is not enough to hold the pupil geometry. Minimum allowed side is {min_ccd_side}")
+            return 0
 
-        if self._verbose:
-            print('geom side = ', side)
-            print('geom wsize = ', wsize)
+        D = DpupPix * pixel_pitch
+        Fov_internal = lambda_ * 1e-9 / D * (D / pixel_pitch) * ModulatedPyramid.rad2arcsec
 
-        # Center coordinates
-        self._geom['cx'] = side * (self._cx - 0.5) + side / 2.
-        self._geom['cy'] = wsize - (side * (self._cy - 0.5) + side / 2.)
+        minfov = FoV * (1 - fov_errinf)
+        maxfov = FoV * (1 + fov_errsup)
+        fov_res = 1.0
 
-        # Set the pixel size
-        self._geom['px'] = self._fov / (self._mod * wsize)
+        if Fov_internal < minfov:
+            fov_res = int(minfov / Fov_internal)
+            if Fov_internal * fov_res < minfov:
+                fov_res += 1
 
-        return self._geom
+        if Fov_internal > maxfov:
+            print("Error: Calculated FoV is higher than maximum accepted FoV.")
+            print("Please revise error margin, or the input phase dimension and/or pitch")
+            return 0
+
+        if fov_res > 1:
+            Fov_internal *= fov_res
+            print(f"Interpolated FoV (arcsec): {Fov_internal:.2f}")
+            print(f"Warning: reaching the requested FoV requires {fov_res}x interpolation of input phase array.")
+            print("Consider revising the input phase dimension and/or pitch to improve performance.")
+
+        fp_masking = FoV / Fov_internal
+
+        if Fov_internal != FoV:
+            print(f"FoV reduction from {Fov_internal:.2f} to {FoV:.2f} will be performed with a focal plane mask")
+
+        DpupPixFov = DpupPix * fov_res
+        pitch_internal = pixel_pitch / fov_res
+
+        fft_res_min = (pup_dist + pup_diam) / pup_diam * 1.1
+        if fft_res < fft_res_min:
+            fft_res = fft_res_min
+
+        internal_ccd_side = round(fft_res * pup_diam / 2) * 2
+        fft_res = internal_ccd_side / float(pup_diam)
+
+        totsize = round(DpupPixFov * fft_res / 2) * 2
+        fft_res = totsize / float(DpupPixFov)
+
+        padding = round((DpupPixFov * fft_res - DpupPixFov) / 2) * 2
+
+        factors = np.array([])
+        exponents = np.array([])
+
+        if not NOTEST:
+            # Placeholder for the test pyramid calculations
+            pass
+
+        results = {
+            'fov_res': fov_res,
+            'fp_masking': fp_masking,
+            'fft_res': fft_res,
+            'tilt_scale': fft_res / ((pup_dist / float(pup_diam)) / 2.0),
+            'fft_sampling': DpupPixFov,
+            'fft_padding': padding,
+            'fft_totsize': totsize,
+            'wavelengthInNm': lambda_,
+            'toccd_side': internal_ccd_side,
+            'final_ccd_side': ccd_side
+        }
+
+        return results
+
     
     def set_extended_source(self, source):
         self._extSource = source
