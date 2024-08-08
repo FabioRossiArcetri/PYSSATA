@@ -1,9 +1,10 @@
+import os
 import numpy as np
-import pickle
-from collections import OrderedDict
-from pathlib import Path
+from collections import OrderedDict, defaultdict
+from scipy.io import savemat, loadmat
+import time
 
-class DataStore(BaseProcessingObj):
+class Datastore(BaseProcessingObj):
     def __init__(self):
         super().__init__('store', 'Storing object')
         self._items = {}
@@ -14,7 +15,7 @@ class DataStore(BaseProcessingObj):
 
     def add(self, data_obj, name=None):
         if name is None:
-            name = type(data_obj).__name__
+            name = data_obj.__class__.__name__
         if name in self._items:
             raise ValueError(f'Storing already has an object with name {name}')
         self._items[name] = data_obj
@@ -28,106 +29,85 @@ class DataStore(BaseProcessingObj):
     def save(self, filename, compress=False):
         times = {k: np.array(list(v.keys())) for k, v in self._storage.items() if isinstance(v, OrderedDict)}
         data = self._storage
-        with open(filename, 'wb') as f:
-            pickle.dump({'data': data, 'times': times}, f, protocol=pickle.HIGHEST_PROTOCOL if compress else pickle.DEFAULT_PROTOCOL)
+        savemat(filename, {'data': data, 'times': times}, do_compression=compress)
 
-    def save_tracknum(self, dir='.', params=None, nofits=False, nosav=False, nooldformat=False, compress=False, save_float=False):
-        Path(dir).mkdir(parents=True, exist_ok=True)
-        today = tracknum()
+    def save_tracknum(self, dir='.', params=None, nofits=False, nosav=False, nodlm=False, nooldformat=False, compress=False, saveFloat=False):
+        today = time.strftime("%Y%m%d")
         num = 0
         while True:
-            tn = f"{today}.{num}"
-            prefix = Path(dir) / tn
-            if not prefix.exists():
+            tn = f'{today}.{num}'
+            prefix = os.path.join(dir, tn)
+            if not os.path.exists(prefix):
+                os.makedirs(prefix)
                 break
             num += 1
-        prefix.mkdir(parents=True, exist_ok=True)
-        self._tn_dir = str(prefix)
+        self._tn_dir = prefix
 
         if params is not None:
-            with open(prefix / 'params.txt', 'w') as f:
-                f.write(str(params))
-            with open(prefix / 'params.pkl', 'wb') as f:
-                pickle.dump(params, f, protocol=pickle.HIGHEST_PROTOCOL if compress else pickle.DEFAULT_PROTOCOL)
+            with open(os.path.join(prefix, 'params.txt'), 'w') as f:
+                for k, v in params.items():
+                    f.write(f'{k}: {v}\n')
+            savemat(os.path.join(prefix, 'params.mat'), {'params': params}, do_compression=compress)
 
-        # Save routines (not applicable in Python)
-        # Save main (not applicable in Python)
+        savemat(os.path.join(prefix, 'routines.mat'), {'routines': self._routines}, do_compression=compress)
 
-        sav = []
-        for k, item in self._storage.items():
-            if k in self._items:
-                if len(item) > 0:
-                    if not nofits:
-                        filename = prefix / f"{k}.fits"
-                        times = np.array(list(item.keys())) / self._time_resolution
-                        data = np.array(list(item.values()))
-                        if save_float and data.dtype == np.float64:
-                            data = data.astype(np.float32)
-                        writefits(filename, data)
-                        writefits(filename, times, append=True)
-                    else:
-                        sav.append(k)
-                        temp = np.array(list(item.keys()))
-                        if len(temp) > 1:
-                            sav.append(f"{k}_times")
-
-        if sav and not nosav:
-            filename = prefix / 'data.pkl'
-            with open(filename, 'wb') as f:
-                pickle.dump({k: self._storage[k] for k in sav}, f, protocol=pickle.HIGHEST_PROTOCOL if compress else pickle.DEFAULT_PROTOCOL)
-            self._data_filename = str(filename)
+        if not nofits:
+            for k, v in self._storage.items():
+                if isinstance(v, OrderedDict) and len(v) > 0:
+                    filename = os.path.join(prefix, f'{k}.fits')
+                    times = np.array(list(v.keys())) / float(self._time_resolution)
+                    data = np.array(list(v.values()))
+                    if saveFloat and data.dtype == np.float64:
+                        data = data.astype(np.float32)
+                    savemat(filename, {'data': data, 'times': times}, do_compression=compress)
+                else:
+                    self._save_to_sav(prefix, k, v, compress)
 
         if not nooldformat:
-            filename = prefix / 'old_format.pkl'
+            filename = os.path.join(prefix, 'old_format.mat')
             self.save(filename, compress=compress)
-
         return tn
 
+    def _save_to_sav(self, prefix, name, data, compress):
+        filename = os.path.join(prefix, 'data.mat')
+        savemat(filename, {name: data}, do_compression=compress)
+
     def restore(self, filename, params=None):
-        with open(filename, 'rb') as f:
-            data = pickle.load(f)
+        data = loadmat(filename)
+        self._storage = data.get('data', {})
         if 'params' in data:
             if params is not None:
-                params = data.pop('params')
-            self._storage['params'] = params
-        self._storage.update(data)
+                params.update(data['params'])
+            else:
+                self._storage['params'] = data['params']
 
     def restore_tracknum(self, tn, dir='.', params=None, no_phi=False):
-        tndir = Path(dir) / tn
-        self.restore(tndir / 'old_format.pkl', params=params)
-        if (tndir / 'params.pkl').exists():
-            with open(tndir / 'params.pkl', 'rb') as f:
-                params = pickle.load(f)
-        for fits_file in tndir.glob('*.fits'):
-            name = fits_file.stem
-            if no_phi and 'Phi' in name:
-                continue
-            if name in self._storage:
-                raise ValueError(f'Storing already has an object with name {name}')
-            data = readfits(fits_file)
-            times = readfits(fits_file, ext=1)
-            self._storage[name] = OrderedDict(zip(times, data))
-
-    @staticmethod
-    def restore(filename, dir='.', params=None, no_phi=False):
-        store = DataStore()
-        if Path(dir).is_dir():
-            store.restore_tracknum(filename, dir=dir, params=params, no_phi=no_phi)
+        tndir = os.path.join(dir, tn)
+        if os.path.isdir(tndir):
+            self.restore(os.path.join(tndir, 'old_format.mat'))
         else:
-            store.restore(Path(dir) / filename, params=params)
-        return store
+            for filename in os.listdir(tndir):
+                if filename.endswith('.fits') and not no_phi and 'Phi' in filename:
+                    continue
+                name = filename.split('.')[0]
+                data = loadmat(os.path.join(tndir, filename))
+                self._storage[name] = data
 
-    def set_property(self, decimation_t=None, **kwargs):
-        if decimation_t is not None:
-            self._decimation_t = self.seconds_to_t(decimation_t)
-        super().set_property(**kwargs)
+    @property
+    def decimation_t(self):
+        return self._decimation_t
 
-    def get_property(self, tn_dir=None, data_filename=None, **kwargs):
-        super().get_property(**kwargs)
-        if tn_dir is not None:
-            tn_dir = self._tn_dir
-        if data_filename is not None:
-            data_filename = self._data_filename
+    @decimation_t.setter
+    def decimation_t(self, value):
+        self._decimation_t = self.seconds_to_t(value)
+
+    @property
+    def tn_dir(self):
+        return self._tn_dir
+
+    @property
+    def data_filename(self):
+        return self._data_filename
 
     def get(self, name):
         return self._storage[name]
@@ -142,30 +122,29 @@ class DataStore(BaseProcessingObj):
         if not self.has_key(name):
             print(f'The key: {name} is not stored in the object!')
             return -1
-        times = self._storage.get(f'{name}_TIMES')
+        times = self._storage.get(f'{name}_times')
         if times is None:
-            times = np.array(list(self._storage[name].keys()))
-        return times.tolist() if as_list else self.t_to_seconds(times)
+            h = self._storage[name]
+            times = list(h.keys())
+        return times if as_list else self.t_to_seconds(np.array(times))
 
     def values(self, name, as_list=False, init=0):
         if not self.has_key(name):
             print(f'The key: {name} is not stored in the object!')
             return -1
-        values = self._storage[name]
-        if isinstance(values, OrderedDict):
-            values = np.array(list(values.values()))
-        if init > 0:
-            values = values[init:]
-        return values.tolist() if as_list else values
+        h = self._storage[name]
+        if isinstance(h, OrderedDict):
+            values = list(h.values())[init:]
+        else:
+            values = h[init:]
+        return values if as_list else np.array(values)
 
     def size(self, name, dimensions=False):
         if not self.has_key(name):
             print(f'The key: {name} is not stored in the object!')
             return -1
-        values = self._storage[name]
-        if isinstance(values, OrderedDict):
-            values = np.array(list(values.values()))
-        return values.shape if dimensions else values.size
+        h = self._storage[name]
+        return h.shape if not dimensions else h.shape[dimensions]
 
     def mean(self, name, init=0, dim=None):
         values = self.values(name, init=init)
@@ -184,17 +163,20 @@ class DataStore(BaseProcessingObj):
         return np.var(values, axis=dim)
 
     def plot(self, name, init=0, map=False, over=False, resolution=1e9, **kwargs):
+        import matplotlib.pyplot as plt
         values = self.values(name, init=init)
+        times = self.times(name)
+        if resolution != 1e9:
+            if (times[1] - times[0]) * resolution <= 1:
+                times *= resolution
+            elif (times[1] - times[0]) / resolution > 1e-4:
+                times /= resolution
         if map:
             plt.imshow(values, **kwargs)
         else:
-            times = self.times(name)
-            if resolution != 1e9:
-                if (times[1] - times[0]) * resolution <= 1:
-                    times *= resolution
-                elif (times[1] - times[0]) / resolution > 1e-4:
-                    times /= resolution
-            if over:
+            if len(values.shape) > 1:
+                plt.plot(times[init:], values, **kwargs)
+            elif over:
                 plt.plot(times[init:], values, **kwargs)
             else:
                 plt.plot(times[init:], values, **kwargs)
@@ -205,15 +187,23 @@ class DataStore(BaseProcessingObj):
         if do_store_values:
             for k, item in self._items.items():
                 if item is not None and item.generation_time == t:
-                    v = self._get_value_from_item(item)
+                    if isinstance(item, BaseValue):
+                        v = item.value
+                    elif isinstance(item, BaseGpuValue):
+                        v = item.read()
+                    elif isinstance(item, Cheat):
+                        v = item.value
+                    elif isinstance(item, Slopes):
+                        v = item.slopes
+                    elif isinstance(item, Pixels):
+                        v = item.pixels
+                    elif isinstance(item, Ef):
+                        v = item.phase_in_nm
+                    elif isinstance(item, Layer):
+                        v = item.phase_in_nm
+                    else:
+                        raise TypeError(f"Error: don't know how to save an object of type {type(item)}")
                     self._storage[k][t] = v
-
-    def _get_value_from_item(self, item):
-        class_name = type(item).__name__
-        if class_name in ['BaseValue', 'BaseGPUValue', 'Cheat', 'Slopes', 'Pixels', 'Ef', 'I', 'Layer']:
-            return getattr(item, 'value', None) or getattr(item, 'read', None)() or getattr(item, 'slopes', None) or getattr(item, 'pixels', None) or getattr(item, 'phase_in_nm', None) or getattr(item, 'i', None)
-        else:
-            raise ValueError(f"Error: don't know how to save an object of type {class_name}")
 
     def run_check(self, time_step, errmsg=''):
         return True
@@ -227,24 +217,4 @@ class DataStore(BaseProcessingObj):
         self._items.clear()
         super().cleanup()
         if self._verbose:
-            print('datastore has been cleaned up.')
-
-# Helper functions
-def tracknum():
-    from datetime import datetime
-    return datetime.now().strftime("%Y%m%d%H%M%S")
-
-def writefits(filename, data, append=False):
-    from astropy.io import fits
-    hdu = fits.PrimaryHDU(data)
-    if append and Path(filename).exists():
-        hdu_list = fits.open(filename, mode='append')
-        hdu_list.append(hdu)
-        hdu_list.writeto(filename, overwrite=True)
-    else:
-        hdu.writeto(filename, overwrite=True)
-
-def readfits(filename, ext=0):
-    from astropy.io import fits
-    with fits.open(filename) as hdul:
-        return hdul[ext].data
+            print('Datastore has been cleaned up.')
