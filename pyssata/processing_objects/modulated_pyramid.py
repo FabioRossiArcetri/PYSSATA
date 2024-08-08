@@ -112,6 +112,31 @@ class ModulatedPyramid(BaseProcessingObj):
     def rot_angle_ph_in_deg(self, value):
         self._rotAnglePhInDeg = value
 
+    def calc_geometry(self):
+        nx = self._n_pix_x
+        ny = self._n_pix_y
+
+        if self._verbose:
+            print('pyr eff. pixels = ', nx, ny)
+
+        self._pixels = Pixels(nx, ny)
+
+        side = self._mod
+        wsize = self._geom['wsize']
+
+        if self._verbose:
+            print('geom side = ', side)
+            print('geom wsize = ', wsize)
+
+        # Center coordinates
+        self._geom['cx'] = side * (self._cx - 0.5) + side / 2.
+        self._geom['cy'] = wsize - (side * (self._cy - 0.5) + side / 2.)
+
+        # Set the pixel size
+        self._geom['px'] = self._fov / (self._mod * wsize)
+
+        return self._geom
+    
     def set_extended_source(self, source):
         self._extSource = source
         self._extended_source_in_on = True
