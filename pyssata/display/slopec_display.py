@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pyssata.base_processing_obj import BaseProcessingObj
-
+from pyssata.processing_objects.pyr_slopec import PyrSlopec
 
 class SlopecDisplay(BaseProcessingObj):
     def __init__(self, slopec=None):
@@ -66,26 +66,28 @@ class SlopecDisplay(BaseProcessingObj):
     def trigger(self, t):
         s = self._slopec.out_slopes
         if s.generation_time == t:
-            if isinstance(self._slopec, ModalAnalysisSlopec):
-                if not plt.fignum_exists(self._windows):
-                    plt.figure(self._windows)
-                    plt.title('Modal Analysis Measurement')
-                plt.clf()
-                plt.plot(self._slopec.out_slopes.slopes)
-                plt.xlabel('Mode Number')
-                plt.ylabel('Mode Amplitude')
-                plt.draw()
-            else:
+            # TODO - ModalAnalysisSlopec not available yet
+            # if isinstance(self._slopec, ModalAnalysisSlopec):
+            #     if not plt.fignum_exists(self._windows):
+            #         plt.figure(self._windows)
+            #         plt.title('Modal Analysis Measurement')
+            #     plt.clf()
+            #     plt.plot(self._slopec.out_slopes.slopes)
+            #     plt.xlabel('Mode Number')
+            #     plt.ylabel('Mode Amplitude')
+            #     plt.draw()
+            #else:
                 sx = s.xslopes
                 sy = s.yslopes
                 if isinstance(self._slopec, PyrSlopec):
                     map_data = self._slopec.pupdata.ind_pup[1, :]
                     slope_side = None  # Auto scaled
-                elif isinstance(self._slopec, (IdealWfsSlopec, ShSlopec, ShSlopecGpu)):
-                    nx = self._slopec.subapdata.nx
-                    map_data = self._slopec.subapdata.map
-                    map_data = (map_data // nx) * nx * 2 + (map_data % nx)
-                    slope_side = nx * 2
+#                TODO --- these SlopeC are not available yet
+#                elif isinstance(self._slopec, (IdealWfsSlopec, ShSlopec, ShSlopecGpu)):
+#                    nx = self._slopec.subapdata.nx
+#                    map_data = self._slopec.subapdata.map
+#                    map_data = (map_data // nx) * nx * 2 + (map_data % nx)
+#                    slope_side = nx * 2
 
                 title = self._title if self._title else 'Slope Display'
                 self.pupil_display(self._slopec.in_pixels.pixels, sx, sy, map_data, slope_side=slope_side, title=title)

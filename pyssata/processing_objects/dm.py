@@ -6,7 +6,7 @@ from pyssata.data_objects.layer import Layer
 class DM(BaseProcessingObj):
     '''Deformable mirror'''
 
-    def __init__(self, pixel_pitch, height, influence_function, GPU=False, precision=0, dtype=None):
+    def __init__(self, pixel_pitch, height, influence_function, precision=0, dtype=None):
         super().__init__()
 
         self._ifunc = influence_function
@@ -16,41 +16,32 @@ class DM(BaseProcessingObj):
         nmodes_if = self._ifunc.size[0]
 
         self._if_commands = np.zeros(nmodes_if, dtype=self._ifunc.dtype)
-        self._gpu = GPU
-        self._layer = Layer(s[0], s[1], pixel_pitch, height, GPU=GPU, precision=precision, dtype=dtype)
+        self._layer = Layer(s[0], s[1], pixel_pitch, height, precision=precision, dtype=dtype)
         self._layer.A = self._ifunc.mask_inf_func.astype(float)
 
         self._sign = -1
 
     def compute_shape(self):
-        if self._gpu and isinstance(self._command, BaseGpuValue):
-            pass  # GPU computation code not implemented
-        else:
-            if isinstance(self._command, BaseGpuValue):
-                commands = self._command.read()
-            else:
-                commands = self._command.value
 
-            temp_matrix = np.zeros(self._layer.size, dtype=float if self._precision == 0 else np.float64)
+        commands = self._command.value
 
-            if np.sum(np.abs(commands)) != 0:
-                if len(commands) > len(self._if_commands):
-                    raise ValueError(f"Command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
+        temp_matrix = np.zeros(self._layer.size, dtype=float if self._precision == 0 else np.float64)
 
-                self._if_commands[:len(commands)] = self._sign * commands
+        if np.sum(np.abs(commands)) != 0:
+            if len(commands) > len(self._if_commands):
+                raise ValueError(f"Command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
 
-                if has_gpu():
-                    temp_matrix[self._ifunc.idx_inf_func] = vecmat_multiply(vector=self._if_commands, matrix=self._ifunc.gpu_ifunc)
-                else:
-                    temp_matrix[self._ifunc.idx_inf_func] = vecmat_multiply(vector=self._if_commands, matrix=self._ifunc.ptr_ifunc)
+            self._if_commands[:len(commands)] = self._sign * commands
 
-            self._layer.phaseInNm = temp_matrix  # Will automatically load on GPU if the output layer is a LAYER_GPU
+            temp_matrix[self._ifunc.idx_inf_func] = vecmat_multiply(vector=self._if_commands, matrix=self._ifunc.ptr_ifunc)
+
+        self._layer.phaseInNm = temp_matrix
 
     def trigger(self, t):
         if self._verbose:
             print('time:', self.t_to_seconds(t))
             print('command generation time:', self.t_to_seconds(self._command.generation_time))
-            commands = self._command.read() if isinstance(self._command, BaseGpuValue) else self._command.value
+            commands = self._command.value
             if len(commands) > 0:
                 print('first', min(6, len(commands)), 'command values:', commands[:min(5, len(commands))])
 
@@ -121,10 +112,6 @@ class DM(BaseProcessingObj):
     def run_check(self, time_step, errmsg=''):
         if not obj_valid(self._command):
             errmsg += self.repr() + ' No input command defined'
-
-        if self._gpu:
-            if not isinstance(self._command, BaseGpuValue):
-                errmsg += 'WARNING: ' + self.repr() + ' Input command is not a BASE_GPU_VALUE object'
 
         return obj_valid(self._command) and obj_valid(self._layer) and obj_valid(self._ifunc)
 
