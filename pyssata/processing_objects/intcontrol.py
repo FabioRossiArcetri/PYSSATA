@@ -32,26 +32,3 @@ class IntControl(IIRControl):
 def int2iirfilter(gain, ff=None):
     # Implementation of the int2iirfilter function goes here
     pass
-
-class BaseProcessingObj:
-    def Init(self, name, description):
-        # Implementation of the BaseProcessingObj.Init method goes here
-        return True
-
-class IIRControl:
-    def Init(self, iirfilter, delay=0):
-        # Implementation of the IIRControl.Init method goes here
-        return True
-
-    def cleanup(self):
-        # Implementation of the IIRControl.cleanup method goes here
-        pass
-
-    @property
-    def poles(self):
-        # Implementation of the IIRControl.poles property goes here
-        pass
-
-    def run_check(self, time_step, errmsg=""):
-        # Implementation of the IIRControl.run_check method goes here
-        return True
