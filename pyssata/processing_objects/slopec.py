@@ -3,40 +3,77 @@ from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.data_objects import Slopes
 
+# Default values
+default_pixels = None
+default_sn = None
+default_cm = None
+default_total_counts = None
+default_subap_counts = None
+default_use_sn = False
+default_accumulate = False
+default_weight_from_accumulated = False
+default_weight_from_acc_with_window = False
+default_remove_mean = False
+default_return0 = False
+default_update_slope_high_speed = False
+default_do_rec = False
+default_do_filter_modes = False
+default_gain_slope_high_speed = 0.0
+default_ff_slope_high_speed = 0.0
+default_store_s = None
+default_store_c = None
+default_sn_scale_fact = None
+default_command_list = None
+default_intmat = None
+default_recmat = None
+default_filt_recmat = None
+default_filt_intmat = None
+default_accumulation_dt = 0
+default_accumulated_pixels = np.zeros((0, 0))
+default_accumulated_pixels_ptr = None
+
 class Slopec(BaseProcessingObj):
-    def __init__(self):
+    def __init__(self, pixels=None, sn=None, cm=None, total_counts=None, subap_counts=None, 
+                 use_sn=False, accumulate=False, weight_from_accumulated=False, 
+                 weight_from_acc_with_window=False, remove_mean=False, return0=False, 
+                 update_slope_high_speed=False, do_rec=False, do_filter_modes=False, 
+                 gain_slope_high_speed=0.0, ff_slope_high_speed=0.0, store_s=None, 
+                 store_c=None, sn_scale_fact=None, command_list=None, intmat=None, 
+                 recmat=None, filt_recmat=None, filt_intmat=None, accumulation_dt=0, 
+                 accumulated_pixels=None, accumulated_pixels_ptr=None):
+
         super().__init__()
-        self._pixels = None
+        self._pixels = pixels if pixels is not None else default_pixels
         self._slopes = Slopes(2)
         self._slopes_ave = BaseValue()
-        self._sn = None
-        self._cm = None
-        self._total_counts = None
-        self._subap_counts = None
+        self._sn = sn if sn is not None else default_sn
+        self._cm = cm if cm is not None else default_cm
+        self._total_counts = total_counts if total_counts is not None else default_total_counts
+        self._subap_counts = subap_counts if subap_counts is not None else default_subap_counts
         self._flux_per_subaperture_vector = BaseValue()
         self._max_flux_per_subaperture_vector = BaseValue()
-        self._use_sn = False
-        self._accumulate = False
-        self._weight_from_accumulated = False
-        self._weight_from_acc_with_window = False
-        self._remove_mean = False
-        self._return0 = False
-        self._update_slope_high_speed = False
-        self._do_rec = False
-        self._do_filter_modes = False
-        self._gain_slope_high_speed = 0.0
-        self._ff_slope_high_speed = 0.0
-        self._store_s = None
-        self._store_c = None
-        self._sn_scale_fact = None
-        self._command_list = None
-        self._intmat = None
-        self._recmat = None
-        self._filt_recmat = None
-        self._filt_intmat = None
-        self._accumulation_dt = 0
-        self._accumulated_pixels = np.zeros((0, 0))
-        self._accumulated_pixels_ptr = None
+        self._use_sn = use_sn if use_sn is not None else default_use_sn
+        self._accumulate = accumulate if accumulate is not None else default_accumulate
+        self._weight_from_accumulated = weight_from_accumulated if weight_from_accumulated is not None else default_weight_from_accumulated
+        self._weight_from_acc_with_window = weight_from_acc_with_window if weight_from_acc_with_window is not None else default_weight_from_acc_with_window
+        self._remove_mean = remove_mean if remove_mean is not None else default_remove_mean
+        self._return0 = return0 if return0 is not None else default_return0
+        self._update_slope_high_speed = update_slope_high_speed if update_slope_high_speed is not None else default_update_slope_high_speed
+        self._do_rec = do_rec if do_rec is not None else default_do_rec
+        self._do_filter_modes = do_filter_modes if do_filter_modes is not None else default_do_filter_modes
+        self._gain_slope_high_speed = gain_slope_high_speed if gain_slope_high_speed is not None else default_gain_slope_high_speed
+        self._ff_slope_high_speed = ff_slope_high_speed if ff_slope_high_speed is not None else default_ff_slope_high_speed
+        self._store_s = store_s if store_s is not None else default_store_s
+        self._store_c = store_c if store_c is not None else default_store_c
+        self._sn_scale_fact = sn_scale_fact if sn_scale_fact is not None else default_sn_scale_fact
+        self._command_list = command_list if command_list is not None else default_command_list
+        self._intmat = intmat if intmat is not None else default_intmat
+        self._recmat = recmat if recmat is not None else default_recmat
+        self._filt_recmat = filt_recmat if filt_recmat is not None else default_filt_recmat
+        self._filt_intmat = filt_intmat if filt_intmat is not None else default_filt_intmat
+        self._accumulation_dt = accumulation_dt if accumulation_dt is not None else default_accumulation_dt
+        self._accumulated_pixels = accumulated_pixels if accumulated_pixels is not None else default_accumulated_pixels
+        self._accumulated_pixels_ptr = accumulated_pixels_ptr if accumulated_pixels_ptr is not None else default_accumulated_pixels_ptr
         self._accumulated_slopes = Slopes(2)
 
     @property
