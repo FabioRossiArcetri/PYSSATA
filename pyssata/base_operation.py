@@ -1,5 +1,7 @@
-import numpy as np
 from astropy.io import fits
+
+from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.base_value import BaseValue
 
 class BaseOperation(BaseProcessingObj):
     def __init__(self, constant_mult=None, constant_div=None, constant_sum=None, constant_sub=None, mult=False, div=False, sum=False, sub=False):

@@ -2,6 +2,9 @@ import numpy as np
 from scipy.ndimage import convolve
 from scipy.stats import poisson, gamma, norm
 
+from pyssata.base_processing_obj import BaseProcessingObj
+
+
 class CCD(BaseProcessingObj):
     def __init__(self, dim2d, binning=1, photon_noise=False, readout_noise=False, excess_noise=False,
                  darkcurrent_noise=False, background_noise=False, cic_noise=False, cte_noise=False,

@@ -1,6 +1,8 @@
 import numpy as np
 from astropy.io import fits
 
+from pyssata.data_objects.layer import Layer
+
 class PupilStop(Layer):
     def __init__(self, dimx, dimy, pixel_pitch, height, GPU=False, input_mask=None, mask_diam=None, obs_diam=None, objname="pupilstop", objdescr="pupilstop object", PRECISION=0, TYPE=None):
         self._pixel_pitch = pixel_pitch

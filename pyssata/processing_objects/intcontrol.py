@@ -1,3 +1,7 @@
+
+from pyssata.processing_objects.iircontrol import IIRControl
+
+
 class IntControl(IIRControl):
     def __init__(self, gain, ff=None, delay=0):
         iirfilter = int2iirfilter(gain, ff=ff)

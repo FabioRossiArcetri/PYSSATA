@@ -1,6 +1,8 @@
 import os
 from astropy.io import fits
 
+from pyssata.base_parameter_obj import BaseParameterObj
+
 class CalibManager(BaseParameterObj):
     def __init__(self, root_dir):
         """

@@ -1,3 +1,7 @@
+
+from astropy.io import fits
+from pyssata.base_time_obj import BaseTimeObj
+
 class BaseValue(BaseTimeObj):
     def __init__(self, objname="base_value", objdescr="Base data object for simple data", value=None):
         """

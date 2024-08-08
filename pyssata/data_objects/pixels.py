@@ -1,6 +1,9 @@
 import numpy as np
 from astropy.io import fits
 
+from pyssata.data_objects.base_data_obj import BaseDataObj
+
+
 class Pixels(BaseDataObj):
     def __init__(self, dimx, dimy, bits=16, signed=0):
         self._validate_bits(bits)
@@ -105,17 +108,3 @@ class Pixels(BaseDataObj):
         self._pixels = None
         super().cleanup()
 
-# Example definition of BaseDataObj if not available.
-class BaseDataObj:
-    def __init__(self, objname, objdescr):
-        self.objname = objname
-        self.objdescr = objdescr
-
-    def save(self, filename, hdr):
-        pass
-
-    def read(self, filename, hdr=None, exten=0):
-        pass
-
-    def cleanup(self):
-        pass
