@@ -4,8 +4,10 @@ from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.layer import Layer
 
 class DM(BaseProcessingObj):
-    def __init__(self, pixel_pitch, height, influence_function, GPU=False, objname="dm", objdescr="Deformable Mirror object", precision=0, dtype=None):
-        super().__init__(objname, objdescr)
+    '''Deformable mirror'''
+
+    def __init__(self, pixel_pitch, height, influence_function, GPU=False, precision=0, dtype=None):
+        super().__init__()
 
         self._ifunc = influence_function
         self._ifunc.set_precision(precision)

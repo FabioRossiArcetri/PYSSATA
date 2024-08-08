@@ -5,16 +5,14 @@ from pyssata.base_time_obj import BaseTimeObj
 from pyssata.base_parameter_obj import BaseParameterObj
 
 class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
-    def __init__(self, objname, objdescr, precision=0):
+    def __init__(self, precision=0):
         """
         Initialize the base processing object.
 
         Parameters:
-        objname (str): object name
-        objdescr (str): object description
         precision (int, optional): double 1 or single 0, defaults to single precision
         """
-        BaseTimeObj.__init__(self, objname, objdescr, precision)
+        BaseTimeObj.__init__(self, precision)
         BaseParameterObj.__init__(self)
         self._verbose = 0
         self._loop_dt = np.int64(0)

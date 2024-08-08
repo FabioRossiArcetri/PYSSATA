@@ -3,8 +3,10 @@ from pyssata.base_processing_obj import BaseProcessingObj
 
 
 class Cheat(BaseProcessingObj):
-    def __init__(self, expr, timeobj=None, objname="cheat", objdescr="Base data object for simple data", **kwargs):
-        super().__init__(objname, objdescr)
+    '''Base data object for simple data'''
+
+    def __init__(self, expr, timeobj=None, **kwargs):
+        super().__init__()
 
         self._expr = expr
         self._timeobj = timeobj if timeobj else None

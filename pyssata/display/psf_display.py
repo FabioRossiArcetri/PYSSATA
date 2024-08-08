@@ -1,9 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from pyssata.base_processing_obj import BaseProcessingObj
+
+
 class PSFDisplay(BaseProcessingObj):
     def __init__(self, psf=None, wsize=[600, 600], window=23):
-        super().__init__('psf_display', 'PSF display')
+        super().__init__()
         self._psf = psf
         self._wsize = wsize
         self._window = window

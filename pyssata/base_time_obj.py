@@ -1,24 +1,16 @@
-import numpy as np
 from astropy.io import fits
 
 class BaseTimeObj:
-    def __init__(self, objname, objdescr, precision=0):
+    def __init__(self, precision=0):
         """
         Creates a new base_time object.
 
         Parameters:
-        objname (str): object name
-        objdescr (str): object description
         precision (int, optional): double 1 or single 0, defaults to single precision
         """
-        self._objname = objname
-        self._objdescr = objdescr
         self._time_resolution = int(1e9)
         self._generation_time = -1
         self._precision = precision
-
-    def __repr__(self):
-        return f"{self._objdescr} ({self._objname})"
 
     @property
     def generation_time(self):
@@ -35,22 +27,6 @@ class BaseTimeObj:
     @time_resolution.setter
     def time_resolution(self, value):
         self._time_resolution = value
-
-    @property
-    def objdescr(self):
-        return self._objdescr
-
-    @objdescr.setter
-    def objdescr(self, value):
-        self._objdescr = value
-
-    @property
-    def objname(self):
-        return self._objname
-
-    @objname.setter
-    def objname(self, value):
-        self._objname = value
 
     @property
     def precision(self):
@@ -82,8 +58,6 @@ class BaseTimeObj:
         hdr = fits.Header()
         hdr['GEN_TIME'] = self._generation_time
         hdr['TIME_RES'] = self._time_resolution
-        hdr['OBJNAME'] = self._objname
-        hdr['OBJDESCR'] = self._objdescr
         hdr['PRECISION'] = self._precision
 
         primary_hdu = fits.PrimaryHDU(header=hdr)
@@ -95,8 +69,6 @@ class BaseTimeObj:
             hdr = hdul[0].header
             self._generation_time = int(hdr.get('GEN_TIME', 0))
             self._time_resolution = int(hdr.get('TIME_RES', 0))
-            self._objname = hdr.get('OBJNAME', '')
-            self._objdescr = hdr.get('OBJDESCR', '')
             self._precision = int(hdr.get('PRECISION', 0))
 
     def get_properties_list(self):

@@ -7,6 +7,8 @@ from pyssata.processing_objects.cheat import Cheat
 
 
 class ModalRec(BaseProcessingObj):
+    '''Modal reconstructor'''
+
     def __init__(self, recmat=None, projmat=None, intmat=None, polc=None):
         self._recmat = recmat if recmat is not None else Recmat()
         self._projmat = projmat
@@ -17,12 +19,11 @@ class ModalRec(BaseProcessingObj):
         self._control_list = []
         self._past_step_list = []
 
-        self._modes = BaseValue('modes', 'output modes from modal reconstructor')
-        self._pseudo_ol_modes = BaseValue('modes', 'output POL modes from modal reconstructor')
-        self._modes_first_step = BaseValue('modes', 'output (no projection) modes from modal reconstructor')
+        self._modes = BaseValue('output modes from modal reconstructor')
+        self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor')
+        self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor')
 
-        if not BaseProcessingObj.__init__(self, 'modalrec', 'Modal reconstructor'):
-            raise Exception("Initialization failed")
+        super().__init__()
 
     def set_layer_modes_list(self):
         if self._recmat.modes2rec_layer is not None:
@@ -30,7 +31,7 @@ class ModalRec(BaseProcessingObj):
             self._layer_idx_list = []
             n = self._recmat.modes2rec_layer.shape[0]
             for i in range(n):
-                self._layer_modes_list.append(BaseValue('modes', f'output modes for layer no {i + 1}'))
+                self._layer_modes_list.append(BaseValue(f'output modes for layer no {i + 1}'))
                 self._layer_idx_list.append(np.where(self._recmat.modes2rec_layer[i, :] > 0)[0])
 
     @property
@@ -239,6 +240,4 @@ class ModalRec(BaseProcessingObj):
         self._layer_idx_list.cleanup()
         BaseProcessingObj.cleanup(self)
 
-    def __repr__(self):
-        return f"{self._objdescr} ({self._objname})"
 

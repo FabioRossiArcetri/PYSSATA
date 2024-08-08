@@ -14,7 +14,7 @@ class Recmat(BaseDataObj):
         self._norm_factor = 0.0
         self._doNotPutOnGpu = False
 
-        if not super().__init__("recmat", "Reconstructor matrix object"):
+        if not super().__init__():
             return
 
     @property

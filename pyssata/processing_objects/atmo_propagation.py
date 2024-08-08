@@ -5,8 +5,9 @@ from pyssata.base_processing_obj import BaseProcessingObj
 
 
 class AtmoPropagation(BaseProcessingObj):
+    '''Atmospheric propagation'''
     def __init__(self, source_list, pixel_pupil, pixel_pitch, GPU=False, precision=0):
-        super().__init__('atmo_propagation', 'Atmospheric propagation', precision=precision)
+        super().__init__(precision=precision)
 
         self._pixel_pupil = pixel_pupil
         self._pixel_pitch = pixel_pitch

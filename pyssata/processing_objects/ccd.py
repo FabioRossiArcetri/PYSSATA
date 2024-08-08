@@ -6,11 +6,12 @@ from pyssata.base_processing_obj import BaseProcessingObj
 
 
 class CCD(BaseProcessingObj):
+    '''Simple CCD from intensity field'''
     def __init__(self, dim2d, binning=1, photon_noise=False, readout_noise=False, excess_noise=False,
                  darkcurrent_noise=False, background_noise=False, cic_noise=False, cte_noise=False,
                  readout_level=0, darkcurrent_level=0, background_level=0, cic_level=0, cte_mat=None,
                  quantum_eff=1.0):
-        super().__init__('ccd', 'Simple CCD from intensity field')
+        super().__init__()
 
         self._photon_noise = photon_noise
         self._readout_noise = readout_noise

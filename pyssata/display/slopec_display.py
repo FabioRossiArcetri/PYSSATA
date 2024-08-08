@@ -1,9 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pyssata.base_processing_obj import BaseProcessingObj
+
+
 class SlopecDisplay(BaseProcessingObj):
     def __init__(self, slopec=None):
-        super().__init__('slopec_display', 'Slope computer display')
+        super().__init__()
 
         self._disp_factor = 1
         self._windows = 21

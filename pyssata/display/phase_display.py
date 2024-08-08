@@ -1,9 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from pyssata.base_processing_obj import BaseProcessingObj
+
+
 class PhaseDisplay(BaseProcessingObj):
     def __init__(self, phase=None, doImage=False, window=23):
-        super().__init__('phase_display', 'Modal display')
+        super().__init__()
 
         self._phase = phase if phase is not None else None
         self._doImage = doImage

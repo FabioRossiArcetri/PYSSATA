@@ -5,10 +5,12 @@ from pyssata.base_processing_obj import BaseProcessingObj
 
 
 class AtmoEvolution(BaseProcessingObj):
+    '''layers obj from statistics and time'''
+
     def __init__(self, L0, wavelengthInNm, pixel_pitch, heights, Cn2, pixel_pupil, directory, source_list, 
                  zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed=None, precision=0, verbose=False, GPU=False,
                  user_defined_phasescreen=None, force_mcao_fov=False, make_cycle=False, fov_in_m=None, pupil_position=None):
-        super().__init__('atmo_evolution', 'layers obj from statistics and time', precision=precision)
+        super().__init__(precision=precision)
 
         if pupil_position is None:
             pupil_position = [0, 0]

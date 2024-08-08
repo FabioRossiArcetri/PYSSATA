@@ -4,6 +4,8 @@ from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 
 class BaseOperation(BaseProcessingObj):
+    ''''Simple operations with base value(s)'''
+
     def __init__(self, constant_mult=None, constant_div=None, constant_sum=None, constant_sub=None, mult=False, div=False, sum=False, sub=False):
         """
         Initialize the base operation object.
@@ -18,7 +20,7 @@ class BaseOperation(BaseProcessingObj):
         sum (bool, optional): Flag for addition operation
         sub (bool, optional): Flag for subtraction operation
         """
-        super().__init__('base_operation', 'Simple operations with base value(s)')
+        super().__init__()
 
         self._constant_mult = constant_mult
         self._constant_div = 1.0 / constant_div if constant_div is not None else None

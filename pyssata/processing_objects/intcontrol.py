@@ -7,7 +7,7 @@ class IntControl(IIRControl):
         iirfilter = int2iirfilter(gain, ff=ff)
         
         # Initialize IIRControl object
-        if not super().Init(iirfilter, delay=delay):
+        if not super().__init__(iirfilter, delay=delay):
             raise ValueError("Initialization of IIRControl failed")
         
         # Initialize BaseProcessingObj
