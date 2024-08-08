@@ -1,9 +1,9 @@
 import numpy as np
 
+from pyssata.base_parameter_obj import BaseParameterObj
 from pyssata.data_objects.base_data_obj import BaseDataObj
 
-
-class Source(BaseDataObj):
+class Source(BaseDataObj, BaseParameterObj):
     '''source'''
 
     def __init__(self, polar_coordinate, height, magnitude, wavelengthInNm, band='', zeroPoint=0):

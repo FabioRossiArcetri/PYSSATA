@@ -1,7 +1,12 @@
+
+from pyssata.base_processing_obj import BaseProcessingObj
+
 class ProcessingContainer(BaseProcessingObj):
+    '''Container of processing objects'''
+
     def __init__(self):
-        super().__init__('processing_container', 'Container of processing objects')
-        self._objs = OrderedDict()
+        super().__init__()
+        self._objs = {}
         self._outputs = {}
         self._inputs = {}
 

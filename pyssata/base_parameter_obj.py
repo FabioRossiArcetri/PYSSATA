@@ -38,8 +38,4 @@ class BaseParameterObj:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-# Define a dummy parameter object attribute as in the IDL struct
-class DummyParameterObj(BaseParameterObj):
-    def __init__(self):
-        super().__init__()
-        self._dummy_parameter_obj = 0
+

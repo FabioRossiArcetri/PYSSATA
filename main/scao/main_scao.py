@@ -4,7 +4,8 @@ from pyssata.factory import Factory
 
 # Read parameters file
 dir = './'
-params = read_params_file(dir + 'params_scao.pro')
+params = {}
+exec(open(dir + 'params_scao.py').read(), params)
 
 # Initialize housekeeping objects
 factory = Factory(params['main'])
@@ -13,8 +14,6 @@ store = factory.get_datastore()
 
 # Initialize processing objects
 source = [factory.get_source(src) for src in params['wfs_source']]
-atmo = factory.get_atmo_container(source, params['atmo'], 
-                                  params['seeing'], params['wind_speed'], params['wind_direction'])
 prop = factory.get_atmo_propagation(params['atmo'], source)
 pyr = factory.get_modulated_pyramid(params['pyramid'])
 ccd = factory.get_ccd(params['detector'])
@@ -23,6 +22,8 @@ rec = factory.get_modalrec(params['modalrec'])
 intc = factory.get_control(params['control'])
 dm = factory.get_dm(params['dm'])
 psf = factory.get_psf(params['camera'])
+atmo = factory.get_atmo_container(source, params['atmo'],
+                                  params['seeing'], params['wind_speed'], params['wind_direction'])
 
 # Initialize display objects
 sc_disp = factory.get_slopec_display(sc)

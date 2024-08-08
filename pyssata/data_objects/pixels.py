@@ -5,6 +5,8 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 
 
 class Pixels(BaseDataObj):
+    '''Pixels'''
+
     def __init__(self, dimx, dimy, bits=16, signed=0):
         self._validate_bits(bits)
         self._signed = signed
@@ -13,7 +15,7 @@ class Pixels(BaseDataObj):
         self._bpp = bits
         self._bytespp = (bits + 7) // 8  # bits rounded to the next multiple of 8
 
-        super().__init__("pixels", "Pixels object")
+        super().__init__()
 
     def _validate_bits(self, bits):
         if bits > 64:

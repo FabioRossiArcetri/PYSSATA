@@ -1,19 +1,17 @@
 import numpy as np
-from dataclasses import dataclass, field
 
 from pyssata.processing_objects.slopec import Slopec
 from pyssata.data_objects.slopes import Slopes
 
-@dataclass
 class PyrSlopec(Slopec):
-    _pupdata: any = field(default_factory=lambda: None)
-    _shlike: bool = False
-    _slopes_from_intensity: bool = False
-    _norm_factor: float = 0.0
-    _thr_value: float = -1
-
-    def __post_init__(self):
-        super().__post_init__()
+    def __init__(self, pupdata_tag=None, shlike=False, norm_factor=0.0, thr_value=0.0, slopes_from_intensity=False, **kwargs):
+        super().__init__(**kwargs)
+        self._shlike = shlike
+        self._norm_factor = norm_factor
+        if pupdata_tag:
+            self._pupdata_tag = pupdata_tag
+        self._thr_value = thr_value
+        self._slopes_from_intensity = slopes_from_intensity
 
     @property
     def shlike(self):
