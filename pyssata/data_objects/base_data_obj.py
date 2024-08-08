@@ -35,6 +35,8 @@ class BaseDataObj(BaseTimeObj):
         with fits.open(filename) as hdul:
             hdr = hdul[0].header
             self._tag = hdr.get('TAG', '').strip()
+        exten = 1
+        return hdr, exten
 
     def cleanup(self):
         pass

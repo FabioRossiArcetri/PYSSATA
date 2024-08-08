@@ -22,17 +22,16 @@ class ModalRec(BaseProcessingObj):
         self._modes = BaseValue('output modes from modal reconstructor')
         self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor')
         self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor')
-
         super().__init__()
 
     def set_layer_modes_list(self):
-        if self._recmat.modes2rec_layer is not None:
+        if self._recmat.modes2recLayer is not None:
             self._layer_modes_list = []
             self._layer_idx_list = []
-            n = self._recmat.modes2rec_layer.shape[0]
+            n = self._recmat.modes2recLayer.shape[0]
             for i in range(n):
                 self._layer_modes_list.append(BaseValue(f'output modes for layer no {i + 1}'))
-                self._layer_idx_list.append(np.where(self._recmat.modes2rec_layer[i, :] > 0)[0])
+                self._layer_idx_list.append(np.where(self._recmat.modes2recLayer[i, :] > 0)[0])
 
     @property
     def recmat(self):

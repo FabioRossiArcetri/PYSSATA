@@ -1,14 +1,14 @@
 import numpy as np
 
 main = {
- 'root_dir':          '/home/guido/IDLWorkspace/PASSATA/SCAO',               # Root directory for calibration manager
+ 'root_dir':          '/tmp/SCAO',               # Root directory for calibration manager
  'pixel_pupil':       160,                    # Linear dimension of pupil phase array
  'pixel_pitch':       0.05,                   # [m] Pitch of the pupil phase array
  'total_time':        1.000,                 # [s] Total simulation running time
  'time_step':         0.001                  # [s] Simulation time step
 }
 
-DM = {
+dm = {
  'type':              'zernike',              # modes type
  'nmodes':            54,                     # number of modes
  'npixels':           160,                    # linear dimension of DM phase array

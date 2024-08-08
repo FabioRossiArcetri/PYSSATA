@@ -3,21 +3,21 @@ import os
 
 
 from pyssata.loop_control import LoopControl
+from pyssata.calib_manager import CalibManager
 from pyssata.base_processing_obj import BaseProcessingObj
+
 from pyssata.processing_objects.ccd import CCD
 from pyssata.processing_objects.atmo_propagation import AtmoPropagation
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 from pyssata.processing_objects.processing_container import ProcessingContainer
 from pyssata.processing_objects.pyr_slopec import PyrSlopec
 from pyssata.processing_objects.datastore import Datastore
+from pyssata.processing_objects.modalrec import ModalRec
+from pyssata.processing_objects.intcontrol import IntControl
+
 from pyssata.data_objects.source import Source
 from pyssata.data_objects.ef import ElectricField
 
-
-class CalibManager:
-    # Placeholder for the CalibManager class
-    def __init__(self, root_dir):
-        self.root_dir = root_dir
 
 class Factory:
     def __init__(self, params, GPU=False, NOCM=False, SINGLEGPU=False):
@@ -128,7 +128,7 @@ class Factory:
         Returns:
         Value of the extracted key or the default value.
         """
-        if key not in dictionary  and optional is False:
+        if key not in dictionary and default is None and optional is False:
             raise KeyError(f"Error: missing key: {key}")
 
         return dictionary.pop(key, default)
@@ -753,10 +753,10 @@ class Factory:
         params = self.ensure_dictionary(params)
         control_type = params.pop('type')
 
-        offset_tag = self.extract(params, 'offset_tag', default=None)
+        offset_tag = self.extract(params, 'offset_tag', default=None, optional=True)
         offset = self._cm.read_data(offset_tag) if offset_tag else None
 
-        offset_gain = self.extract(params, 'offset_gain', default=None)
+        offset_gain = self.extract(params, 'offset_gain', default=None, optional=True)
 
         if control_type == 'INT':
             return self.get_int_control(params, offset=offset)
@@ -999,24 +999,24 @@ class Factory:
         if 'm2c_tag' in params:
             return self.get_dm_m2c(params, GPU=useGPU, ifunc=ifunc, m2c=m2c)
         else:
-            settling_time = self.extract(params, 'settling_time', default=None)
+            settling_time = self.extract(params, 'settling_time', default=None, optional=True)
 
             pixel_pitch = self._main['pixel_pitch']
             height = params.pop('height')
-            ifunc_tag = self.extract(params, 'ifunc_tag', default=None)
+            ifunc_tag = self.extract(params, 'ifunc_tag', default=None, optional=True)
             dm_type = self.extract(params, 'type', default=None)
             nmodes = self.extract(params, 'nmodes', default=None)
-            nzern = self.extract(params, 'nzern', default=None)
-            start_mode = self.extract(params, 'start_mode', default=None)
-            idx_modes = self.extract(params, 'idx_modes', default=None)
+            nzern = self.extract(params, 'nzern', default=None, optional=True)
+            start_mode = self.extract(params, 'start_mode', default=None, optional=True)
+            idx_modes = self.extract(params, 'idx_modes', default=None, optional=True)
             npixels = self.extract(params, 'npixels', default=None)
             obsratio = self.extract(params, 'obsratio', default=None)
-            diaratio = self.extract(params, 'diaratio', default=None)
-            doNotPutOnGpu = self.extract(params, 'doNotPutOnGpu', default=None)
-            pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='')
+            diaratio = self.extract(params, 'diaratio', default=None, optional=True)
+            doNotPutOnGpu = self.extract(params, 'doNotPutOnGpu', default=None, optional=True)
+            pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='', optional=True)
 
-            doNotBuildRecProp = self.extract(params, 'doNotBuildRecProp', default=None)
-            notSeenByLgs = self.extract(params, 'notSeenByLgs', default=None)
+            doNotBuildRecProp = self.extract(params, 'doNotBuildRecProp', default=None, optional=True)
+            notSeenByLgs = self.extract(params, 'notSeenByLgs', default=None, optional=True)
 
             mask = None
             if pupil_mask_tag:
@@ -1455,9 +1455,9 @@ class Factory:
         params = self.ensure_dictionary(params)
 
         gain = params.pop('int_gain')
-        ff = self.extract(params, 'ff', default=None)
-        delay = self.extract(params, 'delay', default=None)
-        og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None)
+        ff = self.extract(params, 'ff', default=None, optional=True)
+        delay = self.extract(params, 'delay', default=None, optional=True)
+        og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None, optional=True)
         og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
 
         if params.get('opt_dt', 0) == 1:
@@ -2342,18 +2342,19 @@ class Factory:
         """
         params = self.ensure_dictionary(params)
 
-        intmat_tag = self.extract(params, 'intmat_tag', default=None)
-        nmodes = self.extract(params, 'nmodes', default=None)
-        recmat_tag = self.extract(params, 'recmat_tag', default=None)
-        projmat_tag = self.extract(params, 'projmat_tag', default=None)
-        filtmat_tag = self.extract(params, 'filtmat_tag', default=None)
+        intmat_tag = self.extract(params, 'intmat_tag', default=None, optional=True)
+        nmodes = self.extract(params, 'nmodes', default=None, optional=True)
+        recmat_tag = self.extract(params, 'recmat_tag', default=None, optional=True)
+        projmat_tag = self.extract(params, 'projmat_tag', default=None, optional=True)
+        filtmat_tag = self.extract(params, 'filtmat_tag', default=None, optional=True)
 
-        identity = self.extract(params, 'identity', default=False)
-        ncutmodes = self.extract(params, 'ncutmodes', default=None)
-        nSlopesToBeDiscarded = self.extract(params, 'nSlopesToBeDiscarded', default=None)
+        identity = self.extract(params, 'identity', default=False, optional=True)
+        ncutmodes = self.extract(params, 'ncutmodes', default=None, optional=True)
+        nSlopesToBeDiscarded = self.extract(params, 'nSlopesToBeDiscarded', default=None, optional=True)
         polc = self.extract(params, 'polc', default=False)
-        dmNumber = self.extract(params, 'dmNumber', default=None)
+        dmNumber = self.extract(params, 'dmNumber', default=None, optional=True)
         noProj = self.extract(params, 'noProj', default=False)
+        projmat = None
 
         if params.get('mPCuRed_tag'):
             return self.get_modalrec_cured(params)
@@ -2393,7 +2394,7 @@ class Factory:
                         recmat = RecMat()
                         recmat.recmat = intmat.intmat
                     else:
-                        recmat = self._cm.read_rec(recmat_tag, doNotPutOnGpu=doNotPutOnGpu)
+                        recmat = self._cm.read_rec(recmat_tag)
 
             if ncutmodes:
                 if recmat is not None:

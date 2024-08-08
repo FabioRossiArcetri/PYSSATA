@@ -58,7 +58,6 @@ class BaseTimeObj:
         hdr = fits.Header()
         hdr['GEN_TIME'] = self._generation_time
         hdr['TIME_RES'] = self._time_resolution
-        hdr['PRECISION'] = self._precision
 
         primary_hdu = fits.PrimaryHDU(header=hdr)
         hdul = fits.HDUList([primary_hdu])
@@ -69,7 +68,6 @@ class BaseTimeObj:
             hdr = hdul[0].header
             self._generation_time = int(hdr.get('GEN_TIME', 0))
             self._time_resolution = int(hdr.get('TIME_RES', 0))
-            self._precision = int(hdr.get('PRECISION', 0))
 
     def get_properties_list(self):
         return vars(self)

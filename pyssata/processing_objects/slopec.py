@@ -1,7 +1,7 @@
 import numpy as np
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
-from pyssata.data_objects import Slopes
+from pyssata.data_objects.slopes import Slopes
 
 # Default values
 default_pixels = None
