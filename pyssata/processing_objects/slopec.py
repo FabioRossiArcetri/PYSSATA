@@ -1,53 +1,43 @@
 import numpy as np
-from dataclasses import dataclass, field
-
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.data_objects import Slopes
 
-@dataclass
 class Slopec(BaseProcessingObj):
-    _pixels: any = field(default_factory=lambda: None)
-    _slopes: any = field(default_factory=lambda: None)
-    _slopes_ave: any = field(default_factory=lambda: None)
-    _sn: any = field(default_factory=lambda: None)
-    _cm: any = field(default_factory=lambda: None)
-    _total_counts: any = field(default_factory=lambda: None)
-    _subap_counts: any = field(default_factory=lambda: None)
-    _flux_per_subaperture_vector: any = field(default_factory=lambda: None)
-    _max_flux_per_subaperture_vector: any = field(default_factory=lambda: None)
-    _use_sn: bool = False
-    _accumulate: bool = False
-    _weight_from_accumulated: bool = False
-    _weight_from_acc_with_window: bool = False
-    _remove_mean: bool = False
-    _return0: bool = False
-    _update_slope_high_speed: bool = False
-    _do_rec: bool = False
-    _do_filter_modes: bool = False
-    _gain_slope_high_speed: float = 0.0
-    _ff_slope_high_speed: float = 0.0
-    _store_s: any = field(default_factory=lambda: None)
-    _store_c: any = field(default_factory=lambda: None)
-    _sn_scale_fact: any = field(default_factory=lambda: None)
-    _command_list: any = field(default_factory=lambda: None)
-    _intmat: any = field(default_factory=lambda: None)
-    _recmat: any = field(default_factory=lambda: None)
-    _filt_recmat: any = field(default_factory=lambda: None)
-    _filt_intmat: any = field(default_factory=lambda: None)
-    _accumulation_dt: int = 0
-    _accumulated_pixels: any = field(default_factory=lambda: None)
-    _accumulated_pixels_ptr: any = field(default_factory=lambda: None)
-    _accumulated_slopes: any = field(default_factory=lambda: None)
-
-    def __post_init__(self):
-        super().__post_init__()
+    def __init__(self):
+        super().__init__()
+        self._pixels = None
         self._slopes = Slopes(2)
-        self._accumulated_slopes = Slopes(2)
         self._slopes_ave = BaseValue()
-        self._use_sn = 1
+        self._sn = None
+        self._cm = None
+        self._total_counts = None
+        self._subap_counts = None
         self._flux_per_subaperture_vector = BaseValue()
         self._max_flux_per_subaperture_vector = BaseValue()
+        self._use_sn = False
+        self._accumulate = False
+        self._weight_from_accumulated = False
+        self._weight_from_acc_with_window = False
+        self._remove_mean = False
+        self._return0 = False
+        self._update_slope_high_speed = False
+        self._do_rec = False
+        self._do_filter_modes = False
+        self._gain_slope_high_speed = 0.0
+        self._ff_slope_high_speed = 0.0
+        self._store_s = None
+        self._store_c = None
+        self._sn_scale_fact = None
+        self._command_list = None
+        self._intmat = None
+        self._recmat = None
+        self._filt_recmat = None
+        self._filt_intmat = None
+        self._accumulation_dt = 0
+        self._accumulated_pixels = np.zeros((0, 0))
+        self._accumulated_pixels_ptr = None
+        self._accumulated_slopes = Slopes(2)
 
     @property
     def in_pixels(self):
