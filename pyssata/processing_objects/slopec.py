@@ -371,10 +371,7 @@ class Slopec(BaseProcessingObj):
                 raise ValueError('slopes have non-finite elements')
 
         if self._do_rec:
-            if has_gpu():
-                m = np.dot(self._slopes.ptr_slopes, self._recmat.gpu_recmat)
-            else:
-                m = np.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
+            m = np.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
             self._slopes.slopes = m
 
     @staticmethod

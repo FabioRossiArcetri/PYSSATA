@@ -201,16 +201,10 @@ class ModalRec(BaseProcessingObj):
                 if self._verbose:
                     print(f"modalrec.compute_modes value from cheat RMS: {np.sqrt(np.mean(slope_ptr**2))}")
 
-        if HAS_GPU():
-            if intmat:
-                m = VECMAT_MULTIPLY(VECTOR=slope_ptr, MATRIX=matrix.gpu_intmat)
-            else:
-                m = VECMAT_MULTIPLY(VECTOR=slope_ptr, MATRIX=matrix.gpu_recmat)
+        if intmat:
+            m = VECMAT_MULTIPLY(VECTOR=slope_ptr, MATRIX=matrix.ptr_intmat)
         else:
-            if intmat:
-                m = VECMAT_MULTIPLY(VECTOR=slope_ptr, MATRIX=matrix.ptr_intmat)
-            else:
-                m = VECMAT_MULTIPLY(VECTOR=slope_ptr, MATRIX=matrix.ptr_recmat)
+            m = VECMAT_MULTIPLY(VECTOR=slope_ptr, MATRIX=matrix.ptr_recmat)
 
         return m
 

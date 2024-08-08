@@ -7,7 +7,7 @@ dir = './'
 params = read_params_file(dir + 'params_scao.pro')
 
 # Initialize housekeeping objects
-factory = Factory(params['main'], gpu=True)
+factory = Factory(params['main'])
 loop = factory.get_loop_control()
 store = factory.get_datastore()
 
