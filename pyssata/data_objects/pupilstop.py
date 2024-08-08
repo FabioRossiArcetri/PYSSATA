@@ -6,15 +6,14 @@ from pyssata.data_objects.layer import Layer
 class PupilStop(Layer):
     '''Pupil stop'''
 
-    def __init__(self, dimx, dimy, pixel_pitch, height, GPU=False, input_mask=None, mask_diam=None, obs_diam=None, PRECISION=0, TYPE=None):
+    def __init__(self, dimx, dimy, pixel_pitch, height, input_mask=None, mask_diam=None, obs_diam=None, PRECISION=0, TYPE=None):
         self._pixel_pitch = pixel_pitch
         self._height = height
-        self._GPU = GPU
         self._input_mask = input_mask
         self._mask_diam = mask_diam
         self._obs_diam = obs_diam
 
-        if not super().__init__(dimx, dimy, pixel_pitch, height, GPU=GPU, PRECISION=PRECISION, TYPE=TYPE):
+        if not super().__init__(dimx, dimy, pixel_pitch, height, PRECISION=PRECISION, TYPE=TYPE):
             return
 
         if input_mask is not None:
@@ -51,7 +50,7 @@ class PupilStop(Layer):
         fits.append(filename, [self._pixel_pitch])
 
     @staticmethod
-    def restore(filename, GPU=False):
+    def restore(filename):
         hdr = fits.getheader(filename)
         version = int(hdr['VERSION'])
 
@@ -62,7 +61,7 @@ class PupilStop(Layer):
         dim = fits.getdata(filename, ext=2)
         pixel_pitch = fits.getdata(filename, ext=3)[0]
 
-        pupilstop = PupilStop(dim[0], dim[1], pixel_pitch, 0, input_mask=input_mask, GPU=GPU)
+        pupilstop = PupilStop(dim[0], dim[1], pixel_pitch, 0, input_mask=input_mask)
         return pupilstop
 
     def revision_track(self):

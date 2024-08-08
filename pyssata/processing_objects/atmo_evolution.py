@@ -2,13 +2,13 @@ import numpy as np
 from astropy.io import fits
 
 from pyssata.base_processing_obj import BaseProcessingObj
-
+from pyssata.data_objects.layer import Layer
 
 class AtmoEvolution(BaseProcessingObj):
     '''layers obj from statistics and time'''
 
     def __init__(self, L0, wavelengthInNm, pixel_pitch, heights, Cn2, pixel_pupil, directory, source_list, 
-                 zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed=None, precision=0, verbose=False, GPU=False,
+                 zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed=None, precision=0, verbose=False,
                  user_defined_phasescreen=None, force_mcao_fov=False, make_cycle=False, fov_in_m=None, pupil_position=None):
         super().__init__(precision=precision)
 
@@ -41,8 +41,7 @@ class AtmoEvolution(BaseProcessingObj):
             raise ValueError('Error: phase-screens dimension must be greater than layer dimension!')
 
         self._user_defined_phasescreen = user_defined_phasescreen
-        self._gpu = GPU
-        self._layer_list = [Layer(px, py, pixel_pitch, h, GPU=GPU, PRECISION=precision) for px, py, h in zip(self._pixel_layer, self._pixel_layer, heights)]
+        self._layer_list = [Layer(px, py, pixel_pitch, h, PRECISION=precision) for px, py, h in zip(self._pixel_layer, self._pixel_layer, heights)]
         self._seed = seed
         self._verbose = verbose
 
@@ -139,7 +138,7 @@ class AtmoEvolution(BaseProcessingObj):
                 raise ValueError('the user defined phasescreen work only if the total phasescreens are 1.')
             temp_screen = temp_screen - np.mean(temp_screen)
             temp_screen = temp_screen * self._wavelengthInNm / (2 * np.pi)
-            self._phasescreens.append(GPUArray(temp_screen) if self._gpu else temp_screen)
+            self._phasescreens.append(temp_screen)
         else:
             self._pixel_phasescreens = max(self._pixel_layer)
             if len(set(self._L0)) == 1:

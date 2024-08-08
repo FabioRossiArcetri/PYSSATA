@@ -6,8 +6,6 @@ class Ifunc:
         self._influence_function = None
         self._mask_inf_func = None
         self._idx_inf_func = None
-        self._gpu_ifunc = None
-        self._gpu_idx = None
         self._doZeroPad = False
         self._precision = np.float32
         self.init()
@@ -49,9 +47,6 @@ class Ifunc:
             ifunc = ifuncPad
 
         self._influence_function = np.array(ifunc)
-        # Assuming HAS_GPU is a function that checks for GPU availability
-        if self.has_gpu():
-            self._gpu_ifunc = self.gpu_matrix(np.array(ifunc, dtype=np.float32))
 
     @property
     def mask_inf_func(self):
@@ -77,14 +72,6 @@ class Ifunc:
     @property
     def type(self):
         return self._influence_function.dtype
-
-    @property
-    def gpu_ifunc(self):
-        return self._gpu_ifunc
-
-    @property
-    def gpu_idx(self):
-        return self._gpu_idx
 
     @property
     def zeroPad(self):
@@ -117,10 +104,6 @@ class Ifunc:
         del self._influence_function
         del self._mask_inf_func
         del self._idx_inf_func
-        if self._gpu_ifunc is not None:
-            self._gpu_ifunc.cleanup()
-        if self._gpu_idx is not None:
-            self._gpu_idx.cleanup()
 
     def save(self, filename, hdr=None):
         hdr = hdr if hdr is not None else fits.Header()
@@ -132,7 +115,7 @@ class Ifunc:
         hdul.append(fits.ImageHDU(data=self._mask_inf_func, name='MASK_INF_FUNC'))
         hdul.writeto(filename, overwrite=True)
 
-    def read(self, filename, exten=0, start_mode=None, nmodes=None, idx_modes=None, doNotPutOnGpu=False, zeroPad=False):
+    def read(self, filename, exten=0, start_mode=None, nmodes=None, idx_modes=None, zeroPad=False):
         self._doZeroPad = zeroPad
         hdul = fits.open(filename)
 
@@ -161,7 +144,7 @@ class Ifunc:
             else:
                 self.influence_function = temp[:, start_mode:nmodes]
 
-    def restore(self, filename, start_mode=None, nmodes=None, doNotPutOnGpu=False, zeroPad=False, idx_modes=None, precision=None):
+    def restore(self, filename, start_mode=None, nmodes=None, zeroPad=False, idx_modes=None, precision=None):
         if idx_modes is not None:
             if start_mode is not None:
                 start_mode = None
@@ -174,15 +157,9 @@ class Ifunc:
         if precision is not None:
             p.precision = precision
 
-        p.read(filename, start_mode=start_mode, nmodes=nmodes, idx_modes=idx_modes, doNotPutOnGpu=doNotPutOnGpu, zeroPad=zeroPad)
+        p.read(filename, start_mode=start_mode, nmodes=nmodes, idx_modes=idx_modes, zeroPad=zeroPad)
         return p
 
     def revision_track(self):
         return '$Rev$'
 
-    # Placeholder for the actual GPU related functions
-    def has_gpu(self):
-        return False
-
-    def gpu_matrix(self, array):
-        return array

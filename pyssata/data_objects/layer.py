@@ -6,13 +6,13 @@ from pyssata.data_objects.ef import ElectricField
 class Layer(ElectricField):
     '''Layer'''
 
-    def __init__(self, dimx, dimy, pixel_pitch, height, GPU=False, precision=0, type_str=None):
+    def __init__(self, dimx, dimy, pixel_pitch, height,precision=0, type_str=None):
         self._height = height
         self._shiftXYinPixel = np.array([0.0, 0.0])
         self._rotInDeg = 0.0
         self._magnification = 1.0
 
-        super().__init__(dimx, dimy, pixel_pitch, GPU=GPU, precision=precision, type_str=type_str)
+        super().__init__(dimx, dimy, pixel_pitch, precision=precision, type_str=type_str)
 
     @property
     def height(self):
