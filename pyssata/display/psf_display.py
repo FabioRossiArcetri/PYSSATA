@@ -75,12 +75,7 @@ class PSFDisplay(BaseProcessingObj):
                 self._opened = True
 
             plt.figure(self._window)
-            image = np.zeros((2, 2))  # default 2D value
-
-            if isinstance(psf, BaseGPUValue):
-                image = psf.read()
-            elif isinstance(psf, BaseValue):
-                image = psf.value
+            image = psf.value
 
             if self._image_p2v > 0:
                 image = np.maximum(image, self._image_p2v**(-1.) * np.max(image))
