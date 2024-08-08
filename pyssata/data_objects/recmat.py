@@ -9,10 +9,8 @@ class Recmat(BaseDataObj):
         self._recmat = None
         self._modes2recLayer = None
         self._im_tag = ''
-        self._gpu_recmat = None
         self._proj_list = []
         self._norm_factor = 0.0
-        self._doNotPutOnGpu = False
 
         if not super().__init__():
             return
@@ -57,13 +55,10 @@ class Recmat(BaseDataObj):
     def norm_factor(self, value):
         self._norm_factor = value
 
-    def set_recmat(self, recmat, doNotPutOnGpu=False):
+    def set_recmat(self, recmat):
         self.free()
-        self._doNotPutOnGpu = doNotPutOnGpu
         if recmat is not None:
             self._recmat = recmat
-            if self.has_gpu():
-                self._gpu_recmat = self.create_gpu_matrix(recmat, doNotPutOnGpu)
 
     def set_modes2recLayer(self, modes2recLayer):
         self._modes2recLayer = modes2recLayer
@@ -81,8 +76,7 @@ class Recmat(BaseDataObj):
         if nModesToBeDiscarded >= nmodes:
             raise ValueError(f"nModesToBeDiscarded should be less than nmodes (<{nmodes})")
         self._recmat = recmat[:, :nmodes - nModesToBeDiscarded]
-        if self.has_gpu():
-            self._gpu_recmat = self.create_gpu_matrix(self._recmat, self._doNotPutOnGpu)
+
 
     def save(self, filename, hdr=None):
         if hdr is None:
@@ -98,21 +92,24 @@ class Recmat(BaseDataObj):
         if self._modes2recLayer is not None:
             fits.append(filename, self._modes2recLayer)
 
-    def read(self, filename, hdr=None, exten=0, doNotPutOnGpu=False):
-        super().read(filename, hdr, exten)
+    def read(self, filename, hdr=None, exten=0):
+        hdr, exten = super().read(filename)
 
         self._recmat = fits.getdata(filename, ext=exten)
-        self.set_recmat(self._recmat, doNotPutOnGpu)
+        self.set_recmat(self._recmat)
 
-        mode2reLayer = fits.getdata(filename, ext=exten + 1)
-        if mode2reLayer.size > 1:
-            self.set_modes2recLayer(mode2reLayer)
+        try:
+            mode2reLayer = fits.getdata(filename, ext=exten + 1)
+            if mode2reLayer.size > 1:
+                self.set_modes2recLayer(mode2reLayer)
+        except IndexError:
+            pass
 
         self._norm_factor = float(hdr['NORMFACT'])
         exten += 1
 
     @staticmethod
-    def restore(filename, doNotPutOnGpu=False):
+    def restore(filename):
         hdr = fits.getheader(filename)
         version = int(hdr['VERSION'])
 
@@ -121,7 +118,7 @@ class Recmat(BaseDataObj):
 
         rec = Recmat()
         rec.im_tag = str(hdr['IM_TAG']).strip()
-        rec.read(filename, hdr, doNotPutOnGpu=doNotPutOnGpu)
+        rec.read(filename, hdr)
 
         return rec
 
@@ -130,18 +127,9 @@ class Recmat(BaseDataObj):
 
     def free(self):
         self._recmat = None
-        if self._gpu_recmat is not None:
-            self._gpu_recmat.cleanup()
-            self._gpu_recmat = None
+
 
     def cleanup(self):
         self.free()
         super().cleanup()
 
-    def has_gpu(self):
-        # Placeholder for actual GPU check
-        return False
-
-    def create_gpu_matrix(self, array, doNotPutOnGpu):
-        # Placeholder for actual GPU matrix creation
-        return None

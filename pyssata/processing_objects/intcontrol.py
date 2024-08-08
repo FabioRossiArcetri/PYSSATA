@@ -1,18 +1,14 @@
 
 from pyssata.processing_objects.iircontrol import IIRControl
+from pyssata.lib.int2iirfilter import int2iirfilter
 
 
 class IntControl(IIRControl):
     def __init__(self, gain, ff=None, delay=0):
         iirfilter = int2iirfilter(gain, ff=ff)
-        
+
         # Initialize IIRControl object
-        if not super().__init__(iirfilter, delay=delay):
-            raise ValueError("Initialization of IIRControl failed")
-        
-        # Initialize BaseProcessingObj
-        if not BaseProcessingObj.Init(self, 'intcontrol', 'Integrator based Time Control'):
-            raise ValueError("Initialization of BaseProcessingObj failed")
+        super().__init__(iirfilter, delay=delay)
 
     @property
     def ff(self):
@@ -28,7 +24,3 @@ class IntControl(IIRControl):
     def run_check(self, time_step, errmsg=""):
         return True
 
-# Define the necessary functions used in IntControl
-def int2iirfilter(gain, ff=None):
-    # Implementation of the int2iirfilter function goes here
-    pass

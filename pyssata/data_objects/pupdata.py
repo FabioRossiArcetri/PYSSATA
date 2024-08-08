@@ -11,7 +11,7 @@ class PupData(BaseDataObj):
         self._ind_pup = np.empty((4, 0), dtype=int)
         self._framesize = np.zeros(2, dtype=int)
         
-        if not super().__init__("pupdata", "Pupil data object"):
+        if not super().__init__():
             return
 
     @property
@@ -89,7 +89,7 @@ class PupData(BaseDataObj):
         fits.append(filename, self._cy)
 
     def read(self, filename, hdr=None, exten=0):
-        super().read(filename, hdr, exten)
+        hdr, exten = super().read(filename)
 
         self._ind_pup = fits.getdata(filename, ext=exten)
         self._radius = fits.getdata(filename, ext=exten + 1)

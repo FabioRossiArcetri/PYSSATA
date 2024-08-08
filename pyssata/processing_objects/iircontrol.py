@@ -3,8 +3,8 @@ from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.processing_objects.timecontrol import TimeControl
 from pyssata.base_value import BaseValue
 
-
 class IIRControl(TimeControl, BaseProcessingObj):
+    '''Infinite Impulse Response filter based Time Control'''
     def __init__(self, iirfilter, delay=0):
         super().__init__()
 
@@ -12,16 +12,14 @@ class IIRControl(TimeControl, BaseProcessingObj):
         typeIIR = iirfilter.num.dtype
         nIIR = iirfilter.nfilter
 
-        if not super(TimeControl, self).Init(delay=delay, n=nIIR, type=typeIIR):
-            raise ValueError("Initialization of TimeControl failed")
+        TimeControl.__init__(self, delay=delay, n=nIIR, type=typeIIR)
 
         self._ist = np.zeros_like(iirfilter.num)
         self._ost = np.zeros_like(iirfilter.den)
 
         self._out_comm = BaseValue()
 
-        if not super(BaseProcessingObj, self).Init('iircontrol', 'Infinite Impulse Response filter based Time Control'):
-            raise ValueError("Initialization of BaseProcessingObj failed")
+        BaseProcessingObj.__init__(self)
 
         self._delta_comm = None
         self._opticalgain = None

@@ -1,7 +1,10 @@
+
 import os
 from astropy.io import fits
 
 from pyssata.base_parameter_obj import BaseParameterObj
+from pyssata.data_objects.pupdata import PupData
+from pyssata.data_objects.recmat import Recmat
 
 class CalibManager(BaseParameterObj):
     def __init__(self, root_dir):
@@ -111,6 +114,18 @@ class CalibManager(BaseParameterObj):
 
     def read_pupilstop(self, name, get_filename=False):
         return self.readfits('pupilstop', name, get_filename)
+
+    def read_pupils(self, name, get_filename=False):
+        filename = self.filename('pupils', name)
+        if get_filename:
+            return filename
+        return PupData.restore(filename)
+
+    def read_rec(self, name, get_filename=False):
+        filename = self.filename('rec', name)
+        if get_filename:
+            return filename
+        return Recmat.restore(filename)
 
     def write_data(self, name, data):
         self.writefits('data', name, data)

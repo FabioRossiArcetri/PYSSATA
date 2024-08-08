@@ -1,3 +1,31 @@
+ #+
+ # NAME:
+ #   int2iirfilter 
+ # PURPOSE:
+ #   this function returns an iirfilter object
+ #   made by integrators                              
+ # CATEGORY:
+ #   AO simulation.
+ # CALLING SEQUENCE:
+ # function int2iirfilter, gain, ff=ff 
+ # INPUTS:
+ #   gain        gain vector
+ # KEYWORD
+ #   ff          forgetting factor vector
+ # OUTPUTS:
+ #   iirfilter   iirfilter object
+ # COMMON BLOCKS:
+ #   None.
+ # SIDE EFFECTS:
+ #   None.
+ # RESTRICTIONS:
+ #   None
+ # MODIFICATION HISTORY:
+ #   Created 24-SEP-2014 by Guido Agapito agapito@arcetri.astro.it
+ #-
+
+from pyssata.data_objects.iirfilter import IIRFilter
+
 import numpy as np
 
 
