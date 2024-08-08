@@ -1,5 +1,8 @@
 import numpy as np
 
+from pyssata.data_objects.base_data_obj import BaseDataObj
+
+
 class Source(BaseDataObj):
     def __init__(self, polar_coordinate, height, magnitude, wavelengthInNm, band='', zeroPoint=0, objname="source", objdescr="star source"):
         self._polar_coordinate = np.array(polar_coordinate)

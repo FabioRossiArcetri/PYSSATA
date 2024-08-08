@@ -1,6 +1,10 @@
 import numpy as np
 from dataclasses import dataclass, field
 
+from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.base_value import BaseValue
+from pyssata.data_objects import Slopes
+
 @dataclass
 class Slopec(BaseProcessingObj):
     _pixels: any = field(default_factory=lambda: None)

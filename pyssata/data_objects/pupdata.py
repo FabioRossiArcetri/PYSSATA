@@ -1,6 +1,8 @@
 import numpy as np
 from astropy.io import fits
 
+from pyssata.data_objects.base_data_obj import BaseDataObj
+
 class PupData(BaseDataObj):
     def __init__(self):
         self._radius = np.zeros(4, dtype=float)

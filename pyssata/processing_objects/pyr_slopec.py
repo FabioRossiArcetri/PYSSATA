@@ -1,6 +1,9 @@
 import numpy as np
 from dataclasses import dataclass, field
 
+from pyssata.processing_objects.slopec import Slopec
+from pyssata.data_objects.slopes import Slopes
+
 @dataclass
 class PyrSlopec(Slopec):
     _pupdata: any = field(default_factory=lambda: None)

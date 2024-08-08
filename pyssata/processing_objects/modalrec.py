@@ -1,8 +1,14 @@
 import numpy as np
+from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.base_value import BaseValue
+from pyssata.data_objects.recmat import Recmat
+from pyssata.data_objects.slopes import Slopes
+from pyssata.processing_objects.cheat import Cheat
 
-class ModalRec:
+
+class ModalRec(BaseProcessingObj):
     def __init__(self, recmat=None, projmat=None, intmat=None, polc=None):
-        self._recmat = recmat if recmat is not None else RecMat()
+        self._recmat = recmat if recmat is not None else Recmat()
         self._projmat = projmat
         self._intmat = intmat
         self._polc = polc

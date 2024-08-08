@@ -1,6 +1,8 @@
 import numpy as np
 from astropy.io import fits
 
+from pyssata.data_objects.ef import ElectricField
+
 class Layer(ElectricField):
     def __init__(self, dimx, dimy, pixel_pitch, height, GPU=False, objname="layer", objdescr="layer object", precision=0, type_str=None):
         self._height = height

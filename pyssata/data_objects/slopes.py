@@ -1,6 +1,9 @@
 import numpy as np
 from astropy.io import fits
 
+from pyssata.data_objects.base_data_obj import BaseDataObj
+
+
 class Slopes(BaseDataObj):
     def __init__(self, length=None, slopes=None, interleave=False):
         if slopes is not None:

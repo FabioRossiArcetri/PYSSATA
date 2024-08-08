@@ -1,5 +1,8 @@
 import numpy as np
 
+from pyssata.base_processing_obj import BaseProcessingObj
+
+
 class DM(BaseProcessingObj):
     def __init__(self, pixel_pitch, height, influence_function, GPU=False, objname="dm", objdescr="Deformable Mirror object", precision=0, dtype=None):
         super().__init__(objname, objdescr)

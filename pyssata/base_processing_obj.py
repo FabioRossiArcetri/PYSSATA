@@ -1,6 +1,9 @@
 import numpy as np
 from astropy.io import fits
 
+from pyssata.base_time_obj import BaseTimeObj
+from pyssata.base_parameter_obj import BaseParameterObj
+
 class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
     def __init__(self, objname, objdescr, precision=0):
         """

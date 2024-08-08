@@ -1,6 +1,9 @@
 import numpy as np
 from astropy.io import fits
 
+from pyssata.base_processing_obj import BaseProcessingObj
+
+
 class AtmoPropagation(BaseProcessingObj):
     def __init__(self, source_list, pixel_pupil, pixel_pitch, GPU=False, precision=0):
         super().__init__('atmo_propagation', 'Atmospheric propagation', precision=precision)

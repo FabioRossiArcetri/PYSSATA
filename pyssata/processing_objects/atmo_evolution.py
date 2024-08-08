@@ -1,6 +1,9 @@
 import numpy as np
 from astropy.io import fits
 
+from pyssata.base_processing_obj import BaseProcessingObj
+
+
 class AtmoEvolution(BaseProcessingObj):
     def __init__(self, L0, wavelengthInNm, pixel_pitch, heights, Cn2, pixel_pupil, directory, source_list, 
                  zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed=None, precision=0, verbose=False, GPU=False,
