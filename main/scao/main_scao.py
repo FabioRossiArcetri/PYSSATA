@@ -1,4 +1,6 @@
-import numpy as np
+
+from pyssata.factory import Factory
+
 
 # Read parameters file
 dir = './'
