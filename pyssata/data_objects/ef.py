@@ -4,9 +4,10 @@ from astropy.io import fits
 from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class ElectricField(BaseDataObj):
-    def __init__(self, dimx, dimy, pixel_pitch, gpu=False, objname="ef", objdescr="Electric field object", precision=0, dtype=None):
-        objdescr = objdescr if not gpu else objdescr + ' on GPU'
-        super().__init__(objname, objdescr, precision)
+    '''Electric field'''
+
+    def __init__(self, dimx, dimy, pixel_pitch, gpu=False, precision=0, dtype=None):
+        super().__init__(precision)
 
         self.gpu = gpu
         self.pixel_pitch = pixel_pitch

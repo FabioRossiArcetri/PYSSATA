@@ -4,7 +4,9 @@ from astropy.io import fits
 from pyssata.data_objects.layer import Layer
 
 class PupilStop(Layer):
-    def __init__(self, dimx, dimy, pixel_pitch, height, GPU=False, input_mask=None, mask_diam=None, obs_diam=None, objname="pupilstop", objdescr="pupilstop object", PRECISION=0, TYPE=None):
+    '''Pupil stop'''
+
+    def __init__(self, dimx, dimy, pixel_pitch, height, GPU=False, input_mask=None, mask_diam=None, obs_diam=None, PRECISION=0, TYPE=None):
         self._pixel_pitch = pixel_pitch
         self._height = height
         self._GPU = GPU
@@ -12,7 +14,7 @@ class PupilStop(Layer):
         self._mask_diam = mask_diam
         self._obs_diam = obs_diam
 
-        if not super().__init__(dimx, dimy, pixel_pitch, height, GPU=GPU, objname=objname + ' layer', objdescr=objname + ' layer object', PRECISION=PRECISION, TYPE=TYPE):
+        if not super().__init__(dimx, dimy, pixel_pitch, height, GPU=GPU, PRECISION=PRECISION, TYPE=TYPE):
             return
 
         if input_mask is not None:
@@ -22,7 +24,7 @@ class PupilStop(Layer):
 
         self.A = np.float32(self._mask_amp)
         
-        if not BaseDataObj.__init__(self, objname, objdescr):
+        if not BaseDataObj.__init__(self):
             return
 
     def make_mask(self, dimx, diaratio, obsratio):
@@ -69,42 +71,3 @@ class PupilStop(Layer):
     def cleanup(self):
         self._A = None
         super().cleanup()
-
-# Example definition of Layer and BaseDataObj if not available.
-class BaseDataObj:
-    def __init__(self, objname, objdescr):
-        self.objname = objname
-        self.objdescr = objdescr
-
-    def save(self, filename, hdr):
-        pass
-
-    def read(self, filename, hdr=None, exten=0):
-        pass
-
-    def cleanup(self):
-        pass
-
-class Layer(BaseDataObj):
-    def __init__(self, dimx, dimy, pixel_pitch, height, GPU=False, objname="layer", objdescr="layer object", PRECISION=0, TYPE=None):
-        self._dimx = dimx
-        self._dimy = dimy
-        self._pixel_pitch = pixel_pitch
-        self._height = height
-        self._GPU = GPU
-        self._PRECISION = PRECISION
-        self._TYPE = TYPE
-        super().__init__(objname, objdescr)
-        # Additional initialization for Layer
-
-    def save(self, filename, hdr=None):
-        super().save(filename, hdr)
-        # Additional save logic for Layer
-
-    def read(self, filename, hdr=None, exten=0):
-        super().read(filename, hdr, exten)
-        # Additional read logic for Layer
-
-    def cleanup(self):
-        super().cleanup()
-        # Additional cleanup logic for Layer

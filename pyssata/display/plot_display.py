@@ -1,9 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from pyssata.base_processing_obj import BaseProcessingObj
+
+
 class PlotDisplay(BaseProcessingObj):
     def __init__(self, value=None, histlen=200, wsize=(600, 400), window=23, yrange=(0, 0), oplot=False, color=1, psym=-4, title=''):
-        super().__init__('plot_display', 'Plot')
+        super().__init__()
         
         self._wsize = wsize
         self._window = window

@@ -1,19 +1,16 @@
-import numpy as np
 from astropy.io import fits
 
 from pyssata.base_time_obj import BaseTimeObj
 
 class BaseDataObj(BaseTimeObj):
-    def __init__(self, objname, objdescr, precision=0):
+    def __init__(self, precision=0):
         """
         Initialize the base data object.
 
         Parameters:
-        objname (str): object name
-        objdescr (str): object description
         precision (int, optional): double 1 or single 0, defaults to single precision
         """
-        super().__init__(objname, objdescr, precision)
+        super().__init__(precision)
         self._tag = ''
 
     @property

@@ -4,7 +4,9 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 
 
 class Source(BaseDataObj):
-    def __init__(self, polar_coordinate, height, magnitude, wavelengthInNm, band='', zeroPoint=0, objname="source", objdescr="star source"):
+    '''source'''
+
+    def __init__(self, polar_coordinate, height, magnitude, wavelengthInNm, band='', zeroPoint=0):
         self._polar_coordinate = np.array(polar_coordinate)
         self._height = height
         self._magnitude = magnitude
@@ -13,7 +15,7 @@ class Source(BaseDataObj):
         self._band = band
         self._verbose = False
 
-        if not super().__init__(objname, objdescr):
+        if not super().__init__():
             return
 
     @property

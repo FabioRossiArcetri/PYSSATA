@@ -1,5 +1,7 @@
 import numpy as np
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.processing_objects.timecontrol import TimeControl
+from pyssata.base_value import BaseValue
 
 
 class IIRControl(TimeControl, BaseProcessingObj):

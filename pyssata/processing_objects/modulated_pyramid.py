@@ -1,9 +1,15 @@
 import numpy as np
 
-class ModulatedPyramid:
+from pyssata.base_processing_obj import BaseProcessingObj
+
+
+class ModulatedPyramid(BaseProcessingObj):
     def __init__(self, wavelength_in_nm, fov_res, fp_masking, fft_res, tilt_scale, fft_sampling, 
                  fft_padding, fft_totsize, toccd_side, final_ccd_side, fp_obs=None, pyr_tlt_coeff=None, 
                  pyr_edge_def_ld=None, pyr_tip_def_ld=None, pyr_tip_maya_ld=None):
+        
+        super().__init__()
+
         # Compute focal plane central obstruction dimension ratio                 
         fp_obsratio = fp_obs / (fft_totsize / fft_res) if fp_obs is not None else 0
 
@@ -361,9 +367,6 @@ class ModulatedPyramid:
 
     def cleanup(self):
         self.free()
-
-    def repr(self):
-        return f'{self._objdescr} ({self._objname})'
 
     def hdr(self, hdr):
         hdr['MODAMP'] = self._mod_amp

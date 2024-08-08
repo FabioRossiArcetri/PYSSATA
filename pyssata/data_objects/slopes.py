@@ -14,7 +14,7 @@ class Slopes(BaseDataObj):
         self._interleave = interleave
         self._pupdata_tag = ''
 
-        if not super().__init__("slopes", "Slopes object"):
+        if not super().__init__():
             return
 
     @property
