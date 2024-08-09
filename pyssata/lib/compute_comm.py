@@ -1,5 +1,8 @@
 import numpy as np
 
+from pyssata.lib.online_filter import online_filter
+
+
 def compute_comm(filter_obj, input_data, ist=None, ost=None):
     nfilter = filter_obj.num.shape[0]
     ninput = len(input_data)
@@ -21,8 +24,8 @@ def compute_comm(filter_obj, input_data, ist=None, ost=None):
         temp_ist = ist[idx_finite]
         temp_ost = ost[idx_finite]
         output[idx_finite] = online_filter(
-            filter_obj.num[idx_finite, :onu[0]],
-            filter_obj.den[idx_finite, :odu[0]],
+            filter_obj.num[idx_finite, :int(onu[0])],
+            filter_obj.den[idx_finite, :int(odu[0])],
             input_data[idx_finite],
             ost=temp_ost,
             ist=temp_ist

@@ -2,6 +2,7 @@ import numpy as np
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.processing_objects.timecontrol import TimeControl
 from pyssata.base_value import BaseValue
+from pyssata.lib.compute_comm import compute_comm
 
 class IIRControl(TimeControl, BaseProcessingObj):
     '''Infinite Impulse Response filter based Time Control'''
@@ -41,6 +42,7 @@ class IIRControl(TimeControl, BaseProcessingObj):
         self._extraPolMinMax = [0, 0]
         self._skipOneStep = False
         self._StepIsNotGood = False
+        self._start_time = 0
 
     @property
     def in_delta_comm(self):

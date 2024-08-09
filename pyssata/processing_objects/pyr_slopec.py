@@ -63,10 +63,10 @@ class PyrSlopec(Slopec):
         if p is not None:
             self._pupdata = p
             if self._slopes_from_intensity:
-                self._slopes = Slopes(len(self._pupdata.ind_pup))
+                self._slopes = Slopes(len(self._pupdata.ind_pup) * 4)
             else:
-                self._slopes = Slopes(len(self._pupdata.ind_pup) // 2)
-            self._accumulated_slopes = Slopes(len(self._pupdata.ind_pup) // 2)
+                self._slopes = Slopes(len(self._pupdata.ind_pup) * 2)
+            self._accumulated_slopes = Slopes(len(self._pupdata.ind_pup) * 2)
             self._slopes.pupdata_tag = pupdata_tag
 
     def calc_slopes(self, t, accumulated=False):

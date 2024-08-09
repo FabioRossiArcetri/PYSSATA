@@ -44,6 +44,7 @@ def online_filter(num, den, input_data, ost=None, ist=None):
             num_temp = num
 
         # Delay the vectors
+        print(ost[:,1:].shape, np.zeros((sden[0], 1)).shape)
         ost = np.concatenate((ost[:, 1:], np.zeros((sden[0], 1))), axis=1)
         ist = np.concatenate((ist[:, 1:], np.zeros((sden[0], 1))), axis=1)
 
