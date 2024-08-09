@@ -110,7 +110,9 @@ class CCD(BaseProcessingObj):
                     self._integrated_i.sum(self._in_i, factor=self._loop_dt * self._bandw)
 
             if (t + self._loop_dt - self._dt - self._start_time) % self._dt == 0:
-                if not self._doNotChangeI:
+                if self._doNotChangeI:
+                    self._pixels.pixels = self._integrated_i.i
+                else:
                     if self._emccd_gain == 0:
                         self._emccd_gain = 400 if self._excess_noise else 1
 
