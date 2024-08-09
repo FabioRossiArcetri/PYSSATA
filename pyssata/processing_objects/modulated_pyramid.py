@@ -3,6 +3,8 @@ import numpy as np
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.lib.make_xy import make_xy
 from pyssata.data_objects.intensity import Intensity
+from pyssata.lib.make_mask import make_mask
+from pyssata.lib.toccd import toccd
 
 class ModulatedPyramid(BaseProcessingObj):
     def __init__(self, wavelength_in_nm, fov_res, fp_masking, fft_res, tilt_scale, fft_sampling, 
@@ -57,8 +59,6 @@ class ModulatedPyramid(BaseProcessingObj):
         # Trigger cache
         self.mod_amp = 3
         self.mod_steps = 32
-
-        self.calc_extobj_planes(fft_sampling)
 
     @property
     def mod_amp(self):
@@ -318,7 +318,7 @@ class ModulatedPyramid(BaseProcessingObj):
         return tlt_f
 
     def get_fp_mask(self, totsize, mask_ratio, obsratio=0):
-        return self.make_mask(totsize, diaratio=mask_ratio, obsratio=obsratio)
+        return make_mask(totsize, diaratio=mask_ratio, obsratio=obsratio)
 
     def get_modulation_tilt(self, p, X=False, Y=False):
         p = int(p)
@@ -331,13 +331,6 @@ class ModulatedPyramid(BaseProcessingObj):
             return tilt_x
         if Y:
             return tilt_y
-
-    def calc_extobj_planes(self, p):
-        p = int(p)
-        xx, yy = make_xy(p, 1.0)
-        self._ext_xtilt = self.zern(2, xx, yy)
-        self._ext_ytilt = self.zern(3, xx, yy)
-        self._ext_focus = self.zern(4, xx, yy)
 
     def cache_ttexp(self):
         if not self._extended_source_in_on:
@@ -439,7 +432,7 @@ class ModulatedPyramid(BaseProcessingObj):
                                      np.arange(self._fft_totsize + 2) - pup_shifty, grid=True, missing=0)
             pup_pyr_tot = image[1:-1, 1:-1]
 
-        ccd_internal = self.toccd(pup_pyr_tot, self._toccd_side)
+        ccd_internal = toccd(pup_pyr_tot, self._toccd_side)
 
         if self._final_ccd_side > self._toccd_side:
             delta = (self._final_ccd_side - self._toccd_side) // 2
@@ -455,6 +448,8 @@ class ModulatedPyramid(BaseProcessingObj):
         self._psf_tot = psf_tot
         self._psf_bfm = psf_bfm
         self._out_transmission = transmission
+        import code
+        code.interact(local=dict(globals(), **locals()))
 
     def run_check(self, time_step):
         if self._extended_source_in_on:
@@ -491,25 +486,13 @@ class ModulatedPyramid(BaseProcessingObj):
 
     @staticmethod
     def zern(mode, xx, yy):
-        # Dummy implementation
-        return xx + yy
+        raise NotImplementedError
+
 
     @staticmethod
     def interpolate(image, x, y, grid=False, missing=0):
-        # Dummy implementation
-        return image
-
-    @staticmethod
-    def toccd(pup_pyr_tot, toccd_side):
-        # Dummy implementation
-        return pup_pyr_tot
-
-    @staticmethod
-    def make_mask(totsize, diaratio, obsratio=0):
-        # Dummy implementation
-        return np.ones((totsize, totsize))
+        raise NotImplementedError
 
     @staticmethod
     def ROT_AND_SHIFT_IMAGE(image, angle, shift, scale, use_interpolate=False):
-        # Dummy implementation
-        return image
+        raise NotImplementedError
