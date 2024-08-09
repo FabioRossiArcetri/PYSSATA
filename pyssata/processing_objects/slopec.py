@@ -117,6 +117,10 @@ class Slopec(BaseProcessingObj):
         self._cm = value
 
     @property
+    def out_slopes(self):
+        return self._slopes
+
+    @property
     def weight_from_accumulated(self):
         return self._weight_from_accumulated
 

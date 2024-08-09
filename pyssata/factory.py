@@ -5,6 +5,7 @@ import os
 from pyssata.loop_control import LoopControl
 from pyssata.calib_manager import CalibManager
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.processing_objects.atmo_evolution import AtmoEvolution
 
 from pyssata.processing_objects.ccd import CCD
 from pyssata.processing_objects.atmo_propagation import AtmoPropagation
@@ -15,6 +16,12 @@ from pyssata.processing_objects.datastore import Datastore
 from pyssata.processing_objects.modalrec import ModalRec
 from pyssata.processing_objects.intcontrol import IntControl
 from pyssata.processing_objects.dm import DM
+from pyssata.processing_objects.psf import PSF
+from pyssata.processing_objects.func_generator import FuncGenerator
+
+from pyssata.display.slopec_display import SlopecDisplay
+from pyssata.display.plot_display import PlotDisplay
+from pyssata.display.phase_display import PhaseDisplay
 
 from pyssata.data_objects.source import Source
 from pyssata.data_objects.ef import ElectricField
@@ -226,15 +233,15 @@ class Factory:
         atmo = self.get_atmo_evolution(params_atmo_copy, source_list)
         seeing = self.get_func_generator(params_seeing)
         wind_speed = self.get_func_generator(params_windspeed_copy)
-        wind_dir = self.get_func_generator(params_winddirection_copy)
+        wind_direction= self.get_func_generator(params_winddirection_copy)
 
         atmo.seeing = seeing.output
         atmo.wind_speed = wind_speed.output
-        atmo.wind_dir = wind_dir.output
+        atmo.wind_direction = wind_direction.output
 
         container.add(seeing, name='seeing')
         container.add(wind_speed, name='wind_speed')
-        container.add(wind_dir, name='wind_dir')
+        container.add(wind_direction, name='wind_direction')
         container.add(atmo, name='atmo', output='layer_list')
 
         return container
@@ -472,19 +479,19 @@ class Factory:
         wavelengthInNm = self.extract(params, 'wavelengthInNm', default=500)
         heights = params.pop('heights')
         Cn2 = params.pop('Cn2')
-        mcao_fov = self.extract(params, 'mcao_fov', default=None)
-        fov_in_m = self.extract(params, 'fov_in_m', default=None)
-        pixel_phasescreens = self.extract(params, 'pixel_phasescreens', default=None)
+        mcao_fov = self.extract(params, 'mcao_fov', default=None, optional=True)
+        fov_in_m = self.extract(params, 'fov_in_m', default=None, optional=True)
+        pixel_phasescreens = self.extract(params, 'pixel_phasescreens', default=None, optional=True)
         seed = self.extract(params, 'seed', default=1)
-        pupil_position = self.extract(params, 'pupil_position', default=None)
+        pupil_position = self.extract(params, 'pupil_position', default=None, optional=True)
         
         directory = self._cm.root_subdir('phasescreen')
 
         user_defined_phasescreen = self.extract(params, 'user_defined_phasescreen', default='')
         
-        force_mcao_fov = self.extract(params, 'force_mcao_fov', default=None)
-        make_cycle = self.extract(params, 'make_cycle', default=None)
-        doFresnel = self.extract(params, 'doFresnel', default=None)
+        force_mcao_fov = self.extract(params, 'force_mcao_fov', default=None, optional=True)
+        make_cycle = self.extract(params, 'make_cycle', default=None, optional=True)
+        doFresnel = self.extract(params, 'doFresnel', default=None, optional=True)
 
         atmo_evolution = AtmoEvolution(L0, wavelengthInNm, pixel_pitch, heights, Cn2,
                                     pixel_pup, directory, source_list,
@@ -1346,7 +1353,7 @@ class Factory:
         """
         params = self.ensure_dictionary(params)
         func_type = self.extract(params, 'func_type', default='SIN')
-        nmodes = self.extract(params, 'nmodes', default=None)
+        nmodes = self.extract(params, 'nmodes', default=None, optional=True)
 
         if 'constant_tag' in params:
             tag = params.pop('constant_tag')
@@ -1367,7 +1374,7 @@ class Factory:
             tag = params.pop('time_hist_tag')
             params['time_hist'] = self._cm.read_data(tag)
         else:
-            time_hist = self.extract(params, 'time_hist', default=None)
+            time_hist = self.extract(params, 'time_hist', default=None, optional=True)
 
         funcgenerator = FuncGenerator(func_type, time_hist=time_hist, nmodes=nmodes)
 
@@ -3020,7 +3027,7 @@ class Factory:
         if useGPU:
             psf = PsfGpu(wavelengthInNm, nd=nd)
         else:
-            psf = Psf(wavelengthInNm, nd=nd)
+            psf = PSF(wavelengthInNm, nd=nd)
         
         self.apply_global_params(psf)
         psf.apply_properties(params)

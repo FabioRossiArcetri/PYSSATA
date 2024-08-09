@@ -1,10 +1,13 @@
 import numpy as np
 
-class FuncGenerator:
+from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.base_value import BaseValue
+
+class FuncGenerator(BaseProcessingObj):
     def __init__(self, type, nmodes=None, time_hist=None, psd=None, fr_psd=None, continuous_psd=None, 
                  constant=None, amp=None, freq=None, offset=None, vect_amplitude=None, 
                  seed=None, ncycles=None):
-        super().__init__('func_generator', 'Function generator')
+        super().__init__()
 
         self._type = type.upper()
 
@@ -108,7 +111,6 @@ class FuncGenerator:
         else:
             raise ValueError(f'Unknown function generator type: {self._type}')
 
-        s = float(s)
         self._output.value = s
         self._output.generation_time = t
 

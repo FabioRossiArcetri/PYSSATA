@@ -4,6 +4,7 @@ from scipy.stats import poisson, gamma, norm
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.pixels import Pixels
+from pyssata.data_objects.intensity import Intensity
 
 class CCD(BaseProcessingObj):
     '''Simple CCD from intensity field'''
@@ -76,7 +77,7 @@ class CCD(BaseProcessingObj):
 
     @dt.setter
     def dt(self, value):
-        self._dt = value
+        self._dt = self.seconds_to_t(value)
 
     @property
     def size(self):
@@ -215,20 +216,21 @@ class CCD(BaseProcessingObj):
     def run_check(self, time_step, errmsg=''):
         if self._loop_dt == 0:
             self._loop_dt = time_step
-        if not obj_valid(self._in_i):
+        if self._in_i is None:
             errmsg = 'Input intensity object has not been set'
-        if not obj_valid(self._pixels):
+        if self._pixels is None:
             errmsg = 'Pixel object has not been set'
         if self._dt % time_step != 0:
             errmsg = f'integration time dt={self._dt} must be a multiple of the basic simulation time_step={time_step}'
         if self._dt <= 0:
             errmsg = f'dt (integration time) is {self._dt} and must be greater than zero'
-        if self._cte_noise and not ptr_valid(self._cte_mat):
+        if self._cte_noise and self._cte_mat is None:
             errmsg = 'CTE matrix must be set!'
 
-        is_check_ok = (obj_valid(self._in_i) and obj_valid(self._pixels) and
+        is_check_ok = (self._in_i is not None and self._pixels is not None and
                        (self._dt > 0) and (self._dt % time_step == 0) and
-                       (not self._cte_noise or ptr_valid(self._cte_mat)))
+                       (not self._cte_noise or self._cte_mat is not None))
+        print(errmsg)
         return is_check_ok
 
     def cleanup(self):

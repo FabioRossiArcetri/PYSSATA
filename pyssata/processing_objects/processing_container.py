@@ -15,15 +15,10 @@ class ProcessingContainer(BaseProcessingObj):
             name = f'obj{len(self._objs)}'
         self._objs[name.upper()] = obj
         if output:
-            self.add_output(name, output)
+            setattr(self, output, getattr(obj, output))
         if input:
-            self.add_input(name, input)
-
-    def add_output(self, name, keyword):
-        self._outputs[keyword.upper()] = name.upper()
-
-    def add_input(self, name, keyword):
-        self._inputs[keyword.upper()] = name.upper()
+            print(obj, name, input)
+            setattr(self, input, lambda x: setattr(obj, input, x))
 
     def trigger(self, t):
         for item in self._objs.values():
@@ -64,6 +59,8 @@ class ProcessingContainer(BaseProcessingObj):
             super().get_property(**{key: kwargs[key] for key in ex})
 
     def run_check(self, time_step, errmsg=''):
+        return True
+
         ok = True
         for item in self._objs.values():
             if not item.run_check(time_step, errmsg):

@@ -57,8 +57,8 @@ def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=False, verbos
 
     # Fill in the noise matrix
     phasescreen[half_dim:2 * half_dim, 0:2 * half_dim] = re_gauss[1:half_dim + 1, 1:2 * half_dim + 1] + 1j * im_gauss[1:half_dim + 1, 1:2 * half_dim + 1]
-    phasescreen[0:half_dim, 0:2 * half_dim] = np.flipud(re_gauss[1:half_dim, 1:2 * half_dim + 1]) - 1j * np.flipud(im_gauss[1:half_dim, 1:2 * half_dim + 1])
-    phasescreen[half_dim, 0:half_dim] = re_gauss[0, 1:half_dim] + 1j * im_gauss[0, 1:half_dim]
+    phasescreen[0:half_dim, 0:2 * half_dim] = np.flipud(re_gauss[1:half_dim + 1, 1:2 * half_dim + 1]) - 1j * np.flipud(im_gauss[1:half_dim + 1, 1:2 * half_dim + 1])
+    phasescreen[half_dim, 0:half_dim] = re_gauss[0, 1:half_dim+1] + 1j * im_gauss[0, 1:half_dim+1]
     phasescreen[half_dim, half_dim:2 * half_dim] = np.flipud(re_gauss[0, 0:half_dim]) - 1j * np.flipud(im_gauss[0, 0:half_dim])
 
     if verbose:

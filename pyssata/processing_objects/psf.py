@@ -1,5 +1,11 @@
-class PSF:
+import numpy as np
+
+from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.base_value import BaseValue
+
+class PSF(BaseProcessingObj):
     def __init__(self, wavelengthInNm, nd=1):
+        super().__init__()
         self._wavelengthInNm = wavelengthInNm
         self._nd = nd
 

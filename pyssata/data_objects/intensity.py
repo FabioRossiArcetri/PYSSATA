@@ -1,9 +1,12 @@
 import numpy as np
 from astropy.io import fits
 
+from pyssata.data_objects.base_data_obj import BaseDataObj
+
 class Intensity(BaseDataObj):
+    '''Intensity field object'''
     def __init__(self, dimx, dimy, precision=0, type_str=None):
-        super().__init__("i", "Intensity field object", precision=precision)
+        super().__init__()
         
         if type_str is None:
             self.type = np.float32 if precision == 0 else np.float64
