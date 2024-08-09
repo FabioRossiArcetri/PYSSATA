@@ -1,7 +1,7 @@
 import numpy as np
 
 main = {
- 'root_dir':          '/tmp/SCAO',               # Root directory for calibration manager
+ 'root_dir':          './calib/SCAO',               # Root directory for calibration manager
  'pixel_pupil':       160,                    # Linear dimension of pupil phase array
  'pixel_pitch':       0.05,                   # [m] Pitch of the pupil phase array
  'total_time':        1.000,                 # [s] Total simulation running time
