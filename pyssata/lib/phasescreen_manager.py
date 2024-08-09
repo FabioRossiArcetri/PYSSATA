@@ -2,6 +2,8 @@ import os
 import numpy as np
 from astropy.io import fits
 
+from pyssata.lib.calc_phasescreen import calc_phasescreen
+
 def phasescreens_manager(L0, dimension, pixel_pitch, directory, seed=None, precision=False, verbose=False):
     if seed is None:
         seed = [0]

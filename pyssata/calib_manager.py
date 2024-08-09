@@ -43,6 +43,9 @@ class CalibManager(BaseParameterObj):
     def root_dir(self, value):
         self._root_dir = value
 
+    def root_subdir(self, type):
+        return os.path.join(self.root_dir, self._subdirs[type])
+
     def setproperty(self, root_dir=None, **kwargs):
         """
         Set properties for the calibration manager.

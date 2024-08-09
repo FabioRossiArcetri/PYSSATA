@@ -9,6 +9,8 @@ class ElectricField(BaseDataObj):
     def __init__(self, dimx, dimy, pixel_pitch, precision=0, dtype=None):
         super().__init__(precision)
 
+        dimx = int(dimx)
+        dimy = int(dimy)
         self.pixel_pitch = pixel_pitch
         self.precision = precision
         self.dtype = dtype if dtype else np.float32 if precision == 0 else np.float64

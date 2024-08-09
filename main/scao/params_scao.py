@@ -63,12 +63,13 @@ camera = {
 
 atmo = {
  'L0':                40,                   # [m] Outer scale
- 'heights':           [119.,837,3045,12780], # [m] layer heights at 0 zenith angle
- 'Cn2':               [0.70,0.06,0.14,0.10], # Cn2 weights (total must be eq 1)
+ 'heights':           np.array([119.,837,3045,12780]), # [m] layer heights at 0 zenith angle
+ 'Cn2':               np.array([0.70,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
 }
 
 seeing = {
- 'constant':          0.8                   # ["] seeing value
+ 'constant':          0.8,                  # ["] seeing value
+ 'func_type':         'SIN'                 # TODO necessary for factory.py line 217
 }
 
 wind_speed = {

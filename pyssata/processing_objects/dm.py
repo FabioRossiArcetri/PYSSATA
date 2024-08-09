@@ -5,18 +5,18 @@ from pyssata.data_objects.layer import Layer
 
 class DM(BaseProcessingObj):
     def __init__(self, pixel_pitch, height, influence_function, GPU=False, objname="dm", objdescr="Deformable Mirror object", PRECISION=0, TYPE=None):
-        super().__init__(objname, objdescr)
+        super().__init__()
         
         self._ifunc = influence_function
-        self._ifunc.set_precision(self._precision)
+        self._ifunc.precision = self._precision
         
         s = self._ifunc.mask_inf_func.shape
         nmodes_if = self._ifunc.size[0]
         
         self._if_commands = np.zeros(nmodes_if, dtype=self._ifunc.type)
         self._gpu = GPU
-        self._layer = Layer(s[0], s[1], pixel_pitch, height, GPU=GPU, PRECISION=self._precision, TYPE=TYPE)
-        self._layer.A = float(self._ifunc.mask_inf_func)
+        self._layer = Layer(s[0], s[1], pixel_pitch, height)
+        self._layer.A = self._ifunc.mask_inf_func
         
         # sign is -1 to take into account the reflection in the propagation
         self._sign = -1
@@ -131,13 +131,13 @@ class DM(BaseProcessingObj):
             print("DM has been cleaned up.")
 
     def run_check(self, time_step, errmsg=""):
-        if not obj_valid(self._command):
+        if self._command is None:
             errmsg += f"{self.repr()} No input command defined"
         
         if self._gpu and not obj_isa(self._command, 'BASE_GPU_VALUE'):
             errmsg += f"WARNING: {self.repr()} Input command is not a BASE_GPU_VALUE object"
         
-        return obj_valid(self._command) and obj_valid(self._layer) and obj_valid(self._ifunc)
+        return self._command is not None and self._layer is not None and self._ifunc is not None
     
     @staticmethod
     def revision_track():

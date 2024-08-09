@@ -2,6 +2,8 @@ import numpy as np
 
 from pyssata.processing_objects.slopec import Slopec
 from pyssata.data_objects.slopes import Slopes
+from pyssata.lib.pyr_compute_slopes import pyr_compute_slopes
+from pyssata.base_value import BaseValue
 
 class PyrSlopec(Slopec):
     def __init__(self, pupdata_tag=None, shlike=False, norm_factor=0.0, thr_value=0.0, slopes_from_intensity=False, **kwargs):
@@ -12,6 +14,9 @@ class PyrSlopec(Slopec):
             self._pupdata_tag = pupdata_tag
         self._thr_value = thr_value
         self._slopes_from_intensity = slopes_from_intensity
+
+        self._total_counts = BaseValue()
+        self._subap_counts = BaseValue()
 
     @property
     def shlike(self):
@@ -87,7 +92,7 @@ class PyrSlopec(Slopec):
             self._flux_per_subaperture_vector.value = flux
             self._flux_per_subaperture_vector.generation_time = t
 
-            px = pixels[self._pupdata.ind_pup]
+            px = pixels.flat[self._pupdata.ind_pup]
             self._total_counts.value = np.sum(px)
             self._subap_counts.value = np.sum(px) / self._pupdata.n_subap
 
@@ -129,10 +134,3 @@ class PyrSlopec(Slopec):
             del self._pupdata
         super().cleanup()
 
-    @staticmethod
-    def pyr_compute_slopes(pixels, ind_pup, shlike, intensity_based, norm_factor, threshold):
-        # Dummy implementation
-        sx = np.random.random(len(ind_pup))
-        sy = np.random.random(len(ind_pup))
-        flux = np.random.random(len(ind_pup))
-        return sx, sy, flux

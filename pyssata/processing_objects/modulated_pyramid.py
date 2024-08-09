@@ -2,6 +2,7 @@ import numpy as np
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.lib.make_xy import make_xy
+from pyssata.data_objects.intensity import Intensity
 
 class ModulatedPyramid(BaseProcessingObj):
     def __init__(self, wavelength_in_nm, fov_res, fp_masking, fft_res, tilt_scale, fft_sampling, 
@@ -15,8 +16,6 @@ class ModulatedPyramid(BaseProcessingObj):
 
         self._wavelength_in_nm = wavelength_in_nm
         self._fov_res = fov_res
-        self._mod_amp = 3
-        self._mod_steps = 16
         self._fp_masking = fp_masking
         self._fp_obsratio = fp_obsratio
         self._fft_res = fft_res
@@ -30,11 +29,15 @@ class ModulatedPyramid(BaseProcessingObj):
         self._pyr_edge_def_ld = pyr_edge_def_ld
         self._pyr_tip_def_ld = pyr_tip_def_ld
         self._pyr_tip_maya_ld = pyr_tip_maya_ld
+        self._rotAnglePhInDeg = 0
+        self._mod_amp = 0
+        self._mod_steps = 0
+        self._pup_shifts = None
 
         if not all([fft_res, fov_res, tilt_scale, fft_sampling, fft_totsize, toccd_side, final_ccd_side]):
             return
 
-        self._out_i = np.zeros((final_ccd_side, final_ccd_side))
+        self._out_i = Intensity(final_ccd_side, final_ccd_side)
 
         self._psf_tot = np.zeros((fft_totsize, fft_totsize))
         self._psf_bfm = np.zeros((fft_totsize, fft_totsize))
@@ -51,6 +54,9 @@ class ModulatedPyramid(BaseProcessingObj):
 
         # Pre-computation of ttexp will be done when mod_steps will be set or re-set
         self._ttexp = {}
+        # Trigger cache
+        self.mod_amp = 3
+        self.mod_steps = 32
 
         self.calc_extobj_planes(fft_sampling)
 
@@ -113,6 +119,10 @@ class ModulatedPyramid(BaseProcessingObj):
     @rot_angle_ph_in_deg.setter
     def rot_angle_ph_in_deg(self, value):
         self._rotAnglePhInDeg = value
+
+    @property
+    def out_i(self):
+        return self._out_i
 
     @staticmethod
     def calc_geometry(
@@ -382,7 +392,9 @@ class ModulatedPyramid(BaseProcessingObj):
             if self._flux_factor_vector[tt] <= np.median(self._flux_factor_vector) * 1e-3:
                 continue
 
-            u_tlt[0, 0] = u_tlt_const * self._ttexp[tt]
+            tmp = u_tlt_const * self._ttexp[tt]
+            ss = tmp.shape
+            u_tlt[0:ss[0], 0:ss[1]] = tmp
 
             u_fp = np.fft.fftshift(np.fft.fft2(u_tlt))
 
@@ -448,8 +460,7 @@ class ModulatedPyramid(BaseProcessingObj):
         if self._extended_source_in_on:
             return 1
         elif self._mod_steps < round(2 * np.pi * self._mod_amp):
-            errmsg = f'Number of modulation steps is too small ({self._mod_steps}), it must be at least 2*pi times the modulation amplitude ({round(2 * np.pi * self._mod_amp)})!'
-            return 0
+            raise Exception(f'Number of modulation steps is too small ({self._mod_steps}), it must be at least 2*pi times the modulation amplitude ({round(2 * np.pi * self._mod_amp)})!')
         return 1
 
     def free(self):

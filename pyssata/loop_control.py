@@ -79,16 +79,17 @@ class LoopControl:
         self._stop_at_time = stop_at_time if stop_at_time is not None else 0
         self._stop_on_data = stop_on_data
 
+        self._time_resolution = 1e9 # TODO get from somewhere
         self._run_time = self.seconds_to_t(self._init_run_time)
         self._dt = self.seconds_to_t(self._init_dt)
         self._t0 = self.seconds_to_t(self._init_t0)
-        self._time_resolution = 1  # assuming some default time resolution
 
         for element in self._list:
             element.loop_dt = self._dt
             element.loop_niters = self.niters()
 
         if not NOCHECK:
+            print(self._init_dt, self.seconds_to_t(self._init_dt), self._dt)
             self.run_check(self._dt)
 
         self._t = self._t0
@@ -136,6 +137,7 @@ class LoopControl:
             self.stop_profiling()
 
     def seconds_to_t(self, seconds):
+        print(seconds, self._time_resolution)
         return int(seconds * self._time_resolution)
 
     def start_profiling(self):
