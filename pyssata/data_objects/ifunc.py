@@ -1,7 +1,7 @@
 import numpy as np
 from astropy.io import fits
 
-class Ifunc:
+class IFunc:
     def __init__(self):
         self._influence_function = None
         self._mask_inf_func = None
@@ -153,7 +153,7 @@ class Ifunc:
                 nmodes = None
                 print('ifunc.restore: nmodes cannot be set together with idx_modes. Setting to None nmodes.')
 
-        p = Ifunc()
+        p = IFunc()
         if precision is not None:
             p.precision = precision
 

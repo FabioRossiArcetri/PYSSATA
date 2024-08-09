@@ -14,10 +14,12 @@ from pyssata.processing_objects.pyr_slopec import PyrSlopec
 from pyssata.processing_objects.datastore import Datastore
 from pyssata.processing_objects.modalrec import ModalRec
 from pyssata.processing_objects.intcontrol import IntControl
+from pyssata.processing_objects.dm import DM
 
 from pyssata.data_objects.source import Source
 from pyssata.data_objects.ef import ElectricField
 
+from pyssata.lib.compute_zern_ifunc import compute_zern_ifunc
 
 class Factory:
     def __init__(self, params, GPU=False, NOCM=False, SINGLEGPU=False):
@@ -1007,11 +1009,11 @@ class Factory:
             dm_type = self.extract(params, 'type', default=None)
             nmodes = self.extract(params, 'nmodes', default=None)
             nzern = self.extract(params, 'nzern', default=None, optional=True)
-            start_mode = self.extract(params, 'start_mode', default=None, optional=True)
+            start_mode = self.extract(params, 'start_mode', default=0, optional=True)
             idx_modes = self.extract(params, 'idx_modes', default=None, optional=True)
             npixels = self.extract(params, 'npixels', default=None)
             obsratio = self.extract(params, 'obsratio', default=None)
-            diaratio = self.extract(params, 'diaratio', default=None, optional=True)
+            diaratio = self.extract(params, 'diaratio', default=1.0, optional=True)
             doNotPutOnGpu = self.extract(params, 'doNotPutOnGpu', default=None, optional=True)
             pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='', optional=True)
 
@@ -1039,7 +1041,7 @@ class Factory:
             if ifunc is None:
                 raise ValueError(f'Error reading influence function: {ifunc_tag}')
 
-            dm = DM(pixel_pitch, height, ifunc, GPU=useGPU)
+            dm = DM(pixel_pitch, height, ifunc)
             self.apply_global_params(dm)
             dm.apply_properties(params)
             return dm
