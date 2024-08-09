@@ -49,12 +49,12 @@ def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0,
         idx = np.where(
             (np.abs(x - xc) <= diaratio) & (np.abs(y - yc) <= diaratio) &
             ((np.abs(x - xc) >= diaratio * ir) | (np.abs(y - yc) >= diaratio * ir))
-        )
+        )[0]
     else:
         idx = np.where(
             ((x - xc) ** 2 + (y - yc) ** 2 < diaratio ** 2) &
             ((x - xc) ** 2 + (y - yc) ** 2 >= (diaratio * ir) ** 2)
-        )
+        )[0]
 
     # Create the mask
     mask = np.zeros((np_size, np_size), dtype=np.uint8)

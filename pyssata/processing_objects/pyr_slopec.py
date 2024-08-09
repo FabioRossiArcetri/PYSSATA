@@ -58,6 +58,10 @@ class PyrSlopec(Slopec):
     def slopes_from_intensity(self, value):
         self._slopes_from_intensity = value
 
+    @property
+    def pupdata(self):
+        return self._pupdata
+
     def load_pupdata(self, pupdata_tag):
         p = self._cm.read_pupils(pupdata_tag)
         if p is not None:

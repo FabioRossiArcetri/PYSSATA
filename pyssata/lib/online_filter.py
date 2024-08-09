@@ -55,7 +55,7 @@ def online_filter(num, den, input_data, ost=None, ist=None):
         if no > 2:
             ost[:, no - 1] = (np.sum(num_temp * ist, axis=1) - np.sum(den[:, :no - 1] * ost[:, :no - 1], axis=1)) / den[:, no - 1]
         else:
-            ost[:, no - 1] = (np.sum(num_temp * ist, axis=1) - den[:, :no - 1] * ost[:, :no - 1]) / den[:, no - 1]
+            ost[:, no - 1] = (np.sum(num_temp * ist, axis=1) - np.squeeze(den[:, :no - 1] * ost[:, :no - 1])) / den[:, no - 1]
 
         output = ost[:len(input_data), no - 1]
 

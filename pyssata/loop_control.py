@@ -89,7 +89,6 @@ class LoopControl:
             element.loop_niters = self.niters()
 
         if not NOCHECK:
-            print(self._init_dt, self.seconds_to_t(self._init_dt), self._dt)
             self.run_check(self._dt)
 
         self._t = self._t0
@@ -108,6 +107,7 @@ class LoopControl:
 
         for element in self._list:
             element.trigger(self._t)
+            print('Trigger', element)
 
         if self._stop_on_data and self._stop_on_data.generation_time == self._t:
             return

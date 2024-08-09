@@ -22,11 +22,8 @@ class DM(BaseProcessingObj):
         self._sign = -1
     
     def compute_shape(self):
-        if obj_isa(self._command, 'BASE_GPU_VALUE'):
-            commands = self._command.read()
-        else:
-            commands = self._command.value
-        
+        commands = self._command.value
+    
         temp_matrix = np.zeros(self._layer.size, dtype=np.float64 if self._precision else np.float32)
         
         # Compute phase only if commands vector is not zero

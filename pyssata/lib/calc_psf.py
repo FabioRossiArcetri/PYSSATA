@@ -28,10 +28,14 @@ def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False, GPU=True
     if imwidth is not None:
         if phase.dtype == np.float64:
             u_ef = np.zeros((imwidth, imwidth), dtype=np.complex128)
-            u_ef[0, 0] = amp * np.exp(1j * phase)
+            result = amp * np.exp(1j * phase)
+            s = result.shape
+            u_ef[:s[0], :s[1]] = result
         else:
             u_ef = np.zeros((imwidth, imwidth), dtype=np.complex64)
-            u_ef[0, 0] = amp * np.exp(1j * phase)
+            result = amp * np.exp(1j * phase)
+            s = result.shape
+            u_ef[:s[0], :s[1]] = result
     else:
         if phase.dtype == np.float64:
             u_ef = amp * np.exp(1j * phase)
@@ -39,10 +43,7 @@ def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False, GPU=True
             u_ef = amp * np.exp(1j * phase)
 
     # Compute FFT (forward)
-    if GPU:
-        u_fp = fft2(u_ef)  # Assuming GPU support is not available, using numpy FFT
-    else:
-        u_fp = fft2(u_ef)
+    u_fp = fft2(u_ef)
 
     # Center the PSF if required
     if not nocenter:

@@ -116,9 +116,9 @@ class PlotDisplay(BaseProcessingObj):
 
             plt.figure(self._window)
             if self._oplot:
-                plt.plot(np.arange(self._count), self._history[:self._count], marker=self._psym, color=self._color)
+                plt.plot(np.arange(self._count), self._history[:self._count], marker='.', color=self._color)
             else:
-                plt.plot(np.arange(self._count), self._history[:self._count], marker=self._psym)
+                plt.plot(np.arange(self._count), self._history[:self._count], marker='.')
                 plt.ylim(self._yrange)
                 plt.title(self._title)
             plt.draw()

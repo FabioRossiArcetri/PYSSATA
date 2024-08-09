@@ -20,7 +20,7 @@ def compute_comm(filter_obj, input_data, ist=None, ost=None):
     output = np.zeros_like(input_data)
 
     if len(onu) == 1 and len(odu) == 1:
-        idx_finite = np.where(np.isfinite(input_data))
+        idx_finite = np.where(np.isfinite(input_data))[0]
         temp_ist = ist[idx_finite]
         temp_ost = ost[idx_finite]
         output[idx_finite] = online_filter(

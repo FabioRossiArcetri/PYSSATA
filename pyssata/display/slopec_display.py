@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.processing_objects.pyr_slopec import PyrSlopec
+from pyssata.display.pupil_display import pupil_display
 
 class SlopecDisplay(BaseProcessingObj):
     def __init__(self, slopec=None):
@@ -80,7 +80,7 @@ class SlopecDisplay(BaseProcessingObj):
                 sx = s.xslopes
                 sy = s.yslopes
                 if isinstance(self._slopec, PyrSlopec):
-                    map_data = self._slopec.pupdata.ind_pup[1, :]
+                    map_data = self._slopec.pupdata.ind_pup[:, 1]
                     slope_side = None  # Auto scaled
 #                TODO --- these SlopeC are not available yet
 #                elif isinstance(self._slopec, (IdealWfsSlopec, ShSlopec, ShSlopecGpu)):
@@ -90,15 +90,7 @@ class SlopecDisplay(BaseProcessingObj):
 #                    slope_side = nx * 2
 
                 title = self._title if self._title else 'Slope Display'
-                self.pupil_display(self._slopec.in_pixels.pixels, sx, sy, map_data, slope_side=slope_side, title=title)
-
-    def pupil_display(self, pixels, sx, sy, map_data, slope_side=None, title='', do_image_show=False, circle_disp=0):
-        plt.figure(self._windows)
-        plt.clf()
-        plt.imshow(pixels, cmap='gray')
-        plt.quiver(map_data[::2], map_data[1::2], sx, sy)
-        plt.title(title)
-        plt.draw()
+                pupil_display(self._slopec.in_pixels.pixels, sx, sy, map_data, self._slopec.in_pixels.pixels.shape[0], title=title)
 
     def run_check(self, time_step):
         return self._slopec is not None
