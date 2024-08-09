@@ -193,7 +193,7 @@ class IIRControl(TimeControl, BaseProcessingObj):
         self._ost = ost
         self.state_update(newc)
 
-        self._out_comm.value = self.get_comm()
+        self._out_comm.value = self.comm
         self._out_comm.generation_time = t
 
         if self._verbose:

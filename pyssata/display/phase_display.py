@@ -71,8 +71,8 @@ class PhaseDisplay(BaseProcessingObj):
     def trigger(self, t):
         phase = self._phase
         if phase.generation_time == t:
-            frame = phase.phaseinnm * (phase.A > 0).astype(float)
-            idx = np.where(phase.A > 0)
+            frame = phase.phaseInNm * (phase.A > 0).astype(float)
+            idx = np.where(phase.A > 0)[0]
             frame[idx] -= np.mean(frame[idx])
 
             if self._verbose:

@@ -2,6 +2,8 @@ import numpy as np
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.data_objects.intensity import Intensity
+from pyssata.lib.calc_psf import calc_psf
 
 class PSF(BaseProcessingObj):
     def __init__(self, wavelengthInNm, nd=1):
@@ -106,10 +108,10 @@ class PSF(BaseProcessingObj):
             s = [round(dim * self._nd) for dim in self._in_ef.size]
 
             if not self._ref:
-                self._ref = I(s[0], s[1])
-                self._ref.i = calc_psf(np.zeros((s[0], s[1])), self._in_ef.A, imwidth=s[0], norm=True)
+                self._ref = Intensity(s[0], s[1])
+                self._ref.i = calc_psf(self._in_ef.A * 0.0, self._in_ef.A, imwidth=s[0], normalize=True)
 
-            self._psf.value = calc_psf(self._in_ef.phi_at_lambda(self._wavelengthInNm), self._in_ef.A, imwidth=s[0], norm=True)
+            self._psf.value = calc_psf(self._in_ef.phi_at_lambda(self._wavelengthInNm), self._in_ef.A, imwidth=s[0], normalize=True)
             if self.t_to_seconds(t) >= self._start_time:
                 self._int_psf.value += self._psf.value
 

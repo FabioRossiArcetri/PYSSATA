@@ -5,6 +5,11 @@ from scipy.io import savemat, loadmat
 import time
 
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.base_value import BaseValue
+from pyssata.data_objects.ef import ElectricField
+from pyssata.data_objects.layer import Layer
+from pyssata.data_objects.pixels import Pixels
+from pyssata.data_objects.slopes import Slopes
 
 
 class Datastore(BaseProcessingObj):
@@ -194,18 +199,12 @@ class Datastore(BaseProcessingObj):
                 if item is not None and item.generation_time == t:
                     if isinstance(item, BaseValue):
                         v = item.value
-                    elif isinstance(item, BaseGpuValue):
-                        v = item.read()
-                    elif isinstance(item, Cheat):
-                        v = item.value
                     elif isinstance(item, Slopes):
                         v = item.slopes
                     elif isinstance(item, Pixels):
                         v = item.pixels
-                    elif isinstance(item, Ef):
-                        v = item.phase_in_nm
-                    elif isinstance(item, Layer):
-                        v = item.phase_in_nm
+                    elif isinstance(item, ElectricField):
+                        v = item.phaseInNm
                     else:
                         raise TypeError(f"Error: don't know how to save an object of type {type(item)}")
                     self._storage[k][t] = v

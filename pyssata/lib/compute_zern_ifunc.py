@@ -20,7 +20,7 @@ def compute_zern_ifunc(dim, nzern, obsratio=0.0, diaratio=1.0, start_mode=0, fit
         mask, idx = make_mask(dim, obsratio, diaratio)
     else:
         mask = mask.astype(float)
-        idx = np.where(mask)
+        idx = np.where(mask)[0]
 
     zern_phase_3d = zern2phi(dim, nzern, mask=mask)
     zern_phase_3d = zern_phase_3d[start_mode:]

@@ -294,7 +294,7 @@ class AtmoEvolution(BaseProcessingObj):
         if len(self._phasescreens) != len(wind_speed) or len(self._phasescreens) != len(wind_direction):
             raise ValueError('Error: number of elements of wind speed and/or direction does not match the number of phasescreens')
 
-        last_position = self._last_position if self._last_position else np.zeros_like(wind_speed)
+        last_position = self._last_position if self._last_position is not None else np.zeros_like(wind_speed)
         delta_time = self.t_to_seconds(t - self._last_t)
         if self._extra_delta_time and not self._last_position:
             delta_time += self._extra_delta_time

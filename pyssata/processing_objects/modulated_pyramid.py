@@ -252,7 +252,7 @@ class ModulatedPyramid(BaseProcessingObj):
             self._ttexp[tt] = np.exp(-iu * (pup_tt + pup_focus))
 
         i = source.coeff_flux
-        idx = np.where(np.abs(i) < np.max(np.abs(i)) * 1e-5)
+        idx = np.where(np.abs(i) < np.max(np.abs(i)) * 1e-5)[0]
         if len(idx[0]) > 0:
             i[idx] = 0
         self._flux_factor_vector = i
@@ -288,21 +288,21 @@ class ModulatedPyramid(BaseProcessingObj):
         dx = np.sqrt(xx ** 2)
         dy = np.sqrt(yy ** 2)
         idx_edge = np.where((dx <= self._pyr_edge_def_ld * self._fft_res / 2) | 
-                            (dy <= self._pyr_edge_def_ld * self._fft_res / 2))
-        if len(idx_edge[0]) > 0:
+                            (dy <= self._pyr_edge_def_ld * self._fft_res / 2))[0]
+        if len(idx_edge) > 0:
             pyr_tlt[idx_edge] = np.max(pyr_tlt) * np.random.rand(len(idx_edge[0]))
             print(f'get_pyr_tlt: {len(idx_edge[0])} pixels set to 0 to consider pyramid imperfect edges')
 
         # distance from tip
         d = np.sqrt(xx ** 2 + yy ** 2)
-        idx_tip = np.where(d <= self._pyr_tip_def_ld * self._fft_res / 2)
-        if len(idx_tip[0]) > 0:
+        idx_tip = np.where(d <= self._pyr_tip_def_ld * self._fft_res / 2)[0]
+        if len(idx_tip) > 0:
             pyr_tlt[idx_tip] = np.max(pyr_tlt) * np.random.rand(len(idx_tip[0]))
             print(f'get_pyr_tlt: {len(idx_tip[0])} pixels set to 0 to consider pyramid imperfect tip')
 
         # distance from tip
-        idx_tip_m = np.where(d <= self._pyr_tip_maya_ld * self._fft_res / 2)
-        if len(idx_tip_m[0]) > 0:
+        idx_tip_m = np.where(d <= self._pyr_tip_maya_ld * self._fft_res / 2)[0]
+        if len(idx_tip_m) > 0:
             pyr_tlt[idx_tip_m] = np.min(pyr_tlt[idx_tip_m])
             print(f'get_pyr_tlt: {len(idx_tip_m[0])} pixels set to 0 to consider pyramid imperfect tip')
 
