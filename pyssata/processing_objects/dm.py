@@ -10,13 +10,13 @@ class DM(BaseProcessingObj):
         super().__init__()
 
         self._ifunc = influence_function
-        self._ifunc.set_precision(precision)
+        self._ifunc.precision = precision
 
         s = self._ifunc.mask_inf_func.shape
         nmodes_if = self._ifunc.size[0]
 
-        self._if_commands = np.zeros(nmodes_if, dtype=self._ifunc.dtype)
-        self._layer = Layer(s[0], s[1], pixel_pitch, height, precision=precision, dtype=dtype)
+        self._if_commands = np.zeros(nmodes_if)
+        self._layer = Layer(s[0], s[1], pixel_pitch, height, precision=precision)
         self._layer.A = self._ifunc.mask_inf_func.astype(float)
 
         self._sign = -1

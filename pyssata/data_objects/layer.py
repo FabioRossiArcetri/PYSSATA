@@ -12,7 +12,7 @@ class Layer(ElectricField):
         self._rotInDeg = 0.0
         self._magnification = 1.0
 
-        super().__init__(dimx, dimy, pixel_pitch, precision=precision, type_str=type_str)
+        super().__init__(dimx, dimy, pixel_pitch, precision=precision)
 
     @property
     def height(self):

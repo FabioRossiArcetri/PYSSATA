@@ -1,29 +1,9 @@
 import numpy as np
 from astropy.io import fits
 
-class Ifunc:
-    def __init__(self):
-        self.mask_inf_func = None
-        self.zeroPad = None
-        self.ifunc = None
+from pyssata.data_objects.ifunc import IFunc
+from pyssata.lib.make_mask import make_mask
 
-    def set_ifunc(self, ifunc_data, doNotPutOnGpu=False):
-        self.ifunc = ifunc_data
-        # Placeholder for GPU handling, if needed
-
-    def save(self, filename, hdr=None):
-        if hdr is None:
-            hdr = fits.Header()
-        hdu = fits.PrimaryHDU(data=self.ifunc, header=hdr)
-        hdu.writeto(filename, overwrite=True)
-
-def make_mask(dim, obsratio=0.0, diaratio=1.0):
-    y, x = np.ogrid[-dim // 2: dim // 2, -dim // 2: dim // 2]
-    mask = x**2 + y**2 <= (dim // 2 * diaratio)**2
-    if obsratio > 0:
-        inner_mask = x**2 + y**2 <= (dim // 2 * obsratio)**2
-        mask = mask & ~inner_mask
-    return mask.astype(float), np.where(mask)
 
 def zern2phi(dim, nzern, mask=None):
     # Placeholder function for zernike polynomials generation
@@ -53,7 +33,7 @@ def compute_zern_ifunc(dim, nzern, obsratio=0.0, diaratio=1.0, start_mode=0, fit
     ifunc_inv = None
     if make_inv:
         zern_phase_2d_inv = pseudo_invert(zern_phase_2d).astype(float)
-        ifunc_inv = Ifunc()
+        ifunc_inv = IFunc()
         if zeroPad:
             ifunc_inv.zeroPad = zeroPad
         ifunc_inv.mask_inf_func = mask
@@ -65,14 +45,14 @@ def compute_zern_ifunc(dim, nzern, obsratio=0.0, diaratio=1.0, start_mode=0, fit
             hdr['X_Y_SIDE'] = str(dim)
             ifunc_inv.save(inv_fits_filename, hdr)
 
-    ifunc = Ifunc()
+    ifunc = IFunc()
     if zeroPad:
         ifunc.zeroPad = zeroPad
     ifunc.mask_inf_func = mask
     if return_inv:
-        ifunc.set_ifunc(pseudo_invert(zern_phase_2d).astype(float), doNotPutOnGpu=doNotPutOnGpu)
+        ifunc.influence_function = pseudo_invert(zern_phase_2d).astype(float)
     else:
-        ifunc.set_ifunc(zern_phase_2d.astype(float), doNotPutOnGpu=doNotPutOnGpu)
+        ifunc.influence_function = zern_phase_2d.astype(float)
 
     if fits_filename:
         hdr = fits.Header()
@@ -81,5 +61,5 @@ def compute_zern_ifunc(dim, nzern, obsratio=0.0, diaratio=1.0, start_mode=0, fit
         hdr['X_Y_SIDE'] = str(dim)
         ifunc.save(fits_filename, hdr)
 
-    return ifunc, ifunc_inv if make_inv else ifunc
+    return ifunc
 
