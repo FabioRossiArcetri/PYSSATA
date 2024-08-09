@@ -15,6 +15,7 @@ class ModalRec(BaseProcessingObj):
         self._intmat = intmat
         self._polc = polc
 
+        self._layer_modes_list = None
         self.set_layer_modes_list()
         self._control_list = []
         self._past_step_list = []
@@ -113,7 +114,7 @@ class ModalRec(BaseProcessingObj):
         self._control_list.append(control)
 
     def trigger(self, t, slope_ptr=None):
-        if not self._recmat.ptr_recmat:
+        if self._recmat._recmat is None:
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
 
@@ -185,9 +186,11 @@ class ModalRec(BaseProcessingObj):
         self._pseudo_ol_slopes.generation_time = t
 
     def compute_modes(self, matrix, slope_ptr, intmat=False):
+
         if slope_ptr is None:
             if isinstance(self._slopes, Slopes):
                 slope_ptr = self._slopes.ptr_slopes
+                print('Slopes')
                 if self._verbose:
                     print(f"modalrec.compute_modes slope RMS: {np.sqrt(np.mean(slope_ptr**2))}")
             elif isinstance(self._slopes, BaseValue):
@@ -201,9 +204,9 @@ class ModalRec(BaseProcessingObj):
                     print(f"modalrec.compute_modes value from cheat RMS: {np.sqrt(np.mean(slope_ptr**2))}")
 
         if intmat:
-            m = VECMAT_MULTIPLY(VECTOR=slope_ptr, MATRIX=matrix.ptr_intmat)
+            m = slope_ptr @ intmat
         else:
-            m = VECMAT_MULTIPLY(VECTOR=slope_ptr, MATRIX=matrix.ptr_recmat)
+            m = slope_ptr @ matrix.recmat.T
 
         return m
 

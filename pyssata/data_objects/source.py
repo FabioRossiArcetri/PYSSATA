@@ -2,6 +2,7 @@ import numpy as np
 
 from pyssata.base_parameter_obj import BaseParameterObj
 from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.lib.n_phot import n_phot
 
 class Source(BaseDataObj, BaseParameterObj):
     '''source'''
@@ -96,7 +97,7 @@ class Source(BaseDataObj, BaseParameterObj):
         else:
             band = None
 
-        res = n_phot(self._magnitude, band=band, LAMBDA=self._wavelengthInNm/1e9, width=1e-9, e0=e0)
+        res = n_phot(self._magnitude, band=band, lambda_=self._wavelengthInNm/1e9, width=1e-9, e0=e0)
         if self._verbose:
             print(f'source.phot_density: magnitude is {self._magnitude}, and flux (output of n_phot with width=1e-9, surf=1) is {res[0]}')
         return res[0]
@@ -107,7 +108,3 @@ class Source(BaseDataObj, BaseParameterObj):
     def cleanup(self):
         pass
 
-# Placeholder for n_phot function
-def n_phot(magnitude, band=None, LAMBDA=None, width=None, e0=None):
-    # Dummy implementation
-    return [0.0]

@@ -334,9 +334,9 @@ class Slopec(BaseProcessingObj):
 
         if self._pixels.generation_time == t:
             self.calc_slopes(t)
-            if np.isfinite(self._slopes.slopes).all():
+            if not np.isfinite(self._slopes.slopes).all():
                 raise ValueError('slopes have non-finite elements')
-            if self._sn and self._use_sn:
+            if self._sn is not None and self._use_sn:
                 if self._verbose:
                     print('removing slope null')
                 if self._sn_scale_fact:
