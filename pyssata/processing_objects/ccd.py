@@ -88,6 +88,14 @@ class CCD(BaseProcessingObj):
         return self._pixels
 
     @property
+    def bandw(self):
+        return self._bandw
+    
+    @bandw.setter
+    def bandw(self, bandw):
+        self._bandw = bandw
+
+    @property
     def binning(self):
         return self._binning
 
@@ -107,11 +115,11 @@ class CCD(BaseProcessingObj):
                 if self._doNotChangeI:
                     self._integrated_i.sum(self._in_i, factor=self._loop_dt / self._dt)
                 else:
-                    self._integrated_i.sum(self._in_i, factor=self._loop_dt * self._bandw)
+                    self._integrated_i.sum(self._in_i, factor=self.t_to_seconds(self._loop_dt) * self._bandw)
 
             if (t + self._loop_dt - self._dt - self._start_time) % self._dt == 0:
                 if self._doNotChangeI:
-                    self._pixels.pixels = self._integrated_i.i
+                    self._pixels.pixels = self._integrated_i.i.copy()
                 else:
                     if self._emccd_gain == 0:
                         self._emccd_gain = 400 if self._excess_noise else 1
@@ -189,7 +197,7 @@ class CCD(BaseProcessingObj):
             ccd_frame = np.zeros(out_dim * self._binning)
             ccd_frame[:in_dim[0], :in_dim[1]] = self._integrated_i.i
         else:
-            ccd_frame = self._integrated_i.i
+            ccd_frame = self._integrated_i.i.copy()
 
         if self._binning > 1:
             tot_ccd_frame = np.sum(ccd_frame)
@@ -197,7 +205,7 @@ class CCD(BaseProcessingObj):
             ccd_frame = ccd_frame * self._binning ** 2 * (tot_ccd_frame / np.sum(ccd_frame))
             self._pixels.pixels = ccd_frame
         else:
-            self._pixels.pixels = self._integrated_i.i
+            self._pixels.pixels = self._integrated_i.i.copy()
 
     def apply_qe(self):
         if self._qe != 1:
