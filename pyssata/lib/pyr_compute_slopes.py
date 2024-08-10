@@ -22,7 +22,7 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
         raise ValueError('INTENSITY_BASED and SHLIKE keywords cannot be set together.')
 
     # Extract intensity arrays for each sub-pupil
-    intensity = [frame.flat[ind_pup[i, :]].reshape(-1) for i in range(4)]
+    intensity = [frame.flat[ind_pup[:, i]].reshape(-1) for i in range(4)]
 
     # Compute total intensity
     flux = np.sum([np.sum(arr) for arr in intensity])
@@ -32,7 +32,7 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
         intensity = [np.maximum(arr - threshold, 0) for arr in intensity]
     
     total_intensity = np.sum([np.sum(arr) for arr in intensity])
-    n_subap = ind_pup.shape[0]
+    n_subap = ind_pup.shape[1]
 
     if total_intensity > 0:
         if norm_fact is not None:
@@ -50,8 +50,8 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
                 factor = 1.0 / inv_factor
                 factor[inv_factor <= 0] = 0.0
                 
-            sx = factor[0] * intensity[0] + factor[1] * intensity[1] - factor[2] * intensity[2] - factor[3] * intensity[3]
-            sy = factor[1] * intensity[1] + factor[2] * intensity[2] - factor[3] * intensity[3] - factor[0] * intensity[0]
+            sx = (intensity[0] + intensity[1] - intensity[2] - intensity[3]) * factor
+            sy = (intensity[1] + intensity[2] - intensity[3] - intensity[0]) * factor
     else:
         if INTENSITY_BASED:
             sx = np.zeros(2 * n_subap)

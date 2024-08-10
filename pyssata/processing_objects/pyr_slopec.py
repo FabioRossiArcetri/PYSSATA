@@ -96,7 +96,7 @@ class PyrSlopec(Slopec):
             self._flux_per_subaperture_vector.value = flux
             self._flux_per_subaperture_vector.generation_time = t
 
-            px = pixels.flat[self._pupdata.ind_pup]
+            px = pixels.flat[self._pupdata.ind_pup].ravel()
             self._total_counts.value = np.sum(px)
             self._subap_counts.value = np.sum(px) / self._pupdata.n_subap
 
@@ -109,8 +109,8 @@ class PyrSlopec(Slopec):
             self._total_counts.generation_time = t
             self._subap_counts.generation_time = t
 
-        if self._verbose:
-            print(f'Slopes min, max and rms: {np.min([sx, sy])}, {np.max([sx, sy])}  //  {np.sqrt(np.mean([sx, sy]**2))}')
+        if 1:#if self._verbose:
+            print(f'Slopes min, max and rms: {np.min([sx, sy])}, {np.max([sx, sy])}  //  {np.sqrt(np.mean([sx**2, sy**2]))}')
 
     def _compute_flux_per_subaperture(self):
         return self._flux_per_subaperture_vector
