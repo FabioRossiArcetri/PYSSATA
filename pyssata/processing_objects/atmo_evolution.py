@@ -290,7 +290,6 @@ class AtmoEvolution(BaseProcessingObj):
         wind_speed = self._wind_speed.value
         wind_direction = self._wind_direction.value
 
-        print(len(self._phasescreens), len(wind_speed), )
         if len(self._phasescreens) != len(wind_speed) or len(self._phasescreens) != len(wind_direction):
             raise ValueError('Error: number of elements of wind speed and/or direction does not match the number of phasescreens')
 
@@ -313,7 +312,7 @@ class AtmoEvolution(BaseProcessingObj):
 
         self._last_position = last_position
         self._last_t = t
-
+        
     def save(self, filename):
         hdr = fits.Header()
         hdr['VERSION'] = 1

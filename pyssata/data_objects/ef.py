@@ -59,6 +59,17 @@ class ElectricField(BaseDataObj):
     def size(self):
         return self._A.shape
 
+    def checkOther(self, ef2, subrect=None):
+        if not isinstance(ef2, ElectricField):
+            raise ValueError(f'{ef2} is not an ElectricField instance')
+        if subrect is None:
+            subrect = [0, 0]
+        sz1 = np.array(self.size) - np.array(subrect)
+        sz2 = np.array(ef2.size)
+        if any(sz1 != sz2):
+            raise ValueError(f'{ef2} has size {sz2} instead of the required {sz1}')
+        return subrect
+        
     def phi_at_lambda(self, wavelengthInNm):
         return self._phaseInNm * ((2 * np.pi) / wavelengthInNm)
 
@@ -66,9 +77,12 @@ class ElectricField(BaseDataObj):
         phi = self.phi_at_lambda(wavelengthInNm)
         return self._A * np.exp(1j * phi)
 
-    def product(self, ef2):
-        self._A *= ef2._A
-        self._phaseInNm += ef2._phaseInNm
+    def product(self, ef2, subrect=None):
+        subrect = self.checkOther(ef2, subrect=subrect)
+        x2 = subrect[0] + self.size[0]
+        y2 = subrect[1] + self.size[1]
+        self._A *= ef2._A[subrect[0] : x2, subrect[1] : y2]
+        self._phaseInNm += ef2._phaseInNm[subrect[0] : x2, subrect[1] : y2]
 
     def area(self):
         return self._A.size * (self.pixel_pitch ** 2)

@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from pyssata.data_objects.pupilstop import PupilStop
 
 
 from pyssata.loop_control import LoopControl
@@ -3051,7 +3052,7 @@ class Factory:
         self.apply_global_params(disp)
         return disp
 
-    def get_pupilstop(self, params, GPU=None):
+    def get_pupilstop(self, params):
         """
         Builds a `pupilstop` processing object.
 
@@ -3062,25 +3063,24 @@ class Factory:
         Returns:
         PupilStop: A new `pupilstop` processing object
         """
-        useGPU = GPU if GPU is not None else self._gpu
         params = self.ensure_dictionary(params)
 
         mask_diam = self.extract(params, 'mask_diam', default=1.)
-        obs_diam = self.extract(params, 'obs_diam', default=None)
+        obs_diam = self.extract(params, 'obs_diam', default=None, optional=True)
         pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='')
 
-        shiftXYinPixel = self.extract(params, 'shiftXYinPixel', default=None)
-        rotInDeg = self.extract(params, 'rotInDeg', default=None)
-        magnification = self.extract(params, 'magnification', default=None)
+        shiftXYinPixel = self.extract(params, 'shiftXYinPixel', default=None, optional=True)
+        rotInDeg = self.extract(params, 'rotInDeg', default=None, optional=True)
+        magnification = self.extract(params, 'magnification', default=None, optional=True)
 
         if pupil_mask_tag:
-            pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=useGPU)
+            pupilstop = self._cm.read_pupilstop(pupil_mask_tag)
             if pupilstop is None:
                 raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
         else:
-            dim = self._main.pixel_pupil
-            pixel_pitch = self._main.pixel_pitch
-            pupilstop = PupilStop(dim, dim, pixel_pitch, 0, GPU=useGPU, mask_diam=mask_diam, obs_diam=obs_diam)
+            dim = self._main['pixel_pupil']
+            pixel_pitch = self._main['pixel_pitch']
+            pupilstop = PupilStop(dim, dim, pixel_pitch, 0, mask_diam=mask_diam, obs_diam=obs_diam)
 
         if shiftXYinPixel is not None:
             pupilstop.shiftXYinPixel = shiftXYinPixel

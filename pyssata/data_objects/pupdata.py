@@ -5,15 +5,13 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class PupData(BaseDataObj):
     def __init__(self):
+        super().__init__()
         self._radius = np.zeros(4, dtype=float)
         self._cx = np.zeros(4, dtype=float)
         self._cy = np.zeros(4, dtype=float)
         self._ind_pup = np.empty((4, 0), dtype=int)
         self._framesize = np.zeros(2, dtype=int)
         
-        if not super().__init__():
-            return
-
     @property
     def radius(self):
         return self._radius

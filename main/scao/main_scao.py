@@ -15,6 +15,7 @@ store = factory.get_datastore()
 # Initialize processing objects
 source = [factory.get_source(src) for src in params['wfs_source']]
 prop = factory.get_atmo_propagation(params['atmo'], source)
+pupilstop = factory.get_pupilstop(params['pupilstop'])
 pyr = factory.get_modulated_pyramid(params['pyramid'])
 ccd = factory.get_ccd(params['detector'])
 sc = factory.get_pyr_slopec(params['slopec'])
@@ -41,6 +42,7 @@ ph_disp.disp_factor = 2
 atmo_layers = atmo.layer_list
 for layer in atmo_layers:
     prop.add_layer_to_layer_list(layer)
+prop.add_layer_to_layer_list(pupilstop)
 prop.add_layer_to_layer_list(dm.out_layer)
 
 # Connect processing objects

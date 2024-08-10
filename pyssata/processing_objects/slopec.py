@@ -405,30 +405,3 @@ class Slopec(BaseProcessingObj):
             m = np.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
             self._slopes.slopes = m
 
-    @staticmethod
-    def make_xy(size, scale):
-        return np.meshgrid(np.linspace(-scale, scale, size), np.linspace(-scale, scale, size))
-
-    @staticmethod
-    def minmax(array):
-        return np.min(array), np.max(array)
-
-    @staticmethod
-    def zern(mode, xx, yy):
-        return xx + yy
-
-    @staticmethod
-    def interpolate(image, x, y, grid=False, missing=0):
-        return image
-
-    @staticmethod
-    def toccd(pup_pyr_tot, toccd_side):
-        return pup_pyr_tot
-
-    @staticmethod
-    def make_mask(totsize, diaratio, obsratio=0):
-        return np.ones((totsize, totsize))
-
-    @staticmethod
-    def ROT_AND_SHIFT_IMAGE(image, angle, shift, scale, use_interpolate=False):
-        return image

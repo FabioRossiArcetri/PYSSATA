@@ -6,16 +6,13 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class Slopes(BaseDataObj):
     def __init__(self, length=None, slopes=None, interleave=False):
+        super().__init__()
         if slopes is not None:
             self._slopes = slopes
         else:
             self._slopes = np.zeros(length, dtype=float)
-
         self._interleave = interleave
         self._pupdata_tag = ''
-
-        if not super().__init__():
-            return
 
     @property
     def slopes(self):

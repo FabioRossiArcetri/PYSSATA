@@ -1,60 +1,24 @@
 import numpy as np
-from scipy.interpolate import interp2d
 from scipy.ndimage import rotate
 import warnings
 from scipy.interpolate import RegularGridInterpolator
 
 
-# class Layer:
-#     def __init__(self, size, pixel_pitch, A, phaseInNm, ongpu=False):
-#         self.size = size
-#         self.pixel_pitch = pixel_pitch
-#         self.A = A
-#         self.phaseInNm = phaseInNm
-#         self.ongpu = ongpu
-
-# class EF:
-#     def __init__(self, size, pixel_pitch, ongpu=False):
-#         self.size = size
-#         self.pixel_pitch = pixel_pitch
-#         self.ongpu = ongpu
-#         self.A = np.zeros(size)
-#         self.phaseInNm = np.zeros(size)
-        
-#     def product(self, layer, subrect=None):
-#         if subrect:
-#             x0, y0 = subrect
-#             self.A = layer.A[x0:x0+self.size[0], y0:y0+self.size[1]]
-#             self.phaseInNm = layer.phaseInNm[x0:x0+self.size[0], y0:y0+self.size[1]]
-#         else:
-#             self.A = layer.A
-#             self.phaseInNm = layer.phaseInNm
-
-#     def product_from_interpolated(self, layer, x_center, y_center, radius):
-#         x = np.linspace(0, self.size[0] - 1, self.size[0])
-#         y = np.linspace(0, self.size[1] - 1, self.size[1])
-#         xx, yy = np.meshgrid(x, y)
-#         interp_func = interp2d(x, y, layer.A, kind='linear')
-#         self.A = interp_func(x_center + xx - radius, y_center + yy - radius)
-#         interp_func = interp2d(x, y, layer.phaseInNm, kind='linear')
-#         self.phaseInNm = interp_func(x_center + xx - radius, y_center + yy - radius)
-    
-#     def physical_prop(self, wavelengthInNm, propagator, temp_array=None):
-#         # Placeholder for physical propagation implementation
-#         pass
-
 def single_layer2pupil_ef(layer_ef, polar_coordinate, height_source, update_ef=None, shiftXY=None, rotAnglePhInDeg=None,
                           magnify=None, pupil_position=None, temp_ef=None, doFresnel=False, propagator=None,
                           wavelengthInNm=None, temp_array=None):
     
-    height_layer = layer_ef.size[0]
+    height_layer = layer_ef.height
     pixel_pitch = layer_ef.pixel_pitch
     pixel_pupil = update_ef.size[0]
 
     diff_height = height_source - height_layer
 
-    if (height_layer == 0 or (np.isfinite(height_source) and polar_coordinate[0] == 0)) and \
-       (shiftXY is None) and (pupil_position is None) and (rotAnglePhInDeg is None) and (magnify is None):
+    if (height_layer == 0 or (np.isinf(height_source) and polar_coordinate[0] == 0)) and \
+       ((shiftXY is None) or (all(shiftXY == [0, 0]))) and \
+       ((pupil_position is None) or (pupil_position == 0)) and \
+       ((rotAnglePhInDeg is None) or (rotAnglePhInDeg == 0)) and \
+       ((magnify is None) or (magnify == 1)):
 
         s_layer = layer_ef.size
 

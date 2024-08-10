@@ -1,12 +1,14 @@
 import numpy as np
 from pyssata.lib.make_xy import make_xy
 
+
 def closest(value, array):
     """Find the closest value in the array and return its index."""
     return (np.abs(array - value)).argmin()
 
+
 def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0, 
-              square=False, inverse=False, centeronpixel=False):
+              square=False, inverse=False, centeronpixel=False, get_idx=False):
     """
     Create a mask array.
 
@@ -19,11 +21,16 @@ def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0,
         square (bool): If True, make a square mask.
         inverse (bool): If True, invert the mask (1->0, 0->1).
         centeronpixel (bool): If True, move the center of the pupil to the nearest pixel.
+        get_idx: if True, return a tuple with (mask, idx)
     
     Returns:
         mask (numpy.ndarray): Array representing the mask with the specified properties.
-        idx (numpy.ndarray): Array of indices inside the pupil.
+        idx (numpy.ndarray): Array of indices inside the pupil. (only if get_idx is True)
     """
+    if diaratio is None:
+        diaratio = 1.0
+    if obsratio is None:
+        obsratio = 0.0
 
     # Generate coordinate grids
     x, y = make_xy(sampling=np_size, ratio=1.0)
@@ -49,12 +56,12 @@ def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0,
         idx = np.where(
             (np.abs(x - xc) <= diaratio) & (np.abs(y - yc) <= diaratio) &
             ((np.abs(x - xc) >= diaratio * ir) | (np.abs(y - yc) >= diaratio * ir))
-        )[0]
+        )
     else:
         idx = np.where(
             ((x - xc) ** 2 + (y - yc) ** 2 < diaratio ** 2) &
             ((x - xc) ** 2 + (y - yc) ** 2 >= (diaratio * ir) ** 2)
-        )[0]
+        )
 
     # Create the mask
     mask = np.zeros((np_size, np_size), dtype=np.uint8)
@@ -64,4 +71,7 @@ def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0,
     if inverse:
         mask = 1 - mask
 
-    return mask, idx
+    if get_idx:
+        return mask, idx
+    else:
+        return mask

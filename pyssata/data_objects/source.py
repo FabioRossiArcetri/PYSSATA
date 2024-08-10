@@ -8,6 +8,7 @@ class Source(BaseDataObj, BaseParameterObj):
     '''source'''
 
     def __init__(self, polar_coordinate, height, magnitude, wavelengthInNm, band='', zeroPoint=0):
+        super().__init__()
         self._polar_coordinate = np.array(polar_coordinate)
         self._height = height
         self._magnitude = magnitude
@@ -15,9 +16,6 @@ class Source(BaseDataObj, BaseParameterObj):
         self._zeroPoint = zeroPoint
         self._band = band
         self._verbose = False
-
-        if not super().__init__():
-            return
 
     @property
     def polar_coordinate(self):

@@ -16,6 +16,9 @@ dm = {
  'height':            0                       # DM height [m]
 }
 
+pupilstop = {                                 # Default parameters (circular pupil)
+}
+
 pyramid = {
  'pup_diam':          30.,                     # Pupil diameter in subaps.
  'pup_dist':          36.,                     # Separation between pupil centers in subaps.
