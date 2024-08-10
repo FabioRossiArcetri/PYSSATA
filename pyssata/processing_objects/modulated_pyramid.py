@@ -409,7 +409,8 @@ class ModulatedPyramid(BaseProcessingObj):
 
             pup_pyr_tot += np.abs(np.fft.ifft2(u_fp_pyr)) ** 2 * self._flux_factor_vector[tt]
 
-        pup_pyr_tot = np.fft.fftshift(pup_pyr_tot)
+        pup_pyr_tot = np.roll(pup_pyr_tot, (self._fft_padding//2, self._fft_padding//2), (0,1))
+
         factor = 1.0 / np.sum(self._flux_factor_vector)
         pup_pyr_tot *= factor
         psf_tot *= factor
