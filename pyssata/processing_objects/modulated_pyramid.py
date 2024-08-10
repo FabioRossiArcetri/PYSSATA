@@ -1,6 +1,7 @@
 import numpy as np
 
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.base_value import BaseValue
 from pyssata.lib.make_xy import make_xy
 from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.make_mask import make_mask
@@ -41,9 +42,9 @@ class ModulatedPyramid(BaseProcessingObj):
 
         self._out_i = Intensity(final_ccd_side, final_ccd_side)
 
-        self._psf_tot = np.zeros((fft_totsize, fft_totsize))
-        self._psf_bfm = np.zeros((fft_totsize, fft_totsize))
-        self._out_transmission = 0
+        self._psf_tot = BaseValue(np.zeros((fft_totsize, fft_totsize)))
+        self._psf_bfm = BaseValue(np.zeros((fft_totsize, fft_totsize)))
+        self._out_transmission = BaseValue(0)
 
         self._pyr_tlt = self.get_pyr_tlt(fft_sampling, fft_padding)
         self._tlt_f = self.get_tlt_f(fft_sampling, fft_padding)
@@ -450,12 +451,14 @@ class ModulatedPyramid(BaseProcessingObj):
         else:
             ccd = ccd_internal
 
-        self._out_i = ccd
-        self._psf_tot = psf_tot
-        self._psf_bfm = psf_bfm
-        self._out_transmission = transmission
-        import code
-        code.interact(local=dict(globals(), **locals()))
+        self._out_i.i = ccd
+        self._out_i.generation_time = t
+        self._psf_tot.value = psf_tot
+        self._psf_tot.generation_time = t
+        self._psf_bfm.value = psf_bfm
+        self._psf_bfm.generation_time = t
+        self._out_transmission.value = transmission
+        self._out_transmission.generation_time = t
 
     def run_check(self, time_step):
         if self._extended_source_in_on:
