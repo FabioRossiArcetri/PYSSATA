@@ -260,7 +260,8 @@ class ModulatedPyramid(BaseProcessingObj):
     def get_pyr_tlt(self, p, c):
         A = int((p + c) // 2)
         pyr_tlt = np.zeros((2 * A, 2 * A))
-        tlt_basis = np.tile(np.arange(A), (A, 1))
+        #tlt_basis = np.tile(np.arange(A), (A, 1))
+        y, x = np.mgrid[0:A,0:A]
 
         if self._pyr_tlt_coeff is not None:
             k = self._pyr_tlt_coeff
@@ -277,10 +278,14 @@ class ModulatedPyramid(BaseProcessingObj):
             pyr_tlt[0:A, A:2*A] -= np.min(pyr_tlt[0:A, A:2*A])
 
         else:
-            pyr_tlt[0:A, 0:A] = tlt_basis + tlt_basis.T
-            pyr_tlt[A:2*A, 0:A] = A - 1 - tlt_basis + tlt_basis.T
-            pyr_tlt[A:2*A, A:2*A] = 2 * A - 2 - tlt_basis - tlt_basis.T
-            pyr_tlt[0:A, A:2*A] = A - 1 + tlt_basis - tlt_basis.T
+            #pyr_tlt[0:A, 0:A] = tlt_basis + tlt_basis.T
+            #pyr_tlt[A:2*A, 0:A] = A - 1 - tlt_basis + tlt_basis.T
+            #pyr_tlt[A:2*A, A:2*A] = 2 * A - 2 - tlt_basis - tlt_basis.T
+            #pyr_tlt[0:A, A:2*A] = A - 1 + tlt_basis - tlt_basis.T
+            pyr_tlt[:A, :A] = x + y
+            pyr_tlt[:A, A:] = x[:,::-1] + y
+            pyr_tlt[A:, :A] = x + y[::-1]
+            pyr_tlt[A:, A:] = x[:,::-1] + y[::-1]
 
         xx, yy = make_xy(A * 2, A)
 
@@ -432,7 +437,7 @@ class ModulatedPyramid(BaseProcessingObj):
                                      np.arange(self._fft_totsize + 2) - pup_shifty, grid=True, missing=0)
             pup_pyr_tot = image[1:-1, 1:-1]
 
-        ccd_internal = toccd(pup_pyr_tot, self._toccd_side)
+        ccd_internal = toccd(pup_pyr_tot, (self._toccd_side, self._toccd_side))
 
         if self._final_ccd_side > self._toccd_side:
             delta = (self._final_ccd_side - self._toccd_side) // 2

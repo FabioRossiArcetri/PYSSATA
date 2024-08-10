@@ -6,14 +6,12 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class Recmat(BaseDataObj):
     def __init__(self):
+        super().__init__()
         self._recmat = None
         self._modes2recLayer = None
         self._im_tag = ''
         self._proj_list = []
         self._norm_factor = 0.0
-
-        if not super().__init__():
-            return
 
     @property
     def recmat(self):

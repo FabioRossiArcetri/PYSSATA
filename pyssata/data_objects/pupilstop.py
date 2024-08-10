@@ -2,33 +2,26 @@ import numpy as np
 from astropy.io import fits
 
 from pyssata.data_objects.layer import Layer
+from pyssata.lib.make_mask import make_mask
 
 class PupilStop(Layer):
     '''Pupil stop'''
 
-    def __init__(self, dimx, dimy, pixel_pitch, height, input_mask=None, mask_diam=None, obs_diam=None, PRECISION=0, TYPE=None):
+    def __init__(self, dimx, dimy, pixel_pitch, height, input_mask=None, mask_diam=None, obs_diam=None):
         self._pixel_pitch = pixel_pitch
         self._height = height
         self._input_mask = input_mask
         self._mask_diam = mask_diam
         self._obs_diam = obs_diam
 
-        if not super().__init__(dimx, dimy, pixel_pitch, height, PRECISION=PRECISION, TYPE=TYPE):
-            return
+        super().__init__(dimx, dimy, pixel_pitch, height)
 
         if input_mask is not None:
             self._mask_amp = input_mask
         else:
-            self._mask_amp = self.make_mask(dimx, mask_diam, obs_diam)
+            self._mask_amp = make_mask(dimx, obs_diam, mask_diam)
 
         self.A = np.float32(self._mask_amp)
-        
-        if not BaseDataObj.__init__(self):
-            return
-
-    def make_mask(self, dimx, diaratio, obsratio):
-        # Implement the mask creation logic here
-        pass
 
     @property
     def A(self):

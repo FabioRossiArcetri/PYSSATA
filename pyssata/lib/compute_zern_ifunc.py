@@ -17,7 +17,7 @@ def compute_zern_ifunc(dim, nzern, obsratio=0.0, diaratio=1.0, start_mode=0, fit
                        make_inv=False, inv_fits_filename=None, return_inv=False, mask=None, zeroPad=None, doNotPutOnGpu=False):
 
     if mask is None:
-        mask, idx = make_mask(dim, obsratio, diaratio)
+        mask, idx = make_mask(dim, obsratio, diaratio, get_idx=True)
     else:
         mask = mask.astype(float)
         idx = np.where(mask)[0]

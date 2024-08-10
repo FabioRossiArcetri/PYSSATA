@@ -102,7 +102,6 @@ class AtmoPropagation(BaseProcessingObj):
                             propagators=self._propagators, wavelengthInNm=self._wavelengthInNm)
 
             self._pupil_list[i].generation_time = t
-
         self._pupil_list.generation_time = t
 
     def trigger(self, t):
