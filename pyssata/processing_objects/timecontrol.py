@@ -1,5 +1,8 @@
 import numpy as np
 
+from pyssata.lib.calc_loop_delay import calc_loop_delay
+
+
 def compute_comm(filter_obj, input, ist=None, ost=None):
     nfilter = filter_obj.num.shape[1]
     ninput = len(input)
@@ -142,8 +145,3 @@ class TimeControl:
     def cleanup(self):
         del self._comm
         del self._state
-
-# Define any necessary helper functions used in TimeControl
-def calc_loop_delay(dt, dm_set, type, bin, comp_tim):
-    # Implementation of the calc_loop_delay function goes here
-    pass

@@ -1,3 +1,6 @@
+from pyssata.lib.calc_detector_noise import calc_detector_noise
+
+
 def calc_loop_delay(fs, dm_set=1e-3, type=None, emccd=False, bin=1, comp_time=0.32e-3, CCD_speed=None):
     """
     Calculate the total AO loop delay in seconds.

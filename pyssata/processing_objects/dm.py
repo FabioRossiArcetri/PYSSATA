@@ -33,10 +33,7 @@ class DM(BaseProcessingObj):
             
             self._if_commands[:len(commands)] = self._sign * commands
             
-            if self.has_gpu():
-                temp_matrix.flat[self._ifunc.idx_inf_func] = vecmat_multiply(vector=self._if_commands, matrix=self._ifunc.gpu_ifunc)
-            else:
-                temp_matrix.flat[self._ifunc.idx_inf_func] = vecmat_multiply(vector=self._if_commands, matrix=self._ifunc.ptr_ifunc)
+            temp_matrix.flat[self._ifunc.idx_inf_func] = np.dot(self._if_commands, self._ifunc.ptr_ifunc)
         
         self._layer.phase_in_nm = temp_matrix
     
@@ -44,10 +41,7 @@ class DM(BaseProcessingObj):
         if self._verbose:
             print(f"time: {self.t_to_seconds(t)}")
             print(f"command generation time: {self.t_to_seconds(self._command.generation_time)}")
-            if obj_isa(self._command, 'BASE_GPU_VALUE'):
-                commands = self._command.read()
-            else:
-                commands = self._command.value
+            commands = self._command.value
             
             if commands.size > 0:
                 print(f"first {min(6, commands.size)} command values: {commands[:min(5, commands.size)]}")
@@ -130,9 +124,6 @@ class DM(BaseProcessingObj):
     def run_check(self, time_step, errmsg=""):
         if self._command is None:
             errmsg += f"{self.repr()} No input command defined"
-        
-        if self._gpu and not obj_isa(self._command, 'BASE_GPU_VALUE'):
-            errmsg += f"WARNING: {self.repr()} Input command is not a BASE_GPU_VALUE object"
         
         return self._command is not None and self._layer is not None and self._ifunc is not None
     
