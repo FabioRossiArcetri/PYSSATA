@@ -1,5 +1,8 @@
 import numpy as np
 
+from pyssata.lib.calc_spatialfrequency import calc_spatialfrequency
+
+
 def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=False, verbose=False):
     if verbose:
         print("Phase-screen computation")
@@ -71,8 +74,8 @@ def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=False, verbos
     # Check for non-finite elements and handle them
     if not np.isfinite(phasescreen).all():
         temp = np.isfinite(phasescreen)
-        idx_inf = np.where(~temp)
-        idx_fin = np.where(temp)
+        idx_inf = np.where(~temp)[0]
+        idx_fin = np.where(temp)[0]
         if len(idx_inf[0]) > 0.01 * temp.size:
             print("Not finite elements are more than 1% of the total!")
             return None
@@ -89,13 +92,3 @@ def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=False, verbos
     phasescreen = np.fft.fftshift(phasescreen)
 
     return np.real(phasescreen)
-
-def calc_spatialfrequency(dimension, precision=False):
-    """Helper function to compute the spatial frequency matrix."""
-    half_dim = dimension // 2
-    freq_range = np.fft.fftfreq(dimension)
-
-    fx, fy = np.meshgrid(freq_range, freq_range)
-    spatial_frequency = np.sqrt(fx**2 + fy**2)
-
-    return spatial_frequency if precision else np.float32(spatial_frequency)
