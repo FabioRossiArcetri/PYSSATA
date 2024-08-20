@@ -88,7 +88,7 @@ def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=False, verbos
 
     # Perform the inverse FFT
     phasescreen = np.fft.ifftshift(phasescreen)
-    phasescreen = np.fft.ifft2(phasescreen)
+    phasescreen = np.fft.ifft2(phasescreen, norm='forward')
     phasescreen = np.fft.fftshift(phasescreen)
 
     return np.real(phasescreen)
