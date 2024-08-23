@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+plt.ion()
 
 from pyssata.base_processing_obj import BaseProcessingObj
 
@@ -19,6 +20,7 @@ class PlotDisplay(BaseProcessingObj):
         self._psym = psym
         self._title = title
         self._opened = False
+        self._first = True
 
     @property
     def value(self):
@@ -97,8 +99,10 @@ class PlotDisplay(BaseProcessingObj):
         self._count = 0
 
     def set_w(self):
-        plt.figure(self._window, figsize=(self._wsize[0] / 100, self._wsize[1] / 100))
-        plt.title(self._title)
+        self.fig = plt.figure(self._window, figsize=(self._wsize[0] / 100, self._wsize[1] / 100))
+        self.ax = self.fig.add_subplot(111)
+#        plt.figure(self._window, figsize=(self._wsize[0] / 100, self._wsize[1] / 100))
+#        plt.title(self._title)
 
     def trigger(self, t):
         if self._value is not None and self._value.generation_time == t:
@@ -114,15 +118,29 @@ class PlotDisplay(BaseProcessingObj):
             self._history[self._count] = self._value.value
             self._count += 1
 
+            x = np.arange(self._count)
+            y = self._history[:self._count]
             plt.figure(self._window)
-            if self._oplot:
-                plt.plot(np.arange(self._count), self._history[:self._count], marker='.', color=self._color)
+            if self._first:
+                self.fig.suptitle(self._title)
+                self.line = self.ax.plot(x, y, marker='.')
+                self._first = False
             else:
-                plt.plot(np.arange(self._count), self._history[:self._count], marker='.')
-                plt.ylim(self._yrange)
-                plt.title(self._title)
-            plt.draw()
-            plt.pause(0.01)
+                self.line[0].set_xdata(x)
+                self.line[0].set_ydata(y)
+                self.ax.set_xlim(x.min(), x.max())
+                self.ax.set_ylim(y.min(), y.max())
+            self.fig.canvas.draw()
+            plt.pause(0.001)
+
+            # if self._oplot:
+            #     plt.plot(np.arange(self._count), self._history[:self._count], marker='.', color=self._color)
+            # else:
+            #     plt.plot(np.arange(self._count), self._history[:self._count], marker='.')
+            #     plt.ylim(self._yrange)
+            #     plt.title(self._title)
+            # plt.draw()
+            # plt.pause(0.01)
 
     def run_check(self, time_step, errmsg=None):
         return self._value is not None and self._history is not None
