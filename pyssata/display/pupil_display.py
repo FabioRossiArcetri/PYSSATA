@@ -116,7 +116,7 @@ def pupil_display(frame, sx, sy, slopemap, real_ccd_side, cirlceDisp=None, NEGAT
         if NOFRAME or signal_total.shape[1] != frame.shape[1]:
             ax.imshow(signal_total, cmap='gray')
         else:
-            combined = np.hstack((frame/np.max(frame) * np.max(signal_total), signal_total))
+            combined = np.vstack((frame/np.max(frame) * np.max(signal_total), signal_total))
             ax.imshow(combined, cmap='gray')
     else:
         signal_display = zoom(signal_total, [MAGNIFY/2, MAGNIFY], order=0)

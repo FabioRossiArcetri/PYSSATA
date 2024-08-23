@@ -303,7 +303,7 @@ class AtmoEvolution(BaseProcessingObj):
         r0wavelength = r0 * (self._wavelengthInNm / 500.0)**(6./5.)
         scale_coeff = (self._pixel_pitch / r0wavelength)**(5./6.) if seeing > 0 else 0.0
 
-        phasescreens_shift(self._phasescreens, self._pixel_layer, wind_speed, wind_direction, delta_time,
+        last_position = phasescreens_shift(self._phasescreens, self._pixel_layer, wind_speed, wind_direction, delta_time,
                                 self._pixel_pitch, scale_coeff, self._layer_list, position=last_position, cycle_screens=self._cycle_screens)
 
         for element in self._layer_list:
