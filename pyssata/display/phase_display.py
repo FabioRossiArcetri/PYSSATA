@@ -15,6 +15,7 @@ class PhaseDisplay(BaseProcessingObj):
         self._title = 'phase'
         self._opened = False
         self._size_frame = (0, 0)
+        self._first = True
 
     @property
     def phase(self):
@@ -65,8 +66,10 @@ class PhaseDisplay(BaseProcessingObj):
         self._size_frame = size_frame
 
     def set_w(self, size_frame):
-        plt.figure(self._window, figsize=(size_frame[0] * self._disp_factor / 100, size_frame[1] * self._disp_factor / 100))
-        plt.title(self._title)
+        self.fig = plt.figure(self._window, figsize=(size_frame[0] * self._disp_factor / 100, size_frame[1] * self._disp_factor / 100))
+        self.ax = self.fig.add_subplot(111)
+#        plt.figure(self._window, figsize=(size_frame[0] * self._disp_factor / 100, size_frame[1] * self._disp_factor / 100))
+#        plt.title(self._title)
 
     def trigger(self, t):
         phase = self._phase
@@ -87,14 +90,22 @@ class PhaseDisplay(BaseProcessingObj):
                 self.set_w(size_frame)
                 self._opened = True
 
-            plt.figure(self._window)
-
-            if self._doImage:
-                plt.imshow(frame, aspect='auto')
+            if self._first:
+                self.img = self.ax.imshow(frame)
+                self._first = False
             else:
-                plt.imshow(np.repeat(np.repeat(frame, self._disp_factor, axis=0), self._disp_factor, axis=1), cmap='gray')
-            plt.draw()
-            plt.pause(0.01)
+                self.img.set_data(frame)
+            self.fig.canvas.draw()
+            plt.pause(0.001)
+
+            # plt.figure(self._window)
+
+            # if self._doImage:
+            #     plt.imshow(frame, aspect='auto')
+            # else:
+            #     plt.imshow(np.repeat(np.repeat(frame, self._disp_factor, axis=0), self._disp_factor, axis=1), cmap='gray')
+            # plt.draw()
+            # plt.pause(0.01)
 
     def run_check(self, time_step):
         return self._phase is not None

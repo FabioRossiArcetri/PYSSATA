@@ -14,6 +14,7 @@ class SlopecDisplay(BaseProcessingObj):
         self._title = ''
         self._do_image_show = False
         self._circle_disp = 0
+        self.fig = self.ax = None
 
     @property
     def slopec(self):
@@ -89,8 +90,12 @@ class SlopecDisplay(BaseProcessingObj):
 #                    map_data = (map_data // nx) * nx * 2 + (map_data % nx)
 #                    slope_side = nx * 2
 
+                if self.fig is not None:
+                    TARGET = (self.fig, self.ax)
+                else:
+                    TARGET = None
                 title = self._title if self._title else 'Slope Display'
-                pupil_display(self._slopec.in_pixels.pixels, sx, sy, map_data, self._slopec.in_pixels.pixels.shape[0], title=title)
+                _, _, _, self.fig, self.ax = pupil_display(self._slopec.in_pixels.pixels, sx, sy, map_data, self._slopec.in_pixels.pixels.shape[0], title=title, TARGET=TARGET)
 
     def run_check(self, time_step):
         return self._slopec is not None

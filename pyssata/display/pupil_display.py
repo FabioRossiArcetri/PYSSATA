@@ -69,9 +69,10 @@ def pupil_display(frame, sx, sy, slopemap, real_ccd_side, cirlceDisp=None, NEGAT
         xsize, ysize = dx * real_ccd_side * MAGNIFY, real_ccd_side * MAGNIFY
     
     if TARGET is None:
-        fig, ax = plt.subplots(figsize=(xsize/100, ysize/100))
+        pupil_display.fig, pupil_display.ax = plt.subplots(figsize=(xsize/100, ysize/100))
     else:
-        ax = TARGET
+        pupil_display.fig, pupil_display.ax = TARGET
+    ax = pupil_display.ax
     
     # Display the frame and signals
     if not NOFRAME:
@@ -125,4 +126,6 @@ def pupil_display(frame, sx, sy, slopemap, real_ccd_side, cirlceDisp=None, NEGAT
     if TARGET is None:
         plt.show()
     
-    return frame_signalx, frame_signaly, GET_SIZE if GET_SIZE else None
+    return frame_signalx, frame_signaly, GET_SIZE if GET_SIZE else None, pupil_display.fig, pupil_display.ax
+pupil_display.fig = None
+pupil_display.ax = None
