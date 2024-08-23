@@ -55,7 +55,7 @@ class IFunc:
     @mask_inf_func.setter
     def mask_inf_func(self, mask_inf_func):
         self._mask_inf_func = np.array(mask_inf_func)
-        self._idx_inf_func = np.where(mask_inf_func)[0]
+        self._idx_inf_func = np.where(mask_inf_func)
 
     @property
     def idx_inf_func(self):

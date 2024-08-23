@@ -17,12 +17,13 @@ def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, de
     
     for ii, p in enumerate(phasescreens):
         # Check if we need to cycle the screens
+        print(ii, new_position[ii], pixel_layer[ii], p.shape[0])
         if cycle_screens:
-            if new_position[ii] + pixel_layer[ii] > p.shape[1]:
+            if new_position[ii] + pixel_layer[ii] > p.shape[0]:
                 new_position[ii] = 0.
         
-        if new_position[ii] + pixel_layer[ii] > p.shape[1]:
-            print(f'phasescreens size: {round(p.shape[1], 2)}')
+        if new_position[ii] + pixel_layer[ii] > p.shape[0]:
+            print(f'phasescreens size: {round(p.shape[0], 2)}')
             print(f'requested position: {round(new_position[ii], 2)}')
             raise ValueError(f'phasescreens_shift cannot go out of the {ii}-th phasescreen!')
         
@@ -50,6 +51,7 @@ def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, de
                 layer = rotate(layer, wind_direction[ii], reshape=False, order=1)
         
         layer_list[ii].phaseInNm = layer * scale_coeff
-    
+
+    print(f'Phasescreen_shift: {new_position=}')    
     # Update position output
     return new_position

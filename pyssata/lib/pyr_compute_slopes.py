@@ -32,7 +32,7 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
         intensity = [np.maximum(arr - threshold, 0) for arr in intensity]
     
     total_intensity = np.sum([np.sum(arr) for arr in intensity])
-    n_subap = ind_pup.shape[1]
+    n_subap = ind_pup.shape[0]
 
     if total_intensity > 0:
         if norm_fact is not None:

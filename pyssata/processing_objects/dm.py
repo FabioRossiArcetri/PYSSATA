@@ -4,20 +4,19 @@ from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.layer import Layer
 
 class DM(BaseProcessingObj):
-    def __init__(self, pixel_pitch, height, influence_function, GPU=False, objname="dm", objdescr="Deformable Mirror object", PRECISION=0, TYPE=None):
+    def __init__(self, pixel_pitch, height, influence_function):
         super().__init__()
         
         self._ifunc = influence_function
-        self._ifunc.precision = self._precision
+#        self._ifunc.precision = self._precision
         
         s = self._ifunc.mask_inf_func.shape
         nmodes_if = self._ifunc.size[0]
         
         self._if_commands = np.zeros(nmodes_if, dtype=self._ifunc.type)
-        self._gpu = GPU
         self._layer = Layer(s[0], s[1], pixel_pitch, height)
         self._layer.A = self._ifunc.mask_inf_func
-        
+        self._verbose =True
         # sign is -1 to take into account the reflection in the propagation
         self._sign = -1
     
@@ -33,8 +32,8 @@ class DM(BaseProcessingObj):
             
             self._if_commands[:len(commands)] = self._sign * commands
             
-            temp_matrix.flat[self._ifunc.idx_inf_func] = np.dot(self._if_commands, self._ifunc.ptr_ifunc)
-        
+            temp_matrix[self._ifunc.idx_inf_func] = np.dot(self._if_commands, self._ifunc.ptr_ifunc)
+
         self._layer.phase_in_nm = temp_matrix
     
     def trigger(self, t):
