@@ -34,7 +34,7 @@ class DM(BaseProcessingObj):
             
             temp_matrix[self._ifunc.idx_inf_func] = np.dot(self._if_commands, self._ifunc.ptr_ifunc)
 
-        self._layer.phase_in_nm = temp_matrix
+        self._layer.phaseInNm = temp_matrix
     
     def trigger(self, t):
         if self._verbose:

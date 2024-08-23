@@ -3,18 +3,13 @@ from astropy.io import fits
 
 from pyssata.data_objects.ifunc import IFunc
 from pyssata.lib.make_mask import make_mask
-
-
-def zern2phi(dim, nzern, mask=None):
-    # Placeholder function for zernike polynomials generation
-    zernike_cube = np.random.rand(nzern, dim, dim)  # Replace with actual Zernike calculation
-    return zernike_cube
+from pyssata.lib.zernike_generator import ZernikeGenerator
 
 def pseudo_invert(matrix):
     return np.linalg.pinv(matrix)
 
 def compute_zern_ifunc(dim, nzern, obsratio=0.0, diaratio=1.0, start_mode=0, fits_filename=None, 
-                       make_inv=False, inv_fits_filename=None, return_inv=False, mask=None, zeroPad=None, doNotPutOnGpu=False):
+                       make_inv=False, inv_fits_filename=None, return_inv=False, mask=None, zeroPad=None):
 
     if mask is None:
         mask, idx = make_mask(dim, obsratio, diaratio, get_idx=True)
@@ -22,7 +17,8 @@ def compute_zern_ifunc(dim, nzern, obsratio=0.0, diaratio=1.0, start_mode=0, fit
         mask = mask.astype(float)
         idx = np.where(mask)[0]
 
-    zern_phase_3d = zern2phi(dim, nzern, mask=mask)
+    zg = ZernikeGenerator(dim)
+    zern_phase_3d = np.stack([zg.getZernike(z) for z in range(2, nzern + 2)])
     zern_phase_3d = zern_phase_3d[start_mode:]
     nzern -= start_mode
 
@@ -37,7 +33,7 @@ def compute_zern_ifunc(dim, nzern, obsratio=0.0, diaratio=1.0, start_mode=0, fit
         if zeroPad:
             ifunc_inv.zeroPad = zeroPad
         ifunc_inv.mask_inf_func = mask
-        ifunc_inv.set_ifunc(zern_phase_2d_inv, doNotPutOnGpu=doNotPutOnGpu)
+        ifunc_inv.influence_function = zern_phase_2d_inv
         if inv_fits_filename:
             hdr = fits.Header()
             hdr['INF_FUNC'] = 'ZERNIKES'
