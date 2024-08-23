@@ -89,12 +89,12 @@ class PhaseDisplay(BaseProcessingObj):
             if not self._opened:
                 self.set_w(size_frame)
                 self._opened = True
-
             if self._first:
                 self.img = self.ax.imshow(frame)
                 self._first = False
             else:
                 self.img.set_data(frame)
+                self.img.set_clim(frame.min(), frame.max())
             self.fig.canvas.draw()
             plt.pause(0.001)
 
