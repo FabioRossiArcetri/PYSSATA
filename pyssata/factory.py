@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from pyssata.data_objects.pupilstop import PupilStop
+from pyssata.display.psf_display import PSFDisplay
 
 
 from pyssata.loop_control import LoopControl
@@ -3045,7 +3046,7 @@ class Factory:
         Returns:
         PsfDisplay: A new `psf_display` processing object
         """
-        disp = PsfDisplay(psf=psf)
+        disp = PSFDisplay(psf=psf)
         if window is not None:
             disp.window = window
             window += 1

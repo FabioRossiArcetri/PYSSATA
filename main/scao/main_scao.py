@@ -30,11 +30,17 @@ atmo = factory.get_atmo_container(source, params['atmo'],
 sc_disp = factory.get_slopec_display(sc)
 sr_disp = factory.get_plot_display(psf.out_sr)
 ph_disp = factory.get_phase_display(prop.pupil_list[0])
+dm_disp = factory.get_phase_display(dm.out_layer)
+psf_disp = factory.get_psf_display(psf.out_psf)
 
 sc_disp.window = 10
 sr_disp.window = 11
 ph_disp.window = 12
+dm_disp.window = 13
+psf_disp.window = 14
 sr_disp.title = 'SR'
+dm_disp.title = 'DM'
+psf_disp.title = 'PSF'
 sc_disp.disp_factor = 4
 ph_disp.disp_factor = 2
 
@@ -72,6 +78,8 @@ loop.add(store)
 loop.add(sc_disp)
 loop.add(sr_disp)
 loop.add(ph_disp)
+loop.add(dm_disp)
+loop.add(psf_disp)
 
 # Run simulation loop
 loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'])
