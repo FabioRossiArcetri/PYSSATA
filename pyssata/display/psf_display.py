@@ -14,6 +14,7 @@ class PSFDisplay(BaseProcessingObj):
         self._image_p2v = 0.0
         self._title = 'PSF'
         self._opened = False
+        self._first = True
 
     @property
     def psf(self):
@@ -64,30 +65,36 @@ class PSFDisplay(BaseProcessingObj):
         self._title = title
 
     def set_w(self):
-        plt.figure(self._window, figsize=(self._wsize[0] / 100, self._wsize[1] / 100))
-        plt.title(self._title)
+#        plt.figure(self._window, figsize=(self._wsize[0] / 100, self._wsize[1] / 100))
+#        plt.title(self._title)
+        self.fig = plt.figure(self._window, figsize=(self._wsize[0] / 100, self._wsize[1] / 100))
+        self.ax = self.fig.add_subplot(111)
 
     def trigger(self, t):
         psf = self._psf
         if psf.generation_time == t:
-            if not self._opened:
-                self.set_w()
-                self._opened = True
 
-            plt.figure(self._window)
             image = psf.value
 
             if self._image_p2v > 0:
                 image = np.maximum(image, self._image_p2v**(-1.) * np.max(image))
-
+            
             if self._log:
-                plt.imshow(np.log10(image), cmap='gray')
-            else:
-                plt.imshow(image, cmap='gray')
+                image = np.log10(image)
 
-            plt.colorbar()
-            plt.draw()
-            plt.pause(0.01)
+            if not self._opened:
+                self.set_w()
+                self._opened = True
+            if self._first:
+                self.img = self.ax.imshow(image)
+                self._first = False
+            else:
+                self.img.set_data(image)
+                self.img.set_clim(image.min(), image.max())
+#            plt.colorbar()
+            self.fig.canvas.draw()
+            plt.pause(0.001)
+
 
     def run_check(self, time_step):
         return self._psf is not None
