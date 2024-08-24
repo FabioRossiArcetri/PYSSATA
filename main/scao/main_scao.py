@@ -1,11 +1,16 @@
 
+from copy import deepcopy
 from pyssata.factory import Factory
-
 
 # Read parameters file
 dir = './'
 params = {}
 exec(open(dir + 'params_scao.py').read(), params)
+
+# Hack to keep the original params dict after factory deletes entries
+del params['__builtins__']
+del params['np']
+params_orig = deepcopy(params)
 
 # Initialize housekeeping objects
 factory = Factory(params['main'])
@@ -87,10 +92,10 @@ loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'])
 # Add integrated PSF to store
 store.add(psf.out_int_psf)
 
-print(f"Mean Strehl Ratio (@{params['camera']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']]) * 100.)}")
+print(f"Mean Strehl Ratio (@{params_orig['camera']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']]) * 100.)}")
 
 # Saving method with a single sav file
-store.save('save_file.sav')
+store.save('save_file.pickle')
 
 # Alternative saving method:
 # tn = store.save_tracknum(dir=dir, params=params, nodlm=True, noolformat=True, compress=True, saveFloat=saveFloat)

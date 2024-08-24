@@ -1,13 +1,12 @@
 import os
 import numpy as np
-from collections import OrderedDict, defaultdict
-from scipy.io import savemat, loadmat
+from collections import OrderedDict
+import pickle
 import time
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.data_objects.ef import ElectricField
-from pyssata.data_objects.layer import Layer
 from pyssata.data_objects.pixels import Pixels
 from pyssata.data_objects.slopes import Slopes
 
@@ -39,7 +38,9 @@ class Datastore(BaseProcessingObj):
     def save(self, filename, compress=False):
         times = {k: np.array(list(v.keys())) for k, v in self._storage.items() if isinstance(v, OrderedDict)}
         data = self._storage
-        savemat(filename, {'data': data, 'times': times}, do_compression=compress)
+        with open(filename, 'wb') as handle:
+            data_to_save = {'data': data, 'times': times}
+            pickle.dump(data_to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def save_tracknum(self, dir='.', params=None, nofits=False, nosav=False, nodlm=False, nooldformat=False, compress=False, saveFloat=False):
         today = time.strftime("%Y%m%d")
@@ -139,6 +140,7 @@ class Datastore(BaseProcessingObj):
         return times if as_list else self.t_to_seconds(np.array(times))
 
     def values(self, name, as_list=False, init=0):
+        init = int(init)
         if not self.has_key(name):
             print(f'The key: {name} is not stored in the object!')
             return -1
