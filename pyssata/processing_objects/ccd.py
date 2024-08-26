@@ -1,6 +1,7 @@
 import numpy as np
-from scipy.ndimage import convolve
 from scipy.stats import poisson, gamma, norm
+from numpy.random import default_rng
+from scipy.ndimage import convolve
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.pixels import Pixels
@@ -59,6 +60,7 @@ class CCD(BaseProcessingObj):
         self._poidev = None
         self._gaussian_noise = None
         self._useOaalibNoiseSource = False
+        self._photon_rng = default_rng(self._photon_seed)
 
     @property
     def in_i(self):
@@ -69,7 +71,6 @@ class CCD(BaseProcessingObj):
         self._in_i = value
         s = self._pixels.size * self._binning
         self._integrated_i = Intensity(s[0], s[1])
-        np.random.seed(self._photon_seed)
 
     @property
     def dt(self):
@@ -155,7 +156,7 @@ class CCD(BaseProcessingObj):
             ccd_frame = convolve(ccd_frame, self._chDiffKernel, mode='constant', cval=0.0)
 
         if self._photon_noise:
-            ccd_frame = poisson.rvs(ccd_frame, random_state=self._photon_seed)
+            ccd_frame = poisson.rvs(ccd_frame, random_state=self._rng)
 
         if self._excess_noise:
             ccd_frame = 1.0 / self._excess_delta * gamma.rvs(self._excess_delta * ccd_frame, self._emccd_gain, random_state=self._excess_seed)

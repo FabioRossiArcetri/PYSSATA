@@ -3,7 +3,11 @@ from copy import deepcopy
 from pyssata.factory import Factory
 
 # Read parameters file
-dir = './'
+dir = '/home/puglisi/git/PYSSATA/main/scao/'
+
+import os
+os.chdir(dir)
+
 params = {}
 exec(open(dir + 'params_scao.py').read(), params)
 
