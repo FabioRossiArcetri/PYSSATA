@@ -239,8 +239,8 @@ class AtmoEvolution(BaseProcessingObj):
                         square_ps_index += 1
                         ps_index = 0
 
-                    temp_screen = square_phasescreens[square_ps_index][:, int(self._pixel_phasescreens) * ps_index:
-                                                                           int(self._pixel_phasescreens) * (ps_index + 1)]
+                    temp_screen = square_phasescreens[square_ps_index][int(self._pixel_phasescreens) * ps_index:
+                                                                       int(self._pixel_phasescreens) * (ps_index + 1), :]
                     temp_screen *= np.sqrt(self._Cn2[i])
                     temp_screen -= np.mean(temp_screen)
                     # Convert to nm
