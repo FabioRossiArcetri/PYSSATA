@@ -17,20 +17,20 @@ def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, de
     
     for ii, p in enumerate(phasescreens):
         # Check if we need to cycle the screens
-        print(ii, new_position[ii], pixel_layer[ii], p.shape[0])
+        print(ii, new_position[ii], pixel_layer[ii], p.shape[1])
         if cycle_screens:
-            if new_position[ii] + pixel_layer[ii] > p.shape[0]:
+            if new_position[ii] + pixel_layer[ii] > p.shape[1]:
                 new_position[ii] = 0.
         
-        if new_position[ii] + pixel_layer[ii] > p.shape[0]:
+        if new_position[ii] + pixel_layer[ii] > p.shape[1]:
             print(f'phasescreens size: {round(p.shape[0], 2)}')
             print(f'requested position: {round(new_position[ii], 2)}')
             raise ValueError(f'phasescreens_shift cannot go out of the {ii}-th phasescreen!')
         
         pos = new_position_quo[ii]
         print(pos, pixel_layer)
-        ps_Shift1 = p[pos: int(pos + pixel_layer[ii]), 0: int(pixel_layer[ii])]
-        ps_Shift2 = p[pos + 1: int(pos + pixel_layer[ii]) + 1, 0: int(pixel_layer[ii])]
+        ps_Shift1 = p[0: int(pixel_layer[ii]), pos: int(pos + pixel_layer[ii])]
+        ps_Shift2 = p[0: int(pixel_layer[ii]), pos + 1: int(pos + pixel_layer[ii]) + 1]
         ps_ShiftInterp = (1 - new_position_rem[ii]) * ps_Shift1 + new_position_rem[ii] * ps_Shift2
         
         layer = ps_ShiftInterp[:, :]
