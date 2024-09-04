@@ -66,8 +66,8 @@ camera = {
 
 atmo = {
  'L0':                40,                   # [m] Outer scale
- 'heights':           np.array([119.,837,3045,12780]), # [m] layer heights at 0 zenith angle
- 'Cn2':               np.array([0.70,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
+ 'heights':           np.array([119.]), #,837,3045,12780]), # [m] layer heights at 0 zenith angle
+ 'Cn2':               np.array([0.70]) #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
 }
 
 seeing = {
@@ -76,11 +76,11 @@ seeing = {
 }
 
 wind_speed = {
- 'constant':          [5.,10.,20.,10.]      # [m/s] Wind speed value
+ 'constant':          [200.]#,10.,20.,10.]      # [m/s] Wind speed value
 }
 
 wind_direction = {
- 'constant':          [90.,270.,270.,90.]   # [degrees] Wind direction value
+ 'constant':          [0.]#,270.,270.,90.]   # [degrees] Wind direction value
 }
 
 modalrec = {
