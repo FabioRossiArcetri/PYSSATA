@@ -19,10 +19,24 @@ class DM(BaseProcessingObj):
         self._verbose =True
         # sign is -1 to take into account the reflection in the propagation
         self._sign = -1
+
+        self._history = None
+        self._delay = 2
+        self._gain = 0.5
     
     def compute_shape(self):
         commands = self._command.value
-    
+
+        if self._history is None:
+            self._history = [commands*0] * (self._delay+1)
+            self._integrated_commands = commands * 0
+
+        self._history.append(commands)
+        self._integrated_commands += self._history[-(self._delay+1)]
+
+        commands = self._integrated_commands * self._gain
+
+
         temp_matrix = np.zeros(self._layer.size, dtype=np.float64 if self._precision else np.float32)
         
         # Compute phase only if commands vector is not zero
@@ -35,7 +49,7 @@ class DM(BaseProcessingObj):
             temp_matrix[self._ifunc.idx_inf_func] = np.dot(self._if_commands, self._ifunc.ptr_ifunc)
 
         self._layer.phaseInNm = temp_matrix
-    
+
     def trigger(self, t):
         if self._verbose:
             print(f"time: {self.t_to_seconds(t)}")

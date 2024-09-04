@@ -66,7 +66,8 @@ ccd.in_i = pyr.out_i
 sc.in_pixels = ccd.out_pixels
 rec.in_slopes = sc.out_slopes
 intc.in_delta_comm = rec.out_modes
-dm.in_command = intc.out_comm
+#dm.in_command = intc.out_comm
+dm.in_command = rec.out_modes
 psf.in_ef = pyr.in_ef
 
 # Set store data
