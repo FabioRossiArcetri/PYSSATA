@@ -2,6 +2,13 @@
 from copy import deepcopy
 from pyssata.factory import Factory
 
+from pyssata.data_objects.source import Source
+from pyssata.data_objects.pupilstop import PupilStop
+from pyssata.processing_objects.psf import PSF
+from pyssata.processing_objects.pyr_slopec import PyrSlopec
+
+from pyssata.calib_manager import CalibManager
+
 # Read parameters file
 dir = '/home/puglisi/git/PYSSATA/main/scao/'
 
@@ -20,18 +27,21 @@ params_orig = deepcopy(params)
 factory = Factory(params['main'])
 loop = factory.get_loop_control()
 store = factory.get_datastore()
+cm = CalibManager(params['main']['root_dir'])
 
 # Initialize processing objects
-source = [factory.get_source(src) for src in params['wfs_source']]
+source = [Source(**p) for p in params['wfs_source']]
 prop = factory.get_atmo_propagation(params['atmo'], source)
-pupilstop = factory.get_pupilstop(params['pupilstop'])
+pupilstop = PupilStop(pixel_pupil = params['main']['pixel_pupil'],
+                      pixel_pitch = params['main']['pixel_pitch'],
+                      **params['pupilstop'])
 pyr = factory.get_modulated_pyramid(params['pyramid'])
 ccd = factory.get_ccd(params['detector'])
-sc = factory.get_pyr_slopec(params['slopec'])
+sc = PyrSlopec(**params['slopec'], cm=cm)
 rec = factory.get_modalrec(params['modalrec'])
 intc = factory.get_control(params['control'])
 dm = factory.get_dm(params['dm'])
-psf = factory.get_psf(params['camera'])
+psf = PSF(**params['camera'])
 atmo = factory.get_atmo_container(source, params['atmo'],
                                   params['seeing'], params['wind_speed'], params['wind_direction'])
 

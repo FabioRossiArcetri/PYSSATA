@@ -3009,32 +3009,6 @@ class Factory:
         self.apply_global_params(disp)
         return disp
 
-    def get_psf(self, params, GPU=None):
-        """
-        Builds a `psf` processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        GPU (bool, optional): Use GPU if available
-
-        Returns:
-        Psf or PsfGpu: A new `psf` processing object
-        """
-        useGPU = GPU if GPU is not None else self._gpu
-        params = self.ensure_dictionary(params)
-
-        wavelengthInNm = params.pop('wavelengthInNm')
-        nd = self.extract(params, 'nd', default=None)
-
-        if useGPU:
-            psf = PsfGpu(wavelengthInNm, nd=nd)
-        else:
-            psf = PSF(wavelengthInNm, nd=nd)
-        
-        self.apply_global_params(psf)
-        psf.apply_properties(params)
-        return psf
-
     def get_psf_display(self, psf, window=None):
         """
         Builds a `psf_display` processing object.
@@ -3052,79 +3026,6 @@ class Factory:
             window += 1
         self.apply_global_params(disp)
         return disp
-
-    def get_pupilstop(self, params):
-        """
-        Builds a `pupilstop` processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        GPU (bool, optional): Use GPU if available
-
-        Returns:
-        PupilStop: A new `pupilstop` processing object
-        """
-        params = self.ensure_dictionary(params)
-
-        mask_diam = self.extract(params, 'mask_diam', default=1.)
-        obs_diam = self.extract(params, 'obs_diam', default=None, optional=True)
-        pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='')
-
-        shiftXYinPixel = self.extract(params, 'shiftXYinPixel', default=None, optional=True)
-        rotInDeg = self.extract(params, 'rotInDeg', default=None, optional=True)
-        magnification = self.extract(params, 'magnification', default=None, optional=True)
-
-        if pupil_mask_tag:
-            pupilstop = self._cm.read_pupilstop(pupil_mask_tag)
-            if pupilstop is None:
-                raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
-        else:
-            dim = self._main['pixel_pupil']
-            pixel_pitch = self._main['pixel_pitch']
-            pupilstop = PupilStop(dim, dim, pixel_pitch, 0, mask_diam=mask_diam, obs_diam=obs_diam)
-
-        if shiftXYinPixel is not None:
-            pupilstop.shiftXYinPixel = shiftXYinPixel
-        if rotInDeg is not None:
-            pupilstop.rotInDeg = rotInDeg
-        if magnification is not None:
-            pupilstop.magnification = magnification
-
-        return pupilstop
-
-    def get_pyr_slopec(self, params):
-        """
-        Builds a `pyr_slopec` processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-
-        Returns:
-        PyrSlopec: A new `pyr_slopec` processing object
-        """
-        params = self.ensure_dictionary(params)
-        computation_time = self.extract(params, 'computation_time', default=None, optional=True)
-        use_optg_sn = self.extract(params, 'use_optg_sn', default=None, optional=True)
-
-        shlike = self.extract(params, 'shlike', default=None, optional=True)
-        slopes_from_intensity = self.extract(params, 'slopes_from_intensity', default=None, optional=True)
-        norm_factor = self.extract(params, 'norm_factor', default=None, optional=True)
-        thr1 = self.extract(params, 'thr1', default=None, optional=True)
-        thr2 = self.extract(params, 'thr2', default=None, optional=True)
-        subap_norm = self.extract(params, 'subap_norm', default=None, optional=True)    # old keyword to be removed!
-        filtmat_tag = self.extract(params, 'filtmat_tag', default='', optional=True)
-
-        sc = PyrSlopec(shlike=shlike, norm_factor=norm_factor, slopes_from_intensity=slopes_from_intensity)
-
-        if filtmat_tag:
-            filtmat = self._cm.read_data(filtmat_tag)
-            sc.filtmat = filtmat
-
-        sc.setproperty(cm=self._cm)
-        self.apply_global_params(sc)
-        sc.apply_properties(params)
-
-        return sc
 
     def get_sh_slopec(self, params, GPU=None, recmat=None, device=None, mode_basis=None, pup_mask=None):
         """
@@ -3256,50 +3157,6 @@ class Factory:
             source_list.append(self.get_source(p))
 
         return source_list
-
-    def get_source(self, params):
-        """
-        Builds a `source` object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-
-        Returns:
-        Source: A `source` object.
-        """
-        params = self.ensure_dictionary(params)
-
-        polar_coordinate = params.pop('polar_coordinate')
-        height = self.extract(params, 'height', default=float('inf'), optional=True)
-        error_coord = self.extract(params, 'error_coord', default=[0., 0.], optional=True)
-
-        polar_coordinate = np.add(polar_coordinate, error_coord)
-
-        if any(error_coord):
-            print(f'there is a desired error ({error_coord[0]},{error_coord[1]}) on source coordinates.')
-            print(f'final coordinates are: {polar_coordinate[0]},{polar_coordinate[1]}')
-
-        if hasattr(self._main, 'zenithAngleInDeg'):
-            airmass = 1. / cos(self._main.zenithAngleInDeg / 180. * pi)
-        else:
-            airmass = 1.
-        height *= airmass
-        if 'verbose' in params and params['verbose']:
-            if airmass != 1.:
-                print(f'get_source: changing source height by airmass value ({airmass})')
-
-        magnitude = params.pop('magnitude')
-        wavelengthInNm = params.pop('wavelengthInNm')
-#        optSource = self.extract(params, 'optSource', default=None)
-
-        band = self.extract(params, 'band', default='', optional=True)
-        zeroPoint = self.extract(params, 'zeroPoint', default=0, optional=True)
-
-        source = Source(polar_coordinate, height, magnitude, wavelengthInNm,
-                        band=band, zeroPoint=zeroPoint)
-        self.apply_global_params(source)
-        source.apply_properties(params)
-        return source
 
     def get_cm(self):
         """
