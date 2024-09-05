@@ -40,8 +40,8 @@ class Slopec(BaseProcessingObj):
                  gain_slope_high_speed=0.0, ff_slope_high_speed=0.0, store_s=None, 
                  store_c=None, sn_scale_fact=None, command_list=None, intmat=None, 
                  recmat=None, filt_recmat=None, filt_intmat=None, accumulation_dt=0, 
-                 accumulated_pixels=None, accumulated_pixels_ptr=None):
-
+                 accumulated_pixels=None, accumulated_pixels_ptr=None, sn_tag=None):
+ 
         super().__init__()
         self._pixels = pixels if pixels is not None else default_pixels
         self._slopes = Slopes(2)
@@ -75,6 +75,10 @@ class Slopec(BaseProcessingObj):
         self._accumulated_pixels = accumulated_pixels if accumulated_pixels is not None else default_accumulated_pixels
         self._accumulated_pixels_ptr = accumulated_pixels_ptr if accumulated_pixels_ptr is not None else default_accumulated_pixels_ptr
         self._accumulated_slopes = Slopes(2)
+        if cm:
+            self._cm = cm
+        if sn_tag:
+            self.load_sn(sn_tag)
 
     @property
     def in_pixels(self):

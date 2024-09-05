@@ -5,15 +5,18 @@ from pyssata.data_objects.slopes import Slopes
 from pyssata.lib.pyr_compute_slopes import pyr_compute_slopes
 from pyssata.base_value import BaseValue
 
+    
 class PyrSlopec(Slopec):
-    def __init__(self, pupdata_tag=None, shlike=False, norm_factor=0.0, thr_value=0.0, slopes_from_intensity=False, **kwargs):
+    def __init__(self, pupdata_tag=None, shlike=False, norm_factor=None, thr_value=0.0, slopes_from_intensity=False, filtmat_tag='', **kwargs):
         super().__init__(**kwargs)
         self._shlike = shlike
         self._norm_factor = norm_factor
-        if pupdata_tag:
-            self._pupdata_tag = pupdata_tag
         self._thr_value = thr_value
         self._slopes_from_intensity = slopes_from_intensity
+        if pupdata_tag:
+            self.pupdata_tag = pupdata_tag  # Property set
+        if filtmat_tag:
+            self.set_filtmat(self._cm.read_data(filtmat_tag))   # TODO
 
         self._total_counts = BaseValue()
         self._subap_counts = BaseValue()

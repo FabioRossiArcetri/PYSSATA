@@ -4,32 +4,37 @@ from astropy.io import fits
 from pyssata.data_objects.layer import Layer
 from pyssata.lib.make_mask import make_mask
 
+    
 class PupilStop(Layer):
     '''Pupil stop'''
 
-    def __init__(self, dimx, dimy, pixel_pitch, height, input_mask=None, mask_diam=None, obs_diam=None):
-        self._pixel_pitch = pixel_pitch
-        self._height = height
+    def __init__(self,
+                 pixel_pupil: int,
+                 pixel_pitch: float,
+                 input_mask: np.ndarray=None,
+                 mask_diam: float=1.0,
+                 obs_diam: float=None,
+                 shiftXYinPixel=(0.0, 0.0), 
+                 rotInDeg: float=0.0,
+                 magnification: float=1.0):
+ 
+        super().__init__(pixel_pupil, pixel_pupil, pixel_pitch, height=0, precision=0,
+                         shiftXYinPixel=shiftXYinPixel, rotInDeg=rotInDeg, magnification=magnification)
+
         self._input_mask = input_mask
         self._mask_diam = mask_diam
         self._obs_diam = obs_diam
 
-        super().__init__(dimx, dimy, pixel_pitch, height)
-
         if input_mask is not None:
-            self._mask_amp = input_mask
+            mask_amp = input_mask
         else:
-            self._mask_amp = make_mask(dimx, obs_diam, mask_diam)
+            mask_amp = make_mask(pixel_pupil, obs_diam, mask_diam)
 
-        self.A = np.float32(self._mask_amp)
+        self.A = np.float32(mask_amp)
 
-    @property
-    def A(self):
-        return self._A
-
-    @A.setter
-    def A(self, value):
-        self._A = value
+    @staticmethod
+    def from_tag(cm, tag):
+        return cm.read_pupilstop(tag)
 
     def save(self, filename, hdr=None):
         if hdr is None:
