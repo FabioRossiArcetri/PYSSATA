@@ -589,63 +589,6 @@ class Factory:
 
         return atmo_readcube
 
-    def get_atmo_propagation(self, params, source_list):
-        """
-        Create an atmo_propagation processing object.
-
-        Parameters:
-        params (dict): Dictionary of atmo parameters
-        source_list (list): List of source objects
-
-        Returns:
-        AtmoPropagation: AtmoPropagation processing object
-        """
-
-        params = self.ensure_dictionary(params)
-
-        pixel_pupil = self._main['pixel_pupil']
-        pixel_pitch = self._main['pixel_pitch']
-
-        atmo_propagation = AtmoPropagation(source_list, pixel_pupil, pixel_pitch)
-
-        doFresnel = self.extract(params, 'doFresnel', default=False, optional=True)
-        wavelengthInNm = self.extract(params, 'wavelengthInNm', default=False, optional=True)
-        if doFresnel:
-            atmo_propagation.doFresnel = doFresnel
-        if doFresnel and wavelengthInNm is None:
-            raise ValueError('get_atmo_propagation: wavelengthInNm is required when doFresnel key is set to correctly simulate physical propagation.')
-        if wavelengthInNm:
-            atmo_propagation.wavelengthInNm = wavelengthInNm
-
-        self.apply_global_params(atmo_propagation)
-
-        pupil_position = self.extract(params, 'pupil_position', default=[0., 0.], optional=True)
-        atmo_propagation.pupil_position = pupil_position
-
-        return atmo_propagation
-
-    def get_atmo_propagation2(self, source_list=None):
-        """
-        Create an atmo_propagation processing object.
-
-        Parameters:
-        source_list (list, optional): List of source objects. If not given, an empty list is initialized.
-
-        Returns:
-        AtmoPropagation: AtmoPropagation processing object
-        """
-        if source_list is None:
-            source_list = []
-
-        pixel_pupil = self._main['pixel_pupil']
-        pixel_pitch = self._main['pixel_pitch']
-
-        atmo_propagation = AtmoPropagation(source_list, pixel_pupil, pixel_pitch)
-
-        self.apply_global_params(atmo_propagation)
-
-        return atmo_propagation
-
     def get_calib_manager(self, params=None):
         """
         Create a calibration manager object.
