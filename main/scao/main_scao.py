@@ -6,11 +6,12 @@ from pyssata.data_objects.source import Source
 from pyssata.data_objects.pupilstop import PupilStop
 from pyssata.processing_objects.psf import PSF
 from pyssata.processing_objects.pyr_slopec import PyrSlopec
+from pyssata.processing_objects.atmo_propagation import AtmoPropagation
 
 from pyssata.calib_manager import CalibManager
 
 # Read parameters file
-dir = '/home/puglisi/git/PYSSATA/main/scao/'
+dir = '/home/alfio/git/PYSSATA/main/scao/'
 
 import os
 os.chdir(dir)
@@ -31,7 +32,10 @@ cm = CalibManager(params['main']['root_dir'])
 
 # Initialize processing objects
 source = [Source(**p) for p in params['wfs_source']]
-prop = factory.get_atmo_propagation(params['atmo'], source)
+prop = AtmoPropagation(source,
+                       pixel_pupil = params['main']['pixel_pupil'],
+                       pixel_pitch = params['main']['pixel_pitch']
+                       )
 pupilstop = PupilStop(pixel_pupil = params['main']['pixel_pupil'],
                       pixel_pitch = params['main']['pixel_pitch'],
                       **params['pupilstop'])

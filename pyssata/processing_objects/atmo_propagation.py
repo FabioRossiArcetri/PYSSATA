@@ -6,23 +6,34 @@ from pyssata.data_objects.ef import ElectricField
 from pyssata.lib.layers2pupil_ef import layers2pupil_ef
 from pyssata.base_list import BaseList
 
+
 class AtmoPropagation(BaseProcessingObj):
     '''Atmospheric propagation'''
-    def __init__(self, source_list, pixel_pupil, pixel_pitch, precision=0):
+    def __init__(self,
+                 source_list,
+                 pixel_pupil: int,
+                 pixel_pitch: float,
+                 precision=0,
+                 doFresnel: bool=False,
+                 wavelengthInNm: float=500.0,
+                 pupil_position=(0., 0.)):
         super().__init__(precision=precision)
+
+        if doFresnel and wavelengthInNm is None:
+            raise ValueError('get_atmo_propagation: wavelengthInNm is required when doFresnel key is set to correctly simulate physical propagation.')
 
         self._pixel_pupil = pixel_pupil
         self._pixel_pitch = pixel_pitch
         self._precision = precision
-        self._wavelengthInNm = 500.0
-        self._doFresnel = False
         self._pupil_list = BaseList()
         self._layer_list = []
         self._source_list = []
         self._shiftXY_list = []
         self._rotAnglePhInDeg_list = []
         self._magnification_list = []
-        self._pupil_position = None
+        self._pupil_position = pupil_position
+        self._doFresnel = doFresnel
+        self._wavelengthInNm = wavelengthInNm
 
         for source in source_list:
             self.add_source(source)
