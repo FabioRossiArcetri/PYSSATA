@@ -41,37 +41,50 @@ class Simul():
 
         main = params['main']
         cm = CalibManager(main['root_dir'])
-        for key, v in params.items():
-            if key in 'pupilstop slopec psf'.split():
-                print(key, v)
-                classname = v['class']
-                del v['class']
+        for key, pars in params.items():
+            if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction'.split():
+                print(key, pars)
+                try:
+                    classname = pars['class']
+                except KeyError:
+                    raise KeyError(f'Object {key} does not define the "class" parameter')
+                del pars['class']
 
                 klass = self._import_class(classname)
                 args = inspect.getfullargspec(getattr(klass, '__init__')).args
                 hints = self._get_type_hints(klass)
 
-                v2 = v.copy()  # Cannot modify original dict during iteration
-                for name, value in v.items():
+                pars2 = pars.copy()  # Cannot modify original dict during iteration
+                for name, value in pars.items():
                     if name.endswith('_data'):
                         parname = name[:-7]
                         data = cm.read_data(value)
-                        v2[name[:-5]] = data
-                        del v2[name]
+                        pars2[name[:-5]] = data
+                        del pars2[name]
                     if name.endswith('_object'):
                         parname = name[:-7]
                         if parname in hints:
                             partype = hints[parname]
                             filename = cm.filename(parname, value)
                             parobj = getattr(partype, 'restore').__call__(filename)
-                            v2[parname] = parobj
-                            del v2[name]
+                            pars2[parname] = parobj
+                            del pars2[name]
                         else:
                             raise ValueError(f'No type hint for parameter {parname} of class {classname}')
                         
+                # TODO special cases
+                if classname == 'AtmoEvolution':
+                    pars2['directory'] = cm.root_subdir('phasescreen')
+                    print(classname, pars2['source_list'])
+                    sources = [globals()[x] for x in pars2['source_list']]  
+                    pars2['source_list'] = sources
+                if classname == 'AtmoPropagation':
+                    sources = [globals()[x] for x in pars2['source_list']]  
+                    pars2['source_list'] = sources
+                        
                 # Add global params if needed
                 my_params = {k: main[k] for k in args if k in main}
-                my_params.update(v2)
+                my_params.update(pars2)
                 globals()[key] = klass(**my_params)  # TODO temporary hack, locals() does not work
 
         # Initialize housekeeping objects
@@ -81,18 +94,13 @@ class Simul():
 
 
         # Initialize processing objects
-        source = [Source(**p) for p in params['wfs_source']]
-        prop = AtmoPropagation(source,
-                            pixel_pupil = params['main']['pixel_pupil'],
-                            pixel_pitch = params['main']['pixel_pitch'],
-                            )
         pyr = factory.get_modulated_pyramid(params['pyramid'])
         ccd = factory.get_ccd(params['detector'])
         rec = factory.get_modalrec(params['modalrec'])
         intc = factory.get_control(params['control'])
         dm = factory.get_dm(params['dm'])
-        atmo = factory.get_atmo_container(source, params['atmo'],
-                                        params['seeing'], params['wind_speed'], params['wind_direction'])
+#        atmo = factory.get_atmo_container(source, params['atmo'],
+#                                        params['seeing'], params['wind_speed'], params['wind_direction'])
 
         # Initialize display objects
         sc_disp = factory.get_slopec_display(slopec)
@@ -128,12 +136,18 @@ class Simul():
         #dm.in_command = intc.out_comm
         dm.in_command = rec.out_modes
         psf.in_ef = pyr.in_ef
-
+        atmo.seeing = seeing.output
+        atmo.wind_speed = wind_speed.output
+        atmo.wind_direction = wind_direction.output
+        
         # Set store data
         store.add(psf.out_sr, name='sr')
         store.add(pyr.in_ef, name='res_ef')
 
         # Build loop
+        loop.add(seeing)
+        loop.add(wind_speed)
+        loop.add(wind_direction)
         loop.add(atmo)
         loop.add(prop)
         loop.add(pyr)
