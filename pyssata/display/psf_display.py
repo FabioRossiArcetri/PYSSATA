@@ -5,14 +5,14 @@ from pyssata.base_processing_obj import BaseProcessingObj
 
 
 class PSFDisplay(BaseProcessingObj):
-    def __init__(self, psf=None, wsize=[600, 600], window=23):
+    def __init__(self, psf=None, wsize=[600, 600], window=23, title='PSF'):
         super().__init__()
         self._psf = psf
         self._wsize = wsize
         self._window = window
         self._log = False
         self._image_p2v = 0.0
-        self._title = 'PSF'
+        self._title = title
         self._opened = False
         self._first = True
 

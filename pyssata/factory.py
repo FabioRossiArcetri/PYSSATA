@@ -2750,24 +2750,6 @@ class Factory:
         optgaincontrol.apply_properties(params)
         return optgaincontrol
 
-    def get_phase_display(self, phase, window=None):
-        """
-        Builds a `phase_display` processing object.
-
-        Parameters:
-        phase (objref): The `phase` object to display
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        PhaseDisplay: A new `phase_display` processing object
-        """
-        disp = PhaseDisplay(phase=phase)
-        if window is not None:
-            disp.window = window
-            window += 1
-        self.apply_global_params(disp)
-        return disp
-
     def get_sh_display(self, sh, pyr_style=None, window=None):
         """
         Builds a `sh_display` processing object.
@@ -2781,42 +2763,6 @@ class Factory:
         ShDisplay: A new `sh_display` processing object
         """
         disp = ShDisplay(sh=sh, pyr_style=pyr_style)
-        if window is not None:
-            disp.window = window
-            window += 1
-        self.apply_global_params(disp)
-        return disp
-
-    def get_plot_display(self, value, window=None):
-        """
-        Builds a `plot_display` processing object.
-
-        Parameters:
-        value (objref): Object of type `base_value` to display
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        PlotDisplay: A new `plot_display` processing object
-        """
-        disp = PlotDisplay(value=value)
-        if window is not None:
-            disp.window = window
-            window += 1
-        self.apply_global_params(disp)
-        return disp
-
-    def get_psf_display(self, psf, window=None):
-        """
-        Builds a `psf_display` processing object.
-
-        Parameters:
-        psf (objref): The `psf` object to display
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        PsfDisplay: A new `psf_display` processing object
-        """
-        disp = PSFDisplay(psf=psf)
         if window is not None:
             disp.window = window
             window += 1
@@ -2886,25 +2832,6 @@ class Factory:
             sc.corr_template = self._cm.read_data(template_tag)
 
         return sc
-
-    def get_slopec_display(self, slopec, window=None):
-        """
-        Builds a `slopec_display` processing object.
-        Can display both Pyramid and SH slope computers.
-
-        Parameters:
-        slopec (objref): The `slopec` object to display
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        SlopecDisplay: A new `slopec_display` processing object
-        """
-        sc_disp = SlopecDisplay(slopec=slopec)
-        if window is not None:
-            sc_disp.window = window
-            window += 1
-        self.apply_global_params(sc_disp)
-        return sc_disp
 
     def get_source_field(self, params):
         """
