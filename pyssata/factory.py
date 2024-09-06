@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from pyssata.data_objects.pupilstop import PupilStop
+from pyssata.data_objects.pupilstop import Pupilstop
 from pyssata.display.psf_display import PSFDisplay
 
 
