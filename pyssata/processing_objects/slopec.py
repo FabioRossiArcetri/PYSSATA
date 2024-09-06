@@ -33,7 +33,7 @@ default_accumulated_pixels = np.zeros((0, 0))
 default_accumulated_pixels_ptr = None
 
 class Slopec(BaseProcessingObj):
-    def __init__(self, pixels=None, sn=None, cm=None, total_counts=None, subap_counts=None, 
+    def __init__(self, pixels=None, sn: Slopes=None, cm=None, total_counts=None, subap_counts=None, 
                  use_sn=False, accumulate=False, weight_from_accumulated=False, 
                  weight_from_acc_with_window=False, remove_mean=False, return0=False, 
                  update_slope_high_speed=False, do_rec=False, do_filter_modes=False, 
