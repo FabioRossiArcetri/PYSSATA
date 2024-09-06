@@ -11,12 +11,11 @@ from pyssata.lib.phasescreens_shift import phasescreens_shift
 
 
 class AtmoEvolution(BaseProcessingObj):
-    def __init__(self, L0, wavelengthInNm, pixel_pitch, heights, Cn2, pixel_pupil, directory, source_list,
-                 zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed=None, precision=None,
-                 verbose=None, GPU=False, user_defined_phasescreen=None, force_mcao_fov=False, make_cycle=None,
+    def __init__(self, L0, pixel_pitch, heights, Cn2, pixel_pupil, directory, source_list, wavelengthInNm: float=500.0,
+                 zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed: int=1, precision=None,
+                 verbose=None, GPU=False, user_defined_phasescreen: str='', force_mcao_fov=False, make_cycle=None,
                  fov_in_m=None, pupil_position=None):
         
-        # Initialize the base processing object
         super().__init__()
         
         self._last_position = None
@@ -38,9 +37,6 @@ class AtmoEvolution(BaseProcessingObj):
         # Conversion coefficient from arcseconds to radians
         sec2rad = 4.848e-6
         
-        # Determine the data type based on precision
-        atype = np.float64 if precision else np.float32
-
         if force_mcao_fov:
             print(f'\nATTENTION: MCAO FoV is forced to diameter={mcao_fov} arcsec\n')
             alpha_fov = mcao_fov / 2.0

@@ -192,53 +192,6 @@ class Factory:
 
         return ifunc
 
-    def get_atmo_container(self, source_list, params_atmo, params_seeing, params_windspeed, params_winddirection):
-        """
-        Gets a processing container with a full complement of atmospheric objects.
-
-        Parameters:
-        source_list (list): List of source objects
-        params_atmo (dict): Parameter dictionary for the atmo_evolution object
-        params_seeing (dict): Parameter dictionary for the seeing func_generator object
-        params_windspeed (dict): Parameter dictionary for the wind speed func_generator object
-        params_winddirection (dict): Parameter dictionary for the wind direction func_generator object
-
-        Returns:
-        ProcessingContainer: Processing container with atmospheric objects
-        """
-        container = ProcessingContainer()
-
-        # the following lines are used to reduce the layers to 1 when seeing is 0
-        params_atmo_copy = params_atmo.copy()
-        params_windspeed_copy = params_windspeed.copy()
-        params_winddirection_copy = params_winddirection.copy()
-
-        if params_seeing['func_type'] == 'SIN' and 'amp' not in params_seeing and 'constant' in params_seeing:
-            if np.sum(np.abs(params_seeing['constant'])) == 0:
-                print('WARNING: seeing is 0, change the atmo profile to 1 layer.')
-                params_atmo_copy['heights'] = [0.0]
-                params_atmo_copy['cn2'] = [1.0]
-                if 'pixel_phasescreens' in params_atmo_copy:
-                    params_atmo_copy.pop('pixel_phasescreens')
-                params_windspeed_copy['constant'] = [0.0]
-                params_winddirection_copy['constant'] = [0.0]
-
-        atmo = self.get_atmo_evolution(params_atmo_copy, source_list)
-        seeing = FuncGenerator(**params_seeing)
-        wind_speed = FuncGenerator(**params_windspeed_copy)
-        wind_direction= FuncGenerator(**params_winddirection_copy)
-
-        atmo.seeing = seeing.output
-        atmo.wind_speed = wind_speed.output
-        atmo.wind_direction = wind_direction.output
-
-        container.add(seeing, name='seeing')
-        container.add(wind_speed, name='wind_speed')
-        container.add(wind_direction, name='wind_direction')
-        container.add(atmo, name='atmo', output='layer_list')
-
-        return container
-
     def get_atmo_cube_container(self, source_list, params_atmo, params_seeing):
         """
         Gets a processing container with a full complement of atmospheric objects for reading cubes.
@@ -449,56 +402,6 @@ class Factory:
         container.add(sh, output='out_i')
 
         return container
-
-    def get_atmo_evolution(self, params, source_list):
-        """
-        Create an atmo_evolution processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        source_list (list): List of source objects
-
-        Returns:
-        AtmoEvolution: AtmoEvolution processing object
-        """
-        params = self.ensure_dictionary(params)
-
-        pixel_pup = self._main['pixel_pupil']
-        pixel_pitch = self._main['pixel_pitch']
-        precision = self._main['precision']
-        zenithAngleInDeg = self._main.get('zenithAngleInDeg')
-
-        L0 = params.pop('L0')
-        wavelengthInNm = self.extract(params, 'wavelengthInNm', default=500)
-        heights = params.pop('heights')
-        Cn2 = params.pop('Cn2')
-        mcao_fov = self.extract(params, 'mcao_fov', default=None, optional=True)
-        fov_in_m = self.extract(params, 'fov_in_m', default=None, optional=True)
-        pixel_phasescreens = self.extract(params, 'pixel_phasescreens', default=None, optional=True)
-        seed = self.extract(params, 'seed', default=1)
-        pupil_position = self.extract(params, 'pupil_position', default=None, optional=True)
-        
-        directory = self._cm.root_subdir('phasescreen')
-
-        user_defined_phasescreen = self.extract(params, 'user_defined_phasescreen', default='')
-        
-        force_mcao_fov = self.extract(params, 'force_mcao_fov', default=None, optional=True)
-        make_cycle = self.extract(params, 'make_cycle', default=None, optional=True)
-        doFresnel = self.extract(params, 'doFresnel', default=None, optional=True)
-
-        atmo_evolution = AtmoEvolution(L0, wavelengthInNm, pixel_pitch, heights, Cn2,
-                                    pixel_pup, directory, source_list,
-                                    zenithAngleInDeg=zenithAngleInDeg, mcao_fov=mcao_fov,
-                                    pixel_phasescreens=pixel_phasescreens,
-                                    precision=precision, seed=seed,
-                                    user_defined_phasescreen=user_defined_phasescreen,
-                                    force_mcao_fov=force_mcao_fov, make_cycle=make_cycle,
-                                    fov_in_m=fov_in_m, pupil_position=pupil_position)
-
-        self.apply_global_params(atmo_evolution)
-        atmo_evolution.apply_properties(params)
-
-        return atmo_evolution
 
     def get_atmo_readcube(self, params, source_list):
         """

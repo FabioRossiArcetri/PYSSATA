@@ -79,13 +79,13 @@ detector = {
  'quantum_eff':       0.32                    # quantum efficiency * total transmission
 }
 
-wfs_source = [
-    {
+wfs_source = {
+ 'class':             'Source',
  'polar_coordinate':  [0.0, 0.0],           # [arcsec, degrees] source polar coordinates
  'magnitude':         8,                    # source magnitude
  'wavelengthInNm':    750                   # [nm] wavelength
 }
-]
+
 
 psf = {
  'class':             'PSF',
@@ -94,22 +94,32 @@ psf = {
  'start_time':        0.05                 # PSF integration start time
 }
 
+prop = {
+ 'class':             'AtmoPropagation',
+ 'source_list':       ['wfs_source'], 
+}
+
 atmo = {
+ 'class':             'AtmoEvolution',
+ 'source_list':       ['wfs_source'], 
  'L0':                40,                   # [m] Outer scale
  'heights':           np.array([119.]), #,837,3045,12780]), # [m] layer heights at 0 zenith angle
  'Cn2':               np.array([0.70]) #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
 }
 
 seeing = {
+ 'class':             'FuncGenerator',
  'constant':          0.8,                  # ["] seeing value
  'func_type':         'SIN'                 # TODO necessary for factory.py line 217
 }
 
 wind_speed = {
+ 'class':             'FuncGenerator',
  'constant':          [200.]#,10.,20.,10.]      # [m/s] Wind speed value
 }
 
 wind_direction = {
+ 'class':             'FuncGenerator',
  'constant':          [0.]#,270.,270.,90.]   # [degrees] Wind direction value
 }
 
