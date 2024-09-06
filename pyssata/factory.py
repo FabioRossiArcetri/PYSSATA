@@ -11,13 +11,9 @@ from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 from pyssata.processing_objects.processing_container import ProcessingContainer
 from pyssata.processing_objects.datastore import Datastore
 from pyssata.processing_objects.modalrec import ModalRec
-from pyssata.processing_objects.intcontrol import IntControl
+from pyssata.processing_objects.int_control import IntControl
 from pyssata.processing_objects.dm import DM
 from pyssata.processing_objects.func_generator import FuncGenerator
-
-from pyssata.display.slopec_display import SlopecDisplay
-from pyssata.display.plot_display import PlotDisplay
-from pyssata.display.phase_display import PhaseDisplay
 
 from pyssata.lib.compute_zern_ifunc import compute_zern_ifunc
 

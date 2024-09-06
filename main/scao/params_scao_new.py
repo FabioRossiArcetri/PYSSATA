@@ -64,8 +64,8 @@ slopec_MORFEO = {
 }
 
 control = {
+ 'class':             'IntControl',
  'delay':             2,                      # Total temporal delay in time steps
- 'type':              'INT',                  # type of control 
  'int_gain':          0.5 * np.ones(54)       # Integrator gain (for 'INT' control)
 }
 
