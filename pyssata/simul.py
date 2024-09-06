@@ -5,12 +5,12 @@ import inspect
 import importlib
 
 from pyssata.factory import Factory
-
-from pyssata.data_objects.source import Source
-from pyssata.processing_objects.atmo_propagation import AtmoPropagation
-
 from pyssata.calib_manager import CalibManager
 
+from pyssata.display.slopec_display import SlopecDisplay
+from pyssata.display.plot_display import PlotDisplay
+from pyssata.display.phase_display import PhaseDisplay
+from pyssata.display.psf_display import PSFDisplay
 
 class Simul():
     
@@ -92,33 +92,19 @@ class Simul():
         loop = factory.get_loop_control()
         store = factory.get_datastore()
 
-
         # Initialize processing objects
         pyr = factory.get_modulated_pyramid(params['pyramid'])
         ccd = factory.get_ccd(params['detector'])
         rec = factory.get_modalrec(params['modalrec'])
         intc = factory.get_control(params['control'])
         dm = factory.get_dm(params['dm'])
-#        atmo = factory.get_atmo_container(source, params['atmo'],
-#                                        params['seeing'], params['wind_speed'], params['wind_direction'])
 
         # Initialize display objects
-        sc_disp = factory.get_slopec_display(slopec)
-        sr_disp = factory.get_plot_display(psf.out_sr)
-        ph_disp = factory.get_phase_display(prop.pupil_list[0])
-        dm_disp = factory.get_phase_display(dm.out_layer)
-        psf_disp = factory.get_psf_display(psf.out_psf)
-
-        sc_disp.window = 10
-        sr_disp.window = 11
-        ph_disp.window = 12
-        dm_disp.window = 13
-        psf_disp.window = 14
-        sr_disp.title = 'SR'
-        dm_disp.title = 'DM'
-        psf_disp.title = 'PSF'
-        sc_disp.disp_factor = 4
-        ph_disp.disp_factor = 2
+        sc_disp = SlopecDisplay(slopec, disp_factor=4)
+        sr_disp = PlotDisplay(psf.out_sr, window=11, title='SR')
+        ph_disp = PhaseDisplay(prop.pupil_list[0], window=12, disp_factor=2)
+        dm_disp = PhaseDisplay(dm.out_layer, window=13, title='DM')
+        psf_disp = PSFDisplay(psf.out_psf, window=14,  title='PSF')
 
         # Add atmospheric and DM layers to propagation object
         atmo_layers = atmo.layer_list
