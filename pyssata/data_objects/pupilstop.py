@@ -4,7 +4,7 @@ from astropy.io import fits
 from pyssata.data_objects.layer import Layer
 from pyssata.lib.make_mask import make_mask
 
-    
+
 class PupilStop(Layer):
     '''Pupil stop'''
 
@@ -14,10 +14,10 @@ class PupilStop(Layer):
                  input_mask: np.ndarray=None,
                  mask_diam: float=1.0,
                  obs_diam: float=None,
-                 shiftXYinPixel=(0.0, 0.0), 
+                 shiftXYinPixel=(0.0, 0.0),
                  rotInDeg: float=0.0,
                  magnification: float=1.0):
- 
+
         super().__init__(pixel_pupil, pixel_pupil, pixel_pitch, height=0, precision=0,
                          shiftXYinPixel=shiftXYinPixel, rotInDeg=rotInDeg, magnification=magnification)
 
@@ -31,10 +31,6 @@ class PupilStop(Layer):
             mask_amp = make_mask(pixel_pupil, obs_diam, mask_diam)
 
         self.A = np.float32(mask_amp)
-
-    @staticmethod
-    def from_tag(cm, tag):
-        return cm.read_pupilstop(tag)
 
     def save(self, filename, hdr=None):
         if hdr is None:
