@@ -1,8 +1,5 @@
 import numpy as np
-import os
-from pyssata.data_objects.pupilstop import Pupilstop
 from pyssata.display.psf_display import PSFDisplay
-
 
 from pyssata.loop_control import LoopControl
 from pyssata.calib_manager import CalibManager
@@ -10,23 +7,17 @@ from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.processing_objects.atmo_evolution import AtmoEvolution
 
 from pyssata.processing_objects.ccd import CCD
-from pyssata.processing_objects.atmo_propagation import AtmoPropagation
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 from pyssata.processing_objects.processing_container import ProcessingContainer
-from pyssata.processing_objects.pyr_slopec import PyrSlopec
 from pyssata.processing_objects.datastore import Datastore
 from pyssata.processing_objects.modalrec import ModalRec
 from pyssata.processing_objects.intcontrol import IntControl
 from pyssata.processing_objects.dm import DM
-from pyssata.processing_objects.psf import PSF
 from pyssata.processing_objects.func_generator import FuncGenerator
 
 from pyssata.display.slopec_display import SlopecDisplay
 from pyssata.display.plot_display import PlotDisplay
 from pyssata.display.phase_display import PhaseDisplay
-
-from pyssata.data_objects.source import Source
-from pyssata.data_objects.ef import ElectricField
 
 from pyssata.lib.compute_zern_ifunc import compute_zern_ifunc
 
@@ -233,9 +224,9 @@ class Factory:
                 params_winddirection_copy['constant'] = [0.0]
 
         atmo = self.get_atmo_evolution(params_atmo_copy, source_list)
-        seeing = self.get_func_generator(params_seeing)
-        wind_speed = self.get_func_generator(params_windspeed_copy)
-        wind_direction= self.get_func_generator(params_winddirection_copy)
+        seeing = FuncGenerator(**params_seeing)
+        wind_speed = FuncGenerator(**params_windspeed_copy)
+        wind_direction= FuncGenerator(**params_winddirection_copy)
 
         atmo.seeing = seeing.output
         atmo.wind_speed = wind_speed.output
@@ -264,7 +255,7 @@ class Factory:
         container = ProcessingContainer()
 
         atmo = self.get_atmo_readcube(params_atmo, source_list)
-        seeing = self.get_func_generator(params_seeing)
+        seeing = FuncGenerator(**params_seeing)
 
         atmo.seeing = seeing.output
 
@@ -309,17 +300,17 @@ class Factory:
             params_zfocus = {'func_type': 'SIN', 'constant': zfocus_temp}
             params_theta = {'func_type': 'SIN', 'constant': theta_temp}
 
-        zfocus = self.get_func_generator(params_zfocus)
-        theta = self.get_func_generator(params_theta)
+        zfocus = FuncGenerator(**params_zfocus)
+        theta = FuncGenerator(**params_theta)
 
         kernel = self.get_kernel({})
         kernel.zfocus = zfocus.output
         kernel.theta = theta.output
         kernel.lenslet = sh.lenslet
 
-        seeing = self.get_func_generator(params_seeing)
-        zlayer = self.get_func_generator(params_zlayer)
-        zprofile = self.get_func_generator(params_zprofile)
+        seeing = FuncGenerator(**params_seeing)
+        zlayer = FuncGenerator(**params_zlayer)
+        zprofile = FuncGenerator(**params_zprofile)
 
         launcher_sizeArcsec = self.extract(params_launcher, 'sizeArcsec', default=0)
         launcher_pos = self.extract(params_launcher, 'position', default=[0, 0, 0])
@@ -430,8 +421,8 @@ class Factory:
             params_zfocus = {'func_type': 'SIN', 'constant': zfocus_temp}
             params_theta = {'func_type': 'SIN', 'constant': theta_temp}
 
-        zfocus = self.get_func_generator(params_zfocus)
-        theta = self.get_func_generator(params_theta)
+        zfocus = FuncGenerator(**params_zfocus)
+        theta = FuncGenerator(**params_theta)
 
         sh = self.get_sh(params_sh)
         kernel = self.get_kernel()
@@ -440,9 +431,9 @@ class Factory:
         kernel.source = source
         kernel.lenslet = sh.lenslet
         kernel.ef = sh.in_ef
-        seeing = self.get_func_generator(params_seeing)
-        zlayer = self.get_func_generator(params_zlayer)
-        zprofile = self.get_func_generator(params_zprofile)
+        seeing = FuncGenerator(**params_seeing)
+        zlayer = FuncGenerator(**params_zlayer)
+        zprofile = FuncGenerator(**params_zprofile)
 
         kernel.seeing = seeing.output
         kernel.zlayer = zlayer.output
@@ -1285,47 +1276,6 @@ class Factory:
         # extended_source.apply_properties(params)
 
         return extended_source
-
-    def get_func_generator(self, params):
-        """
-        Create a func_generator processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-
-        Returns:
-        FuncGenerator: FuncGenerator processing object
-        """
-        params = self.ensure_dictionary(params)
-        func_type = self.extract(params, 'func_type', default='SIN')
-        nmodes = self.extract(params, 'nmodes', default=None, optional=True)
-
-        if 'constant_tag' in params:
-            tag = params.pop('constant_tag')
-            params['constant'] = self._cm.read_data(tag)
-        if 'amp_tag' in params:
-            tag = params.pop('amp_tag')
-            params['amp'] = self._cm.read_data(tag)
-        if 'freq_tag' in params:
-            tag = params.pop('freq_tag')
-            params['freq'] = self._cm.read_data(tag)
-        if 'offset_tag' in params:
-            tag = params.pop('offset_tag')
-            params['offset'] = self._cm.read_data(tag)
-        if 'vect_amplitude_tag' in params:
-            tag = params.pop('vect_amplitude_tag')
-            params['vect_amplitude'] = self._cm.read_data(tag)
-        if 'time_hist_tag' in params:
-            tag = params.pop('time_hist_tag')
-            params['time_hist'] = self._cm.read_data(tag)
-        else:
-            time_hist = self.extract(params, 'time_hist', default=None, optional=True)
-
-        funcgenerator = FuncGenerator(func_type, time_hist=time_hist, nmodes=nmodes)
-
-        self.apply_global_params(funcgenerator)
-        funcgenerator.apply_properties(params)
-        return funcgenerator
 
     def get_ideal_wfs(self, params):
         """

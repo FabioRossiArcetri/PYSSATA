@@ -3,13 +3,14 @@ import numpy as np
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 
+
 class FuncGenerator(BaseProcessingObj):
-    def __init__(self, type, nmodes=None, time_hist=None, psd=None, fr_psd=None, continuous_psd=None, 
+    def __init__(self, func_type='SIN', nmodes=None, time_hist=None, psd=None, fr_psd=None, continuous_psd=None, 
                  constant=None, amp=None, freq=None, offset=None, vect_amplitude=None, 
                  seed=None, ncycles=None):
         super().__init__()
 
-        self._type = type.upper()
+        self._type = func_type.upper()
 
         if self._type == 'PUSHPULLREPEAT':
             self._repeat_ncycles = True
