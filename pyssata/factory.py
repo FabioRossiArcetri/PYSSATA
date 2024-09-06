@@ -2194,7 +2194,7 @@ class Factory:
                             intmat.reduce_size(nmodes_intmat - nmodes)
                         if nSlopesToBeDiscarded:
                             intmat.reduce_slopes(nSlopesToBeDiscarded)
-                        recmat = RecMat()
+                        recmat = RecMat()  # TODO Guido qui recmat viene sovrascritto anche se recmat_tag e' valido nell'if precedente
                         recmat.recmat = intmat.intmat
                     else:
                         recmat = self._cm.read_rec(recmat_tag)
@@ -2213,7 +2213,7 @@ class Factory:
                 if dmNumber is not None:
                     if dmNumber <= 0:
                         raise ValueError('dmNumber must be > 0')
-                    projmat = RecMat()
+                    projmat = RecMat() # TODO Guido qui projmat viene sovrascritto anche se e' valido nell'if precedente
                     projmat.recmat = recmat.proj_list[dmNumber - 1]
                 else:
                     raise ValueError('dmNumber (>0) must be defined if projmat_tag is not defined!')
