@@ -5,7 +5,7 @@ from pyssata.data_objects.layer import Layer
 from pyssata.lib.make_mask import make_mask
 
 
-class PupilStop(Layer):
+class Pupilstop(Layer):
     '''Pupil stop'''
 
     def __init__(self,
