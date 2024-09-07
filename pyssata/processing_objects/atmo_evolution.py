@@ -8,6 +8,7 @@ from pyssata.data_objects.layer import Layer
 from pyssata.lib.cv_coord import cv_coord
 from pyssata.lib.phasescreen_manager import phasescreens_manager
 from pyssata.lib.phasescreens_shift import phasescreens_shift
+from pyssata.connections import InputValue
 
 
 class AtmoEvolution(BaseProcessingObj):
@@ -17,6 +18,7 @@ class AtmoEvolution(BaseProcessingObj):
                  fov_in_m=None, pupil_position=None):
         
         super().__init__()
+
         
         self._last_position = None
         self._last_t = 0
@@ -67,7 +69,9 @@ class AtmoEvolution(BaseProcessingObj):
         self._pixel_layer = pixel_layer
         self._directory = directory
         self._make_cycle = make_cycle
-        self._wind_direction = BaseValue(0)
+        self._seeing = None
+        self._wind_speed = None
+        self._wind_direction = None
 
         if pixel_phasescreens is None:
             self._pixel_square_phasescreens = 8192
@@ -94,6 +98,12 @@ class AtmoEvolution(BaseProcessingObj):
         
         if seed is not None:
             self.seed = seed
+
+        # TODO this is not really used, it can only be useful for type checks
+        self.inputs['seeing'] = InputValue(object=self._seeing, type=BaseValue)
+        self.inputs['wind_speed'] = InputValue(object=self._wind_speed, type=BaseValue)
+        self.inputs['wind_direction'] = InputValue(object=self._wind_direction, type=BaseValue)
+
 
     @property
     def seed(self):

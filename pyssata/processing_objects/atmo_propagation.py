@@ -5,7 +5,8 @@ from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.ef import ElectricField
 from pyssata.lib.layers2pupil_ef import layers2pupil_ef
 from pyssata.base_list import BaseList
-
+from pyssata.connections import InputList
+from pyssata.data_objects.layer import Layer
 
 class AtmoPropagation(BaseProcessingObj):
     '''Atmospheric propagation'''
@@ -34,9 +35,13 @@ class AtmoPropagation(BaseProcessingObj):
         self._pupil_position = pupil_position
         self._doFresnel = doFresnel
         self._wavelengthInNm = wavelengthInNm
+        self._propagators = None
 
         for source in source_list:
             self.add_source(source)
+            
+        self.inputs['layer_list'] = InputList(object=self.layer_list, element_type=Layer)
+
 
     @property
     def pupil_list(self):
@@ -47,8 +52,8 @@ class AtmoPropagation(BaseProcessingObj):
         return self._layer_list
 
     @layer_list.setter
-    def layer_list(self, value):
-        self._layer_list = value
+    def layer_list(self, layer_list):
+        self._layer_list = layer_list
         self._propagators = None
 
     @property
@@ -148,6 +153,11 @@ class AtmoPropagation(BaseProcessingObj):
         return prop
 
     def run_check(self, time_step):
+        # TODO here for no better place, we need something like a "setup()" method called before the loop starts
+        self._shiftXY_list = [layer.shiftXYinPixel if hasattr(layer, 'shiftXYinPixel') else [0, 0] for layer in self.layer_list]
+        self._rotAnglePhInDeg_list = [layer.rotInDeg if hasattr(layer, 'rotInDeg') else 0 for layer in self.layer_list]
+        self._magnification_list = [max(layer.magnification, 1.0) if hasattr(layer, 'magnification') else 1.0 for layer in self.layer_list]
+
         errmsg = ''
         if not (len(self._source_list) > 0):
             errmsg += 'no source'

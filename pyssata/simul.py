@@ -16,6 +16,7 @@ class Simul():
     
     def __init__(self, param_file):
         self.param_file = param_file
+        self.objs = {}
 
     def _camelcase_to_snakecase(self, s):
         tokens = re.findall('[A-Z]+[0-9a-z]*', s)
@@ -35,12 +36,10 @@ class Simul():
             hints.update(typing.get_type_hints(getattr(x, '__init__')))
         return hints
 
-    def run(self):
-        params = {}
-        exec(open(self.param_file).read(), params)
-
+    def build_objects(self, params):
         main = params['main']
         cm = CalibManager(main['root_dir'])
+
         for key, pars in params.items():
             if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control'.split():
                 print(key, pars)
@@ -55,6 +54,8 @@ class Simul():
                 hints = self._get_type_hints(klass)
 
                 pars2 = pars.copy()  # Cannot modify original dict during iteration
+                if 'inputs' in pars2:
+                    del pars2['inputs']
                 for name, value in pars.items():
                     if name.endswith('_data'):
                         parname = name[:-7]
@@ -71,46 +72,93 @@ class Simul():
                             del pars2[name]
                         else:
                             raise ValueError(f'No type hint for parameter {parname} of class {classname}')
-                        
+      
                 # TODO special cases
                 if classname == 'AtmoEvolution':
                     pars2['directory'] = cm.root_subdir('phasescreen')
                     print(classname, pars2['source_list'])
-                    sources = [globals()[x] for x in pars2['source_list']]  
+                    sources = [self.objs[x] for x in pars2['source_list']]  
                     pars2['source_list'] = sources
                 if classname == 'AtmoPropagation':
-                    sources = [globals()[x] for x in pars2['source_list']]  
+                    sources = [self.objs[x] for x in pars2['source_list']]  
                     pars2['source_list'] = sources
                         
                 # Add global params if needed
                 my_params = {k: main[k] for k in args if k in main}
                 my_params.update(pars2)
-                globals()[key] = klass(**my_params)  # TODO temporary hack, locals() does not work
+                self.objs[key] = klass(**my_params)     
+    
+    def resolve_output(self, output_name):
+        if '.' in output_name:
+            obj_name, attr_name = output_name.split('.')
+            output_ref = getattr(self.objs[obj_name], attr_name)
+        else:
+            output_ref = self.objs[output_name]
+        return output_ref
+        
+    def connect_objects(self, params):
+        for key, pars in params.items():
+            print(pars)
+            if 'inputs' not in pars:
+                continue
 
+            for input_name, input_value in pars['inputs'].items():
+                if not input_name in self.objs[key].inputs:
+                    raise ValueError(f'Object {key} does does not have an input called {input_name}')
+
+                if isinstance(input_value, str):
+                    wanted_type = self.objs[key].inputs[input_name].type
+                    output_ref = self.resolve_output(input_value)
+                    if type(output_ref) != wanted_type:
+                        raise ValueError(f'Input {input_name}: output {output_ref} is not of type {wanted_type}')
+                    setattr(self.objs[key], input_name, output_ref)
+
+                elif isinstance(input_value, list):
+                    wanted_type = self.objs[key].inputs[input_name].element_type
+                    for input_ref in input_value:
+                        output_ref = self.resolve_output(input_ref)
+                        if isinstance(output_ref, list):
+                            getattr(self.objs[key], input_name).extend(output_ref) 
+                        elif isinstance(output_ref, wanted_type):
+                            getattr(self.objs[key], input_name).append(output_ref) 
+                        else:
+                            raise ValueError(f'Input {input_name}: output {output_ref} is not of type {wanted_type}')
+                else:
+                    raise ValueError(f'Object {key}: invalid input definition type {type(input_value)}')
+        
+    def run(self):
+        params = {}
+        exec(open(self.param_file).read(), params)
+        del params['__builtins__']
+        del params['np']
+
+        main = params['main']
         # Initialize housekeeping objects
         factory = Factory(params['main'])
         loop = factory.get_loop_control()
         store = factory.get_datastore()
 
-        # Initialize processing objects
+        # Initialize processing objects - leftovers from conversion
         pyr = factory.get_modulated_pyramid(params['pyramid'])
         ccd = factory.get_ccd(params['detector'])
         rec = factory.get_modalrec(params['modalrec'])
         dm = factory.get_dm(params['dm'])
+        self.objs['dm'] = dm
+        
+        # Actual creation code
+        self.build_objects(params)
+        self.connect_objects(params)
 
+        # TODO temporary hack, locals() does not work
+        for name, obj in self.objs.items():
+            globals()[name] = obj
+                        
         # Initialize display objects
         sc_disp = SlopecDisplay(slopec, disp_factor=4)
         sr_disp = PlotDisplay(psf.out_sr, window=11, title='SR')
         ph_disp = PhaseDisplay(prop.pupil_list[0], window=12, disp_factor=2)
         dm_disp = PhaseDisplay(dm.out_layer, window=13, title='DM')
         psf_disp = PSFDisplay(psf.out_psf, window=14,  title='PSF')
-
-        # Add atmospheric and DM layers to propagation object
-        atmo_layers = atmo.layer_list
-        for layer in atmo_layers:
-            prop.add_layer_to_layer_list(layer)
-        prop.add_layer_to_layer_list(pupilstop)
-        prop.add_layer_to_layer_list(dm.out_layer)
 
         # Connect processing objects
         pyr.in_ef = prop.pupil_list[0]
@@ -121,9 +169,6 @@ class Simul():
         #dm.in_command = control.out_comm
         dm.in_command = rec.out_modes
         psf.in_ef = pyr.in_ef
-        atmo.seeing = seeing.output
-        atmo.wind_speed = wind_speed.output
-        atmo.wind_direction = wind_direction.output
         
         # Set store data
         store.add(psf.out_sr, name='sr')

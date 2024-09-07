@@ -97,6 +97,11 @@ psf = {
 prop = {
  'class':             'AtmoPropagation',
  'source_list':       ['wfs_source'], 
+ 'inputs': {
+   'layer_list': ['atmo.layer_list',
+                  'pupilstop',
+                  'dm.out_layer']
+ }
 }
 
 atmo = {
@@ -104,7 +109,12 @@ atmo = {
  'source_list':       ['wfs_source'], 
  'L0':                40,                   # [m] Outer scale
  'heights':           np.array([119.]), #,837,3045,12780]), # [m] layer heights at 0 zenith angle
- 'Cn2':               np.array([0.70]) #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
+ 'Cn2':               np.array([0.70]), #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
+ 'inputs': {
+    'seeing' : 'seeing.output',
+    'wind_speed': 'wind_speed.output',
+    'wind_direction': 'wind_direction.output',
+     }
 }
 
 seeing = {
