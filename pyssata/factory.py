@@ -10,7 +10,7 @@ from pyssata.processing_objects.ccd import CCD
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 from pyssata.processing_objects.processing_container import ProcessingContainer
 from pyssata.processing_objects.datastore import Datastore
-from pyssata.processing_objects.modalrec import ModalRec
+from pyssata.processing_objects.modalrec import Modalrec
 from pyssata.processing_objects.int_control import IntControl
 from pyssata.processing_objects.dm import DM
 from pyssata.processing_objects.func_generator import FuncGenerator
@@ -2043,106 +2043,6 @@ class Factory:
         self.apply_global_params(modalanalysis_wfs)
         modalanalysis_wfs.apply_properties(params)
         return modalanalysis_wfs
-
-    def get_modalrec(self, params, recmat=None, intmat=None):
-        """
-        Create a modalrec processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        recmat (optional): Reconstruction matrix
-        intmat (optional): Interaction matrix
-
-        Returns:
-        ModalRec: modalrec object
-        """
-        params = self.ensure_dictionary(params)
-
-        intmat_tag = self.extract(params, 'intmat_tag', default=None, optional=True)
-        nmodes = self.extract(params, 'nmodes', default=None, optional=True)
-        recmat_tag = self.extract(params, 'recmat_tag', default=None, optional=True)
-        projmat_tag = self.extract(params, 'projmat_tag', default=None, optional=True)
-        filtmat_tag = self.extract(params, 'filtmat_tag', default=None, optional=True)
-
-        identity = self.extract(params, 'identity', default=False, optional=True)
-        ncutmodes = self.extract(params, 'ncutmodes', default=None, optional=True)
-        nSlopesToBeDiscarded = self.extract(params, 'nSlopesToBeDiscarded', default=None, optional=True)
-        polc = self.extract(params, 'polc', default=False)
-        dmNumber = self.extract(params, 'dmNumber', default=None, optional=True)
-        noProj = self.extract(params, 'noProj', default=False)
-        projmat = None
-
-        if params.get('mPCuRed_tag'):
-            return self.get_modalrec_cured(params)
-        if params.get('nn_python'):
-            return self.get_modalrec_nn_python(params)
-        if params.get('WeightsBiases_tag'):
-            return self.get_modalrec_nn(params)
-        if params.get('WeightsBiases1_tag'):
-            return self.get_modalrec_nn_multi(params)
-
-        if polc:
-            if identity:
-                raise ValueError('identity cannot be set with POLC.')
-            if ncutmodes is not None:
-                raise ValueError('ncutmodes cannot be set with POLC.')
-            if recmat is None:
-                recmat = self._cm.read_rec(recmat_tag, doNotPutOnGpu=doNotPutOnGpu)
-            if intmat is None:
-                intmat = self._cm.read_im(intmat_tag, doNotPutOnGpu=doNotPutOnGpu)
-            if intmat is None:
-                raise ValueError(f'WARNING: intmat is null. intmat_tag is: {intmat_tag}')
-        else:
-            if recmat is None:
-                if identity:
-                    recmat = RecMat()
-                    if nmodes is None:
-                        raise ValueError('modalrec nmodes key must be set!')
-                    recmat.recmat = np.identity(nmodes)
-                else:
-                    if recmat_tag and intmat_tag:
-                        intmat = self._cm.read_im(intmat_tag, doNotPutOnGpu=doNotPutOnGpu)
-                        if nmodes:
-                            nmodes_intmat = intmat.size[0]
-                            intmat.reduce_size(nmodes_intmat - nmodes)
-                        if nSlopesToBeDiscarded:
-                            intmat.reduce_slopes(nSlopesToBeDiscarded)
-                        recmat = RecMat()  # TODO Guido qui recmat viene sovrascritto anche se recmat_tag e' valido nell'if precedente
-                        recmat.recmat = intmat.intmat
-                    else:
-                        recmat = self._cm.read_rec(recmat_tag)
-
-            if ncutmodes:
-                if recmat is not None:
-                    recmat.reduce_size(ncutmodes)
-                else:
-                    print('recmat cannot be reduced because it is null.')
-
-        if projmat_tag and not noProj:
-            projmat = self._cm.read_rec(projmat_tag, doNotPutOnGpu=doNotPutOnGpu)
-
-        if recmat is None:
-            if projmat and recmat.proj_list and not noProj:
-                if dmNumber is not None:
-                    if dmNumber <= 0:
-                        raise ValueError('dmNumber must be > 0')
-                    projmat = RecMat() # TODO Guido qui projmat viene sovrascritto anche se e' valido nell'if precedente
-                    projmat.recmat = recmat.proj_list[dmNumber - 1]
-                else:
-                    raise ValueError('dmNumber (>0) must be defined if projmat_tag is not defined!')
-
-        if filtmat_tag:
-            filtmat = self._cm.read_data(filtmat_tag)
-            recmat_orig = recmat.recmat
-            recmat_new = np.matmul(recmat_orig, filtmat)
-            recmat.recmat = recmat_new
-            print('recmat updated with filmat!')
-            stop
-
-        modalrec = ModalRec(recmat, intmat=intmat, projmat=projmat, polc=polc)
-        self.apply_global_params(modalrec)
-        modalrec.apply_properties(params)
-        return modalrec
 
     def get_modalrec_nn(self, params):
         """

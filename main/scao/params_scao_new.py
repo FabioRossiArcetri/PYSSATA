@@ -8,23 +8,6 @@ main = {
  'time_step':         0.001                  # [s] Simulation time step
 }
 
-# common = {
-#  'class':             'CommonParameters',
-#  'pixel_pupil':       160,                    # Linear dimension of pupil phase array
-#  'pixel_pitch':       0.05,                   # [m] Pitch of the pupil phase array
-# }
-
-# cm = {
-#  'class':    'CalibrationManager',
-#  'root_dir': './calib/SCAO',            # Root directory for calibration manager
-# }
-
-# loop = {
-#  'class':             'LoopControl',
-#  'total_time':        1.000,                 # [s] Total simulation running time
-#  'time_step':         0.001                  # [s] Simulation time step
-# }
-
 dm = {
  'class':             'DM',
  'type':              'zernike',              # modes type
@@ -124,8 +107,9 @@ wind_direction = {
  'constant':          [0.]#,270.,270.,90.]   # [degrees] Wind direction value
 }
 
-modalrec = {
- 'recmat_tag':        'scao_recmat'         # reconstruction matrix tag
+rec = {
+ 'class':             'Modalrec',
+ 'recmat_object':        'scao_recmat'         # reconstruction matrix tag
 }
 
 pupil_stop = {

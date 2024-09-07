@@ -24,6 +24,7 @@ class CalibManager(BaseParameterObj):
             'pupdata': 'pupils',
             'subaps': 'subaps/',
             'rec': 'rec/',
+            'recmat': 'rec/',
             'im': 'im/',
             'ifunc': 'ifunc/',
             'm2c': 'm2c/',
