@@ -1,14 +1,39 @@
 import numpy as np
 
-from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.data_objects.ifunc import IFunc
 from pyssata.data_objects.layer import Layer
+from pyssata.data_objects.pupilstop import Pupilstop
+from pyssata.base_processing_obj import BaseProcessingObj
+
 
 class DM(BaseProcessingObj):
-    def __init__(self, pixel_pitch, height, influence_function):
+    def __init__(self,
+                 pixel_pitch: float,
+                 height: float,
+                 ifunc: IFunc=None,
+                 type: str=None,
+                 nmodes: int=None,
+                 nzern: int=None,
+                 start_mode: int=None,
+                 idx_modes: np.ndarray=None,
+                 npixels: int=None,
+                 obsratio: float=None,
+                 diaratio: float=None,
+                 pupilstop: Pupilstop=None,
+                 ):
         super().__init__()
         
-        self._ifunc = influence_function
-#        self._ifunc.precision = self._precision
+        mask = None
+        if pupilstop:
+            mask = pupilstop.A
+            if npixels is None:
+                npixels = mask.shape[0]
+
+        if not ifunc:
+            ifunc = IFunc(type=type, mask=mask, npixels=npixels,
+                           obsratio=obsratio, diaratio=diaratio, nzern=nzern,
+                           nmodes=nmodes, start_mode=start_mode, idx_modes=idx_modes)
+        self._ifunc = ifunc
         
         s = self._ifunc.mask_inf_func.shape
         nmodes_if = self._ifunc.size[0]
@@ -16,10 +41,11 @@ class DM(BaseProcessingObj):
         self._if_commands = np.zeros(nmodes_if, dtype=self._ifunc.type)
         self._layer = Layer(s[0], s[1], pixel_pitch, height)
         self._layer.A = self._ifunc.mask_inf_func
-        self._verbose =True
+        
         # sign is -1 to take into account the reflection in the propagation
         self._sign = -1
 
+        # Integrator control workaround
         self._history = None
         self._delay = 2
         self._gain = 0.5

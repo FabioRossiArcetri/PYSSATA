@@ -26,6 +26,7 @@ main = {
 # }
 
 dm = {
+ 'class':             'DM',
  'type':              'zernike',              # modes type
  'nmodes':            54,                     # number of modes
  'npixels':           160,                    # linear dimension of DM phase array
