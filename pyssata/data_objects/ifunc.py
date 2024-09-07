@@ -1,20 +1,53 @@
 import numpy as np
 from astropy.io import fits
 
+from pyssata.lib.compute_zern_ifunc import compute_zern_ifunc
+
+def compute_kl_ifunc(*args, **kwargs):
+    raise NotImplementedError
+
+def compute_mixed_ifunc(*args, **kwargs):
+    raise NotImplementedError
+
+
 class IFunc:
-    def __init__(self):
-        self._influence_function = None
-        self._mask_inf_func = None
-        self._idx_inf_func = None
+    def __init__(self,
+                 ifunc: np.array=None,
+                 type: str=None,
+                 mask: np.array=None,
+                 npixels: int=None,
+                 nzern: int=None,
+                 obsratio: float=None,
+                 diaratio: float=None,
+                 start_mode: int=None,
+                 nmodes: int=None,
+                 idx_modes=None,
+                ):
         self._doZeroPad = False
         self._precision = np.float32
-        self.init()
-
-    def init(self):
-        self._influence_function = np.array([])
-        self._mask_inf_func = np.array([])
-        self._idx_inf_func = np.array([])
-        return True
+        
+        if ifunc is None:
+            if type is None:
+                raise ValueError('At least one of ifunc and type must be set')
+            if mask is not None:
+                mask = (np.array(mask) > 0).astype(float)
+            if npixels is None:
+                raise ValueError("If ifunc is not set, then npixels must be set!")
+            
+            type_lower = type.lower()
+            if type_lower == 'kl':
+                ifunc, mask = compute_kl_ifunc(npixels, nmodes=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask)
+            elif type_lower in ['zern', 'zernike']:
+                ifunc, mask = compute_zern_ifunc(npixels, nzern=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask)
+            elif type_lower == 'mixed':
+                ifunc, mask = compute_mixed_ifunc(npixels, nzern=nzern, nmodes=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask)
+            else:
+                raise ValueError(f'Invalid ifunc type {type}')
+        
+        self._influence_function = ifunc
+        self._mask_inf_func = mask
+        self._idx_inf_func = np.where(mask)
+        self.cut(start_mode=start_mode, nmodes=nmodes, idx_modes=idx_modes)
 
     @property
     def influence_function(self):
@@ -85,6 +118,9 @@ class IFunc:
     def precision(self):
         return self._precision
 
+    def inverse(self):
+        return np.linalg.pinv(self._influence_function)
+
     @precision.setter
     def precision(self, precision):
         if self._influence_function.dtype == precision:
@@ -115,49 +151,42 @@ class IFunc:
         hdul.append(fits.ImageHDU(data=self._mask_inf_func, name='MASK_INF_FUNC'))
         hdul.writeto(filename, overwrite=True)
 
-    def read(self, filename, exten=0, start_mode=None, nmodes=None, idx_modes=None, zeroPad=False):
-        self._doZeroPad = zeroPad
-        hdul = fits.open(filename)
+    def cut(self, start_mode=None, nmodes=None, idx_modes=None):
 
-        temp = hdul[exten].data
-        if self._precision == np.float32:
-            temp = temp.astype(np.float32)
-        elif self._precision == np.float64:
-            temp = temp.astype(np.float64)
-
-        stemp = temp.shape
-        if start_mode is None:
-            start_mode = 0
-        if nmodes is None:
-            nmodes = stemp[0] if stemp[1] > stemp[0] else stemp[1]
-
-        self.mask_inf_func = hdul[exten + 1].data
-
-        if idx_modes is not None:
-            if stemp[1] > stemp[0]:
-                self.influence_function = temp[idx_modes, :]
-            else:
-                self.influence_function = temp[:, idx_modes]
-        else:
-            if stemp[1] > stemp[0]:
-                self.influence_function = temp[start_mode:nmodes, :]
-            else:
-                self.influence_function = temp[:, start_mode:nmodes]
-
-    def restore(self, filename, start_mode=None, nmodes=None, zeroPad=False, idx_modes=None, precision=None):
         if idx_modes is not None:
             if start_mode is not None:
                 start_mode = None
-                print('ifunc.restore: start_mode cannot be set together with idx_modes. Setting to None start_mode.')
+                print('ifunc.cut: start_mode cannot be set together with idx_modes. Setting to None start_mode.')
             if nmodes is not None:
                 nmodes = None
-                print('ifunc.restore: nmodes cannot be set together with idx_modes. Setting to None nmodes.')
+                print('ifunc.cut: nmodes cannot be set together with idx_modes. Setting to None nmodes.')
+                        
+        nrows, ncols = self.influence_function.shape
 
+        if start_mode is None:
+            start_mode = 0
+        if nmodes is None:
+            nmodes = nrows if ncols > nrows else ncols
+            
+        if idx_modes is not None:
+            if ncols > nrows:
+                self._influence_function = self._influence_function[idx_modes, :]
+            else:
+                self._influence_function = self._influence_function[:, idx_modes]
+        else:
+            if ncols > nrows:
+                self._influence_function = self._influence_function[start_mode:nmodes, :]
+            else:
+                self._influence_function = self._influence_function[:, start_mode:nmodes] 
+      
+    def read(self, filename, exten=0):
+        hdul = fits.open(filename)
+        self.influence_function = hdul[exten].data
+        self.mask_inf_func = hdul[exten+1].data
+        
+    def restore(self, filename):
         p = IFunc()
-        if precision is not None:
-            p.precision = precision
-
-        p.read(filename, start_mode=start_mode, nmodes=nmodes, idx_modes=idx_modes, zeroPad=zeroPad)
+        p.read(filename)
         return p
 
     def revision_track(self):
