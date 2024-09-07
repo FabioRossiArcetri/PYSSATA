@@ -1,10 +1,10 @@
 import numpy as np
-from pyssata.display.psf_display import PSFDisplay
+
 
 from pyssata.loop_control import LoopControl
 from pyssata.calib_manager import CalibManager
 from pyssata.base_processing_obj import BaseProcessingObj
-from pyssata.processing_objects.atmo_evolution import AtmoEvolution
+from pyssata.data_objects.ifunc import IFunc
 
 from pyssata.processing_objects.ccd import CCD
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
@@ -15,7 +15,6 @@ from pyssata.processing_objects.int_control import IntControl
 from pyssata.processing_objects.dm import DM
 from pyssata.processing_objects.func_generator import FuncGenerator
 
-from pyssata.lib.compute_zern_ifunc import compute_zern_ifunc
 
 class Factory:
     def __init__(self, params, GPU=False, NOCM=False, SINGLEGPU=False):
@@ -148,7 +147,7 @@ class Factory:
 
     def ifunc_restore(self, tag=None, type=None, npixels=None, nmodes=None, nzern=None, 
                     obsratio=None, diaratio=None, start_mode=None, mask=None, 
-                    return_inv=None, doNotPutOnGpu=None, zeroPad=None, idx_modes=None):
+                    return_inv=None, idx_modes=None):
         """
         Restore ifunc object from disk.
 
@@ -158,34 +157,12 @@ class Factory:
         Returns:
         ifunc: Restored ifunc object.
         """
-        precision = self._main['precision']
         ifunc = None
         if tag:
-            ifunc = self._cm.read_ifunc(tag, start_mode=start_mode, nmodes=nmodes, 
-                                        zeroPad=zeroPad, 
-                                        precision=precision, idx_modes=idx_modes)
-        if tag and not ifunc:
-            print(f"ifunc {tag} not present on disk!")
-        
-        if not ifunc and type:
-            if mask is not None:
-                mask = (np.array(mask) > 0).astype(float)
-            if npixels is None:
-                raise ValueError("factory::ifunc_restore --> npixels must be set!")
-            
-            type_lower = type.lower()
-            if type_lower == 'kl':
-                ifunc = compute_kl_ifunc(npixels, nmodes, obsratio=obsratio, diaratio=diaratio, 
-                                        start_mode=start_mode, mask=mask, point4radius=point4radius, 
-                                        zeroPad=zeroPad, return_inv=return_inv)
-            elif type_lower in ['zern', 'zernike']:
-                ifunc = compute_zern_ifunc(npixels, nmodes, obsratio=obsratio, diaratio=diaratio, 
-                                        start_mode=start_mode, mask=mask, zeroPad=zeroPad, return_inv=return_inv)
-            elif type_lower == 'mixed':
-                ifunc = compute_mixed_ifunc(npixels, nzern, nmodes, obsratio=obsratio, diaratio=diaratio, 
-                                            start_mode=start_mode, mask=mask, point4radius=point4radius, 
-                                            zeroPad=zeroPad, return_inv=return_inv)
-
+            ifunc = ifunc.restore(self._cm.read_ifunc(tag, get_filename=True))
+        else:
+            ifunc = IFunc(mask=mask, type=type, npixels=npixels, nzern=nzern, obsratio=obsratio,
+                          diaratio=diaratio, start_mode=start_mode, nmodes=nmodes, idx_modes=idx_modes)
         return ifunc
 
     def get_atmo_cube_container(self, source_list, params_atmo, params_seeing):
@@ -823,70 +800,6 @@ class Factory:
         self.apply_global_params(disturbance)
         disturbance.apply_properties(params)
         return disturbance
-
-    def get_dm(self, params, GPU=None, ifunc=None, m2c=None):
-        """
-        Create a DM processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        GPU (bool, optional): Flag for using GPU
-        ifunc: Influence function object
-        m2c: M2C matrix object
-
-        Returns:
-        DM: DM processing object
-        """
-        useGPU = GPU if GPU is not None else self._gpu
-        params = self.ensure_dictionary(params)
-
-        if 'm2c_tag' in params:
-            return self.get_dm_m2c(params, GPU=useGPU, ifunc=ifunc, m2c=m2c)
-        else:
-            settling_time = self.extract(params, 'settling_time', default=None, optional=True)
-
-            pixel_pitch = self._main['pixel_pitch']
-            height = params.pop('height')
-            ifunc_tag = self.extract(params, 'ifunc_tag', default=None, optional=True)
-            dm_type = self.extract(params, 'type', default=None)
-            nmodes = self.extract(params, 'nmodes', default=None)
-            nzern = self.extract(params, 'nzern', default=None, optional=True)
-            start_mode = self.extract(params, 'start_mode', default=0, optional=True)
-            idx_modes = self.extract(params, 'idx_modes', default=None, optional=True)
-            npixels = self.extract(params, 'npixels', default=None)
-            obsratio = self.extract(params, 'obsratio', default=None)
-            diaratio = self.extract(params, 'diaratio', default=1.0, optional=True)
-            doNotPutOnGpu = self.extract(params, 'doNotPutOnGpu', default=None, optional=True)
-            pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='', optional=True)
-
-            doNotBuildRecProp = self.extract(params, 'doNotBuildRecProp', default=None, optional=True)
-            notSeenByLgs = self.extract(params, 'notSeenByLgs', default=None, optional=True)
-
-            mask = None
-            if pupil_mask_tag:
-                if phase2modes_tag:
-                    print('if phase2modes_tag is defined then pupil_mask_tag will not be used!')
-                pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=useGPU)
-                if pupilstop is None:
-                    raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
-                mask = pupilstop.A
-                if not npixels:
-                    npixels = mask.shape[0]
-
-            doRestore = False
-            if not ifunc or not isinstance(ifunc, SomeValidClassType):
-                doRestore = True
-            if doRestore:
-                ifunc = self.ifunc_restore(tag=ifunc_tag, type=dm_type, npixels=npixels, nmodes=nmodes, nzern=nzern, 
-                                        obsratio=obsratio, diaratio=diaratio, mask=mask, start_mode=start_mode, 
-                                        idx_modes=idx_modes, doNotPutOnGpu=doNotPutOnGpu)
-            if ifunc is None:
-                raise ValueError(f'Error reading influence function: {ifunc_tag}')
-
-            dm = DM(pixel_pitch, height, ifunc)
-            self.apply_global_params(dm)
-            dm.apply_properties(params)
-            return dm
 
     def get_dm_m2c(self, params, GPU=None, ifunc=None, m2c=None):
         """
