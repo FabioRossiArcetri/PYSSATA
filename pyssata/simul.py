@@ -41,6 +41,7 @@ class Simul():
     def build_objects(self, params):
         main = params['main']
         cm = CalibManager(main['root_dir'])
+        skip_pars = 'class inputs'.split()
 
         for key, pars in params.items():
             if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control'.split():
@@ -49,31 +50,28 @@ class Simul():
                     classname = pars['class']
                 except KeyError:
                     raise KeyError(f'Object {key} does not define the "class" parameter')
-                del pars['class']
 
                 klass = self._import_class(classname)
                 args = inspect.getfullargspec(getattr(klass, '__init__')).args
                 hints = self._get_type_hints(klass)
 
-                pars2 = pars.copy()  # Cannot modify original dict during iteration
-                if 'inputs' in pars2:
-                    del pars2['inputs']
+                pars2 = {}
                 for name, value in pars.items():
                     if name.endswith('_data'):
-                        parname = name[:-7]
                         data = cm.read_data(value)
                         pars2[name[:-5]] = data
-                        del pars2[name]
-                    if name.endswith('_object'):
+                    elif name.endswith('_object'):
                         parname = name[:-7]
                         if parname in hints:
                             partype = hints[parname]
-                            filename = cm.filename(parname, value)
+                            filename = cm.filename(parname, value)  # TODO use partype instead of parname?
                             parobj = getattr(partype, 'restore').__call__(filename)
                             pars2[parname] = parobj
-                            del pars2[name]
                         else:
                             raise ValueError(f'No type hint for parameter {parname} of class {classname}')
+                    else:
+                        if name not in skip_pars:
+                            pars2[name] = value
 
                 # TODO special cases
                 if classname == 'AtmoEvolution':
@@ -84,11 +82,11 @@ class Simul():
                 if classname == 'AtmoPropagation':
                     sources = [self.objs[x] for x in pars2['source_list']]  
                     pars2['source_list'] = sources
- 
+
                 # Add global params if needed
                 my_params = {k: main[k] for k in args if k in main}
                 my_params.update(pars2)
-                self.objs[key] = klass(**my_params)     
+                self.objs[key] = klass(**my_params)
 
     def resolve_output(self, output_name):
         if '.' in output_name:
@@ -127,14 +125,13 @@ class Simul():
                             raise ValueError(f'Input {input_name}: output {output_ref} is not of type {wanted_type}')
                 else:
                     raise ValueError(f'Object {key}: invalid input definition type {type(input_value)}')
-        
+
     def run(self):
         params = {}
         exec(open(self.param_file).read(), params)
         del params['__builtins__']
         del params['np']
 
-        main = params['main']
         # Initialize housekeeping objects
         factory = Factory(params['main'])
         loop = factory.get_loop_control()
