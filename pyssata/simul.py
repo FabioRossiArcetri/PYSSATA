@@ -13,7 +13,9 @@ from pyssata.display.phase_display import PhaseDisplay
 from pyssata.display.psf_display import PSFDisplay
 
 class Simul():
-    
+    '''
+    Simulation organizer
+    '''
     def __init__(self, param_file):
         self.param_file = param_file
         self.objs = {}
@@ -72,7 +74,7 @@ class Simul():
                             del pars2[name]
                         else:
                             raise ValueError(f'No type hint for parameter {parname} of class {classname}')
-      
+
                 # TODO special cases
                 if classname == 'AtmoEvolution':
                     pars2['directory'] = cm.root_subdir('phasescreen')
@@ -82,12 +84,12 @@ class Simul():
                 if classname == 'AtmoPropagation':
                     sources = [self.objs[x] for x in pars2['source_list']]  
                     pars2['source_list'] = sources
-                        
+ 
                 # Add global params if needed
                 my_params = {k: main[k] for k in args if k in main}
                 my_params.update(pars2)
                 self.objs[key] = klass(**my_params)     
-    
+
     def resolve_output(self, output_name):
         if '.' in output_name:
             obj_name, attr_name = output_name.split('.')
@@ -95,7 +97,7 @@ class Simul():
         else:
             output_ref = self.objs[output_name]
         return output_ref
-        
+
     def connect_objects(self, params):
         for key, pars in params.items():
             print(pars)
@@ -109,7 +111,7 @@ class Simul():
                 if isinstance(input_value, str):
                     wanted_type = self.objs[key].inputs[input_name].type
                     output_ref = self.resolve_output(input_value)
-                    if type(output_ref) != wanted_type:
+                    if not isinstance(output_ref, wanted_type):
                         raise ValueError(f'Input {input_name}: output {output_ref} is not of type {wanted_type}')
                     setattr(self.objs[key], input_name, output_ref)
 
