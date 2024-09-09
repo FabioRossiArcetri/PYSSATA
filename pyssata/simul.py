@@ -99,13 +99,10 @@ class Simul():
                     else:
                         pars2[name] = value
 
-
-                # TODO special cases
-                if classname == 'AtmoEvolution':
-                    pars2['directory'] = cm.root_subdir('phasescreen')
-
-                # Add global params if needed
+                # Add global and class-specific params if needed
                 my_params = {k: main[k] for k in args if k in main}
+                if 'data_dir' in args:
+                    my_params['data_dir'] = cm.root_subdir(classname)
                 my_params.update(pars2)
                 self.objs[key] = klass(**my_params)
 
