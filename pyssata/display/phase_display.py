@@ -5,14 +5,14 @@ from pyssata.base_processing_obj import BaseProcessingObj
 
 
 class PhaseDisplay(BaseProcessingObj):
-    def __init__(self, phase=None, doImage=False, window=23):
+    def __init__(self, phase=None, doImage=False, window=23, disp_factor=1, title='phase'):
         super().__init__()
 
         self._phase = phase if phase is not None else None
         self._doImage = doImage
         self._window = window
-        self._disp_factor = 1
-        self._title = 'phase'
+        self._disp_factor = disp_factor
+        self._title = title
         self._opened = False
         self._size_frame = (0, 0)
         self._first = True

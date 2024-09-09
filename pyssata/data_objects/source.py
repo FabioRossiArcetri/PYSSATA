@@ -4,18 +4,40 @@ from pyssata.base_parameter_obj import BaseParameterObj
 from pyssata.data_objects.base_data_obj import BaseDataObj
 from pyssata.lib.n_phot import n_phot
 
+
 class Source(BaseDataObj, BaseParameterObj):
     '''source'''
 
-    def __init__(self, polar_coordinate, height, magnitude, wavelengthInNm, band='', zeroPoint=0):
+    def __init__(self,
+                 polar_coordinate,
+                 magnitude,
+                 wavelengthInNm,
+                 height: float=float('inf'),
+                 band='',
+                 zeroPoint=0,
+                 zenithAngleInDeg=None,
+                 error_coord=(0., 0.),
+                 verbose: bool=False):
         super().__init__()
-        self._polar_coordinate = np.array(polar_coordinate)
+        
+        if zenithAngleInDeg is not None:
+            airmass = 1. / np.cos(zenithAngleInDeg / 180. * np.pi)
+            height *= airmass
+            if verbose:
+                    print(f'get_source: changing source height by airmass value ({airmass})')
+
+        polar_coordinate = np.add(polar_coordinate, error_coord)
+        if any(error_coord):
+            print(f'there is a desired error ({error_coord[0]},{error_coord[1]}) on source coordinates.')
+            print(f'final coordinates are: {polar_coordinate[0]},{polar_coordinate[1]}')
+          
+        self._polar_coordinate = polar_coordinate
         self._height = height
         self._magnitude = magnitude
         self._wavelengthInNm = wavelengthInNm
         self._zeroPoint = zeroPoint
         self._band = band
-        self._verbose = False
+        self._verbose = verbose
 
     @property
     def polar_coordinate(self):

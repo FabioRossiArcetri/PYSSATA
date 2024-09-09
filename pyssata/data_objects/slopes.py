@@ -129,7 +129,8 @@ class Slopes(BaseDataObj):
         fits.append(filename, self._slopes)
 
     def read(self, filename, hdr=None, exten=0):
-        super().read(filename, hdr, exten)
+        super().read(filename)
+        exten += 1  # TODO exten numbering does not work in Python this way
         self._slopes = fits.getdata(filename, ext=exten)
         exten += 1
 

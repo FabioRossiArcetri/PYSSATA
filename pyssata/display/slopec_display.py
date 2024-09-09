@@ -5,10 +5,10 @@ from pyssata.processing_objects.pyr_slopec import PyrSlopec
 from pyssata.display.pupil_display import pupil_display
 
 class SlopecDisplay(BaseProcessingObj):
-    def __init__(self, slopec=None):
+    def __init__(self, slopec=None, disp_factor=1):
         super().__init__()
 
-        self._disp_factor = 1
+        self._disp_factor = disp_factor
         self._windows = 21
         self._slopec = slopec if slopec is not None else None
         self._title = ''

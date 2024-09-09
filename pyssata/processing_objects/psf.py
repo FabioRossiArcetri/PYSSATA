@@ -5,11 +5,17 @@ from pyssata.base_value import BaseValue
 from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.calc_psf import calc_psf
 
+
 class PSF(BaseProcessingObj):
-    def __init__(self, wavelengthInNm, nd=1):
+    def __init__(self,
+                 wavelengthInNm: float,
+                 nd: int=1,
+                 start_time: float=0.0):
+
         super().__init__()
-        self._wavelengthInNm = wavelengthInNm
         self._nd = nd
+        self._start_time = start_time
+        self._wavelengthInNm = wavelengthInNm
 
         self._sr = BaseValue()
         self._int_sr = BaseValue()
@@ -19,7 +25,6 @@ class PSF(BaseProcessingObj):
         self._ref = None
         self._intsr = 0.0
         self._count = 0
-        self._start_time = 0.0
 
         self.reset_integration()
 
