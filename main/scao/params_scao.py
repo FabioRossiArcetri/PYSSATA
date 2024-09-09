@@ -17,6 +17,7 @@ dm = {
 }
 
 pupilstop = {                                 # Default parameters (circular pupil)
+    'class': 'Pupilstop'
 }
 
 pyramid = {
@@ -30,13 +31,14 @@ pyramid = {
 }
 
 slopec = {
- 'pupdata_tag' :      'scao_pup',             # tag of the pyramid WFS pupils
- 'sn_tag':            'scao_sn'               # tag of the slope reference vector
+ 'class':             'PyrSlopec',
+ 'pupdata_object':    'scao_pup',             # tag of the pyramid WFS pupils
+ 'sn_object':         'scao_sn',               # tag of the slope reference vector
 }
 
 control = {
+ 'class':             'IntControl',
  'delay':             2,                      # Total temporal delay in time steps
- 'type':              'INT',                  # type of control 
  'int_gain':          0.5 * np.ones(54)       # Integrator gain (for 'INT' control)
 }
 
@@ -50,36 +52,57 @@ detector = {
  'quantum_eff':       0.32                    # quantum efficiency * total transmission
 }
 
-wfs_source = [
-    {
+wfs_source = {
+ 'class':             'Source',
  'polar_coordinate':  [0.0, 0.0],           # [arcsec, degrees] source polar coordinates
  'magnitude':         8,                    # source magnitude
  'wavelengthInNm':    750                   # [nm] wavelength
 }
-]
 
-camera = {
+
+psf = {
+ 'class':             'PSF',
  'wavelengthInNm':    1650,                 # [nm] Imaging wavelength
  'nd':                8,                    # padding coefficient for PSF computation
  'start_time':        0.05                 # PSF integration start time
 }
 
+prop = {
+ 'class':             'AtmoPropagation',
+ 'source_list':       ['wfs_source'], 
+ 'inputs': {
+   'layer_list': ['atmo.layer_list',
+                  'pupilstop',
+                  'dm.out_layer']
+ }
+}
+
 atmo = {
+ 'class':             'AtmoEvolution',
+ 'source_list':       ['wfs_source'], 
  'L0':                40,                   # [m] Outer scale
  'heights':           np.array([119.]), #,837,3045,12780]), # [m] layer heights at 0 zenith angle
- 'Cn2':               np.array([0.70]) #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
+ 'Cn2':               np.array([0.70]), #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
+ 'inputs': {
+    'seeing' : 'seeing.output',
+    'wind_speed': 'wind_speed.output',
+    'wind_direction': 'wind_direction.output',
+     }
 }
 
 seeing = {
+ 'class':             'FuncGenerator',
  'constant':          0.8,                  # ["] seeing value
  'func_type':         'SIN'                 # TODO necessary for factory.py line 217
 }
 
 wind_speed = {
+ 'class':             'FuncGenerator',
  'constant':          [200.]#,10.,20.,10.]      # [m/s] Wind speed value
 }
 
 wind_direction = {
+ 'class':             'FuncGenerator',
  'constant':          [0.]#,270.,270.,90.]   # [degrees] Wind direction value
 }
 
