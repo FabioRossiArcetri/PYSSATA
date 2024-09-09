@@ -18,8 +18,10 @@ class CalibManager(BaseParameterObj):
         self._subdirs = {
             'phasescreen': 'phasescreens/',
             'slopenull': 'slopenulls/',
+            'sn': 'slopenulls/',
             'background': 'backgrounds/',
             'pupils': 'pupils/',
+            'pupdata': 'pupils',
             'subaps': 'subaps/',
             'rec': 'rec/',
             'im': 'im/',
@@ -89,6 +91,7 @@ class CalibManager(BaseParameterObj):
         filename = self.filename(subdir, name)
         if get_filename:
             return filename
+        print(filename)
         if not os.path.exists(filename):
             print(f"Missing file: {filename}")
             return None

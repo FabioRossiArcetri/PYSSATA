@@ -1,8 +1,5 @@
 import numpy as np
-import os
-from pyssata.data_objects.pupilstop import PupilStop
 from pyssata.display.psf_display import PSFDisplay
-
 
 from pyssata.loop_control import LoopControl
 from pyssata.calib_manager import CalibManager
@@ -10,23 +7,13 @@ from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.processing_objects.atmo_evolution import AtmoEvolution
 
 from pyssata.processing_objects.ccd import CCD
-from pyssata.processing_objects.atmo_propagation import AtmoPropagation
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 from pyssata.processing_objects.processing_container import ProcessingContainer
-from pyssata.processing_objects.pyr_slopec import PyrSlopec
 from pyssata.processing_objects.datastore import Datastore
 from pyssata.processing_objects.modalrec import ModalRec
-from pyssata.processing_objects.intcontrol import IntControl
+from pyssata.processing_objects.int_control import IntControl
 from pyssata.processing_objects.dm import DM
-from pyssata.processing_objects.psf import PSF
 from pyssata.processing_objects.func_generator import FuncGenerator
-
-from pyssata.display.slopec_display import SlopecDisplay
-from pyssata.display.plot_display import PlotDisplay
-from pyssata.display.phase_display import PhaseDisplay
-
-from pyssata.data_objects.source import Source
-from pyssata.data_objects.ef import ElectricField
 
 from pyssata.lib.compute_zern_ifunc import compute_zern_ifunc
 
@@ -201,53 +188,6 @@ class Factory:
 
         return ifunc
 
-    def get_atmo_container(self, source_list, params_atmo, params_seeing, params_windspeed, params_winddirection):
-        """
-        Gets a processing container with a full complement of atmospheric objects.
-
-        Parameters:
-        source_list (list): List of source objects
-        params_atmo (dict): Parameter dictionary for the atmo_evolution object
-        params_seeing (dict): Parameter dictionary for the seeing func_generator object
-        params_windspeed (dict): Parameter dictionary for the wind speed func_generator object
-        params_winddirection (dict): Parameter dictionary for the wind direction func_generator object
-
-        Returns:
-        ProcessingContainer: Processing container with atmospheric objects
-        """
-        container = ProcessingContainer()
-
-        # the following lines are used to reduce the layers to 1 when seeing is 0
-        params_atmo_copy = params_atmo.copy()
-        params_windspeed_copy = params_windspeed.copy()
-        params_winddirection_copy = params_winddirection.copy()
-
-        if params_seeing['func_type'] == 'SIN' and 'amp' not in params_seeing and 'constant' in params_seeing:
-            if np.sum(np.abs(params_seeing['constant'])) == 0:
-                print('WARNING: seeing is 0, change the atmo profile to 1 layer.')
-                params_atmo_copy['heights'] = [0.0]
-                params_atmo_copy['cn2'] = [1.0]
-                if 'pixel_phasescreens' in params_atmo_copy:
-                    params_atmo_copy.pop('pixel_phasescreens')
-                params_windspeed_copy['constant'] = [0.0]
-                params_winddirection_copy['constant'] = [0.0]
-
-        atmo = self.get_atmo_evolution(params_atmo_copy, source_list)
-        seeing = self.get_func_generator(params_seeing)
-        wind_speed = self.get_func_generator(params_windspeed_copy)
-        wind_direction= self.get_func_generator(params_winddirection_copy)
-
-        atmo.seeing = seeing.output
-        atmo.wind_speed = wind_speed.output
-        atmo.wind_direction = wind_direction.output
-
-        container.add(seeing, name='seeing')
-        container.add(wind_speed, name='wind_speed')
-        container.add(wind_direction, name='wind_direction')
-        container.add(atmo, name='atmo', output='layer_list')
-
-        return container
-
     def get_atmo_cube_container(self, source_list, params_atmo, params_seeing):
         """
         Gets a processing container with a full complement of atmospheric objects for reading cubes.
@@ -264,7 +204,7 @@ class Factory:
         container = ProcessingContainer()
 
         atmo = self.get_atmo_readcube(params_atmo, source_list)
-        seeing = self.get_func_generator(params_seeing)
+        seeing = FuncGenerator(**params_seeing)
 
         atmo.seeing = seeing.output
 
@@ -309,17 +249,17 @@ class Factory:
             params_zfocus = {'func_type': 'SIN', 'constant': zfocus_temp}
             params_theta = {'func_type': 'SIN', 'constant': theta_temp}
 
-        zfocus = self.get_func_generator(params_zfocus)
-        theta = self.get_func_generator(params_theta)
+        zfocus = FuncGenerator(**params_zfocus)
+        theta = FuncGenerator(**params_theta)
 
         kernel = self.get_kernel({})
         kernel.zfocus = zfocus.output
         kernel.theta = theta.output
         kernel.lenslet = sh.lenslet
 
-        seeing = self.get_func_generator(params_seeing)
-        zlayer = self.get_func_generator(params_zlayer)
-        zprofile = self.get_func_generator(params_zprofile)
+        seeing = FuncGenerator(**params_seeing)
+        zlayer = FuncGenerator(**params_zlayer)
+        zprofile = FuncGenerator(**params_zprofile)
 
         launcher_sizeArcsec = self.extract(params_launcher, 'sizeArcsec', default=0)
         launcher_pos = self.extract(params_launcher, 'position', default=[0, 0, 0])
@@ -430,8 +370,8 @@ class Factory:
             params_zfocus = {'func_type': 'SIN', 'constant': zfocus_temp}
             params_theta = {'func_type': 'SIN', 'constant': theta_temp}
 
-        zfocus = self.get_func_generator(params_zfocus)
-        theta = self.get_func_generator(params_theta)
+        zfocus = FuncGenerator(**params_zfocus)
+        theta = FuncGenerator(**params_theta)
 
         sh = self.get_sh(params_sh)
         kernel = self.get_kernel()
@@ -440,9 +380,9 @@ class Factory:
         kernel.source = source
         kernel.lenslet = sh.lenslet
         kernel.ef = sh.in_ef
-        seeing = self.get_func_generator(params_seeing)
-        zlayer = self.get_func_generator(params_zlayer)
-        zprofile = self.get_func_generator(params_zprofile)
+        seeing = FuncGenerator(**params_seeing)
+        zlayer = FuncGenerator(**params_zlayer)
+        zprofile = FuncGenerator(**params_zprofile)
 
         kernel.seeing = seeing.output
         kernel.zlayer = zlayer.output
@@ -458,56 +398,6 @@ class Factory:
         container.add(sh, output='out_i')
 
         return container
-
-    def get_atmo_evolution(self, params, source_list):
-        """
-        Create an atmo_evolution processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        source_list (list): List of source objects
-
-        Returns:
-        AtmoEvolution: AtmoEvolution processing object
-        """
-        params = self.ensure_dictionary(params)
-
-        pixel_pup = self._main['pixel_pupil']
-        pixel_pitch = self._main['pixel_pitch']
-        precision = self._main['precision']
-        zenithAngleInDeg = self._main.get('zenithAngleInDeg')
-
-        L0 = params.pop('L0')
-        wavelengthInNm = self.extract(params, 'wavelengthInNm', default=500)
-        heights = params.pop('heights')
-        Cn2 = params.pop('Cn2')
-        mcao_fov = self.extract(params, 'mcao_fov', default=None, optional=True)
-        fov_in_m = self.extract(params, 'fov_in_m', default=None, optional=True)
-        pixel_phasescreens = self.extract(params, 'pixel_phasescreens', default=None, optional=True)
-        seed = self.extract(params, 'seed', default=1)
-        pupil_position = self.extract(params, 'pupil_position', default=None, optional=True)
-        
-        directory = self._cm.root_subdir('phasescreen')
-
-        user_defined_phasescreen = self.extract(params, 'user_defined_phasescreen', default='')
-        
-        force_mcao_fov = self.extract(params, 'force_mcao_fov', default=None, optional=True)
-        make_cycle = self.extract(params, 'make_cycle', default=None, optional=True)
-        doFresnel = self.extract(params, 'doFresnel', default=None, optional=True)
-
-        atmo_evolution = AtmoEvolution(L0, wavelengthInNm, pixel_pitch, heights, Cn2,
-                                    pixel_pup, directory, source_list,
-                                    zenithAngleInDeg=zenithAngleInDeg, mcao_fov=mcao_fov,
-                                    pixel_phasescreens=pixel_phasescreens,
-                                    precision=precision, seed=seed,
-                                    user_defined_phasescreen=user_defined_phasescreen,
-                                    force_mcao_fov=force_mcao_fov, make_cycle=make_cycle,
-                                    fov_in_m=fov_in_m, pupil_position=pupil_position)
-
-        self.apply_global_params(atmo_evolution)
-        atmo_evolution.apply_properties(params)
-
-        return atmo_evolution
 
     def get_atmo_readcube(self, params, source_list):
         """
@@ -588,63 +478,6 @@ class Factory:
         # atmo_readcube.apply_properties(params)
 
         return atmo_readcube
-
-    def get_atmo_propagation(self, params, source_list):
-        """
-        Create an atmo_propagation processing object.
-
-        Parameters:
-        params (dict): Dictionary of atmo parameters
-        source_list (list): List of source objects
-
-        Returns:
-        AtmoPropagation: AtmoPropagation processing object
-        """
-
-        params = self.ensure_dictionary(params)
-
-        pixel_pupil = self._main['pixel_pupil']
-        pixel_pitch = self._main['pixel_pitch']
-
-        atmo_propagation = AtmoPropagation(source_list, pixel_pupil, pixel_pitch)
-
-        doFresnel = self.extract(params, 'doFresnel', default=False, optional=True)
-        wavelengthInNm = self.extract(params, 'wavelengthInNm', default=False, optional=True)
-        if doFresnel:
-            atmo_propagation.doFresnel = doFresnel
-        if doFresnel and wavelengthInNm is None:
-            raise ValueError('get_atmo_propagation: wavelengthInNm is required when doFresnel key is set to correctly simulate physical propagation.')
-        if wavelengthInNm:
-            atmo_propagation.wavelengthInNm = wavelengthInNm
-
-        self.apply_global_params(atmo_propagation)
-
-        pupil_position = self.extract(params, 'pupil_position', default=[0., 0.], optional=True)
-        atmo_propagation.pupil_position = pupil_position
-
-        return atmo_propagation
-
-    def get_atmo_propagation2(self, source_list=None):
-        """
-        Create an atmo_propagation processing object.
-
-        Parameters:
-        source_list (list, optional): List of source objects. If not given, an empty list is initialized.
-
-        Returns:
-        AtmoPropagation: AtmoPropagation processing object
-        """
-        if source_list is None:
-            source_list = []
-
-        pixel_pupil = self._main['pixel_pupil']
-        pixel_pitch = self._main['pixel_pitch']
-
-        atmo_propagation = AtmoPropagation(source_list, pixel_pupil, pixel_pitch)
-
-        self.apply_global_params(atmo_propagation)
-
-        return atmo_propagation
 
     def get_calib_manager(self, params=None):
         """
@@ -1342,47 +1175,6 @@ class Factory:
         # extended_source.apply_properties(params)
 
         return extended_source
-
-    def get_func_generator(self, params):
-        """
-        Create a func_generator processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-
-        Returns:
-        FuncGenerator: FuncGenerator processing object
-        """
-        params = self.ensure_dictionary(params)
-        func_type = self.extract(params, 'func_type', default='SIN')
-        nmodes = self.extract(params, 'nmodes', default=None, optional=True)
-
-        if 'constant_tag' in params:
-            tag = params.pop('constant_tag')
-            params['constant'] = self._cm.read_data(tag)
-        if 'amp_tag' in params:
-            tag = params.pop('amp_tag')
-            params['amp'] = self._cm.read_data(tag)
-        if 'freq_tag' in params:
-            tag = params.pop('freq_tag')
-            params['freq'] = self._cm.read_data(tag)
-        if 'offset_tag' in params:
-            tag = params.pop('offset_tag')
-            params['offset'] = self._cm.read_data(tag)
-        if 'vect_amplitude_tag' in params:
-            tag = params.pop('vect_amplitude_tag')
-            params['vect_amplitude'] = self._cm.read_data(tag)
-        if 'time_hist_tag' in params:
-            tag = params.pop('time_hist_tag')
-            params['time_hist'] = self._cm.read_data(tag)
-        else:
-            time_hist = self.extract(params, 'time_hist', default=None, optional=True)
-
-        funcgenerator = FuncGenerator(func_type, time_hist=time_hist, nmodes=nmodes)
-
-        self.apply_global_params(funcgenerator)
-        funcgenerator.apply_properties(params)
-        return funcgenerator
 
     def get_ideal_wfs(self, params):
         """
@@ -2402,7 +2194,7 @@ class Factory:
                             intmat.reduce_size(nmodes_intmat - nmodes)
                         if nSlopesToBeDiscarded:
                             intmat.reduce_slopes(nSlopesToBeDiscarded)
-                        recmat = RecMat()
+                        recmat = RecMat()  # TODO Guido qui recmat viene sovrascritto anche se recmat_tag e' valido nell'if precedente
                         recmat.recmat = intmat.intmat
                     else:
                         recmat = self._cm.read_rec(recmat_tag)
@@ -2421,7 +2213,7 @@ class Factory:
                 if dmNumber is not None:
                     if dmNumber <= 0:
                         raise ValueError('dmNumber must be > 0')
-                    projmat = RecMat()
+                    projmat = RecMat() # TODO Guido qui projmat viene sovrascritto anche se e' valido nell'if precedente
                     projmat.recmat = recmat.proj_list[dmNumber - 1]
                 else:
                     raise ValueError('dmNumber (>0) must be defined if projmat_tag is not defined!')
@@ -2954,24 +2746,6 @@ class Factory:
         optgaincontrol.apply_properties(params)
         return optgaincontrol
 
-    def get_phase_display(self, phase, window=None):
-        """
-        Builds a `phase_display` processing object.
-
-        Parameters:
-        phase (objref): The `phase` object to display
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        PhaseDisplay: A new `phase_display` processing object
-        """
-        disp = PhaseDisplay(phase=phase)
-        if window is not None:
-            disp.window = window
-            window += 1
-        self.apply_global_params(disp)
-        return disp
-
     def get_sh_display(self, sh, pyr_style=None, window=None):
         """
         Builds a `sh_display` processing object.
@@ -2990,141 +2764,6 @@ class Factory:
             window += 1
         self.apply_global_params(disp)
         return disp
-
-    def get_plot_display(self, value, window=None):
-        """
-        Builds a `plot_display` processing object.
-
-        Parameters:
-        value (objref): Object of type `base_value` to display
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        PlotDisplay: A new `plot_display` processing object
-        """
-        disp = PlotDisplay(value=value)
-        if window is not None:
-            disp.window = window
-            window += 1
-        self.apply_global_params(disp)
-        return disp
-
-    def get_psf(self, params, GPU=None):
-        """
-        Builds a `psf` processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        GPU (bool, optional): Use GPU if available
-
-        Returns:
-        Psf or PsfGpu: A new `psf` processing object
-        """
-        useGPU = GPU if GPU is not None else self._gpu
-        params = self.ensure_dictionary(params)
-
-        wavelengthInNm = params.pop('wavelengthInNm')
-        nd = self.extract(params, 'nd', default=None)
-
-        if useGPU:
-            psf = PsfGpu(wavelengthInNm, nd=nd)
-        else:
-            psf = PSF(wavelengthInNm, nd=nd)
-        
-        self.apply_global_params(psf)
-        psf.apply_properties(params)
-        return psf
-
-    def get_psf_display(self, psf, window=None):
-        """
-        Builds a `psf_display` processing object.
-
-        Parameters:
-        psf (objref): The `psf` object to display
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        PsfDisplay: A new `psf_display` processing object
-        """
-        disp = PSFDisplay(psf=psf)
-        if window is not None:
-            disp.window = window
-            window += 1
-        self.apply_global_params(disp)
-        return disp
-
-    def get_pupilstop(self, params):
-        """
-        Builds a `pupilstop` processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        GPU (bool, optional): Use GPU if available
-
-        Returns:
-        PupilStop: A new `pupilstop` processing object
-        """
-        params = self.ensure_dictionary(params)
-
-        mask_diam = self.extract(params, 'mask_diam', default=1.)
-        obs_diam = self.extract(params, 'obs_diam', default=None, optional=True)
-        pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='')
-
-        shiftXYinPixel = self.extract(params, 'shiftXYinPixel', default=None, optional=True)
-        rotInDeg = self.extract(params, 'rotInDeg', default=None, optional=True)
-        magnification = self.extract(params, 'magnification', default=None, optional=True)
-
-        if pupil_mask_tag:
-            pupilstop = self._cm.read_pupilstop(pupil_mask_tag)
-            if pupilstop is None:
-                raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
-        else:
-            dim = self._main['pixel_pupil']
-            pixel_pitch = self._main['pixel_pitch']
-            pupilstop = PupilStop(dim, dim, pixel_pitch, 0, mask_diam=mask_diam, obs_diam=obs_diam)
-
-        if shiftXYinPixel is not None:
-            pupilstop.shiftXYinPixel = shiftXYinPixel
-        if rotInDeg is not None:
-            pupilstop.rotInDeg = rotInDeg
-        if magnification is not None:
-            pupilstop.magnification = magnification
-
-        return pupilstop
-
-    def get_pyr_slopec(self, params):
-        """
-        Builds a `pyr_slopec` processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-
-        Returns:
-        PyrSlopec: A new `pyr_slopec` processing object
-        """
-        params = self.ensure_dictionary(params)
-        computation_time = self.extract(params, 'computation_time', default=None, optional=True)
-        use_optg_sn = self.extract(params, 'use_optg_sn', default=None, optional=True)
-
-        shlike = self.extract(params, 'shlike', default=None, optional=True)
-        slopes_from_intensity = self.extract(params, 'slopes_from_intensity', default=None, optional=True)
-        norm_factor = self.extract(params, 'norm_factor', default=None, optional=True)
-        thr1 = self.extract(params, 'thr1', default=None, optional=True)
-        thr2 = self.extract(params, 'thr2', default=None, optional=True)
-        subap_norm = self.extract(params, 'subap_norm', default=None, optional=True)    # old keyword to be removed!
-        filtmat_tag = self.extract(params, 'filtmat_tag', default='', optional=True)
-
-        sc = PyrSlopec(shlike=shlike, norm_factor=norm_factor, slopes_from_intensity=slopes_from_intensity)
-
-        if filtmat_tag:
-            filtmat = self._cm.read_data(filtmat_tag)
-            sc.filtmat = filtmat
-
-        sc.setproperty(cm=self._cm)
-        self.apply_global_params(sc)
-        sc.apply_properties(params)
-
-        return sc
 
     def get_sh_slopec(self, params, GPU=None, recmat=None, device=None, mode_basis=None, pup_mask=None):
         """
@@ -3190,25 +2829,6 @@ class Factory:
 
         return sc
 
-    def get_slopec_display(self, slopec, window=None):
-        """
-        Builds a `slopec_display` processing object.
-        Can display both Pyramid and SH slope computers.
-
-        Parameters:
-        slopec (objref): The `slopec` object to display
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        SlopecDisplay: A new `slopec_display` processing object
-        """
-        sc_disp = SlopecDisplay(slopec=slopec)
-        if window is not None:
-            sc_disp.window = window
-            window += 1
-        self.apply_global_params(sc_disp)
-        return sc_disp
-
     def get_source_field(self, params):
         """
         Builds a list of `source` objects arranged on a regular grid.
@@ -3256,50 +2876,6 @@ class Factory:
             source_list.append(self.get_source(p))
 
         return source_list
-
-    def get_source(self, params):
-        """
-        Builds a `source` object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-
-        Returns:
-        Source: A `source` object.
-        """
-        params = self.ensure_dictionary(params)
-
-        polar_coordinate = params.pop('polar_coordinate')
-        height = self.extract(params, 'height', default=float('inf'), optional=True)
-        error_coord = self.extract(params, 'error_coord', default=[0., 0.], optional=True)
-
-        polar_coordinate = np.add(polar_coordinate, error_coord)
-
-        if any(error_coord):
-            print(f'there is a desired error ({error_coord[0]},{error_coord[1]}) on source coordinates.')
-            print(f'final coordinates are: {polar_coordinate[0]},{polar_coordinate[1]}')
-
-        if hasattr(self._main, 'zenithAngleInDeg'):
-            airmass = 1. / cos(self._main.zenithAngleInDeg / 180. * pi)
-        else:
-            airmass = 1.
-        height *= airmass
-        if 'verbose' in params and params['verbose']:
-            if airmass != 1.:
-                print(f'get_source: changing source height by airmass value ({airmass})')
-
-        magnitude = params.pop('magnitude')
-        wavelengthInNm = params.pop('wavelengthInNm')
-#        optSource = self.extract(params, 'optSource', default=None)
-
-        band = self.extract(params, 'band', default='', optional=True)
-        zeroPoint = self.extract(params, 'zeroPoint', default=0, optional=True)
-
-        source = Source(polar_coordinate, height, magnitude, wavelengthInNm,
-                        band=band, zeroPoint=zeroPoint)
-        self.apply_global_params(source)
-        source.apply_properties(params)
-        return source
 
     def get_cm(self):
         """

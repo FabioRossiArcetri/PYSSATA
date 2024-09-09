@@ -4,16 +4,20 @@ from pyssata.processing_objects.slopec import Slopec
 from pyssata.data_objects.slopes import Slopes
 from pyssata.lib.pyr_compute_slopes import pyr_compute_slopes
 from pyssata.base_value import BaseValue
+from pyssata.data_objects.pupdata import PupData
 
+    
 class PyrSlopec(Slopec):
-    def __init__(self, pupdata_tag=None, shlike=False, norm_factor=0.0, thr_value=0.0, slopes_from_intensity=False, **kwargs):
+    def __init__(self, pupdata: PupData=None, shlike=False, norm_factor=None, thr_value=0.0, slopes_from_intensity=False, filtmat_tag='', **kwargs):
         super().__init__(**kwargs)
         self._shlike = shlike
         self._norm_factor = norm_factor
-        if pupdata_tag:
-            self._pupdata_tag = pupdata_tag
         self._thr_value = thr_value
         self._slopes_from_intensity = slopes_from_intensity
+        if pupdata is not None:
+            self.pupdata = pupdata  # Property set
+        if filtmat_tag:
+            self.set_filtmat(self._cm.read_data(filtmat_tag))   # TODO
 
         self._total_counts = BaseValue()
         self._subap_counts = BaseValue()
@@ -35,14 +39,6 @@ class PyrSlopec(Slopec):
         self._norm_factor = value
 
     @property
-    def pupdata_tag(self):
-        return self._pupdata_tag
-
-    @pupdata_tag.setter
-    def pupdata_tag(self, value):
-        self.load_pupdata(value)
-
-    @property
     def thr_value(self):
         return self._thr_value
 
@@ -62,8 +58,8 @@ class PyrSlopec(Slopec):
     def pupdata(self):
         return self._pupdata
 
-    def load_pupdata(self, pupdata_tag):
-        p = self._cm.read_pupils(pupdata_tag)
+    @pupdata.setter
+    def pupdata(self, p):
         if p is not None:
             self._pupdata = p
             if self._slopes_from_intensity:
@@ -71,7 +67,6 @@ class PyrSlopec(Slopec):
             else:
                 self._slopes = Slopes(len(self._pupdata.ind_pup) * 2)
             self._accumulated_slopes = Slopes(len(self._pupdata.ind_pup) * 2)
-            self._slopes.pupdata_tag = pupdata_tag
 
     def calc_slopes(self, t, accumulated=False):
         if not self._pupdata:
