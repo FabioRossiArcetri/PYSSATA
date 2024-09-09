@@ -40,7 +40,7 @@ class AtmoPropagation(BaseProcessingObj):
         for source in source_list:
             self.add_source(source)
             
-        self.inputs['layer_list'] = InputList(object=self.layer_list, element_type=Layer)
+        self.inputs['layer_list'] = InputList(object=self.layer_list, type=Layer)
 
 
     @property

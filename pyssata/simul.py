@@ -5,7 +5,9 @@ import inspect
 import importlib
 
 from pyssata.factory import Factory
+from pyssata.lib.flatten import flatten
 from pyssata.calib_manager import CalibManager
+
 
 from pyssata.display.slopec_display import SlopecDisplay
 from pyssata.display.plot_display import PlotDisplay
@@ -37,6 +39,16 @@ class Simul():
         for x in type.__mro__:
             hints.update(typing.get_type_hints(getattr(x, '__init__')))
         return hints
+    
+    def _handle_lists(self, parname, f, lst):
+        if parname.endswith('_list'):
+            return parname[:-5], [f(y) for y in lst]
+    
+    def _resolve(self, x):
+        return self.resolve_output(x)
+
+
+
 
     def build_objects(self, params):
         main = params['main']
@@ -57,31 +69,40 @@ class Simul():
 
                 pars2 = {}
                 for name, value in pars.items():
-                    if name.endswith('_data'):
+                    if name in skip_pars:
+                        continue
+
+                    if name.endswith('_list_ref'):
+                        data = [self.resolve_output(x) for x in value]
+                        pars2[name[:-4]] = data
+
+                    elif name.endswith('_ref'):
+                        data = self.resolve_output(value)
+                        pars2[name[:-4]] = data
+
+                    elif name.endswith('_data'):
                         data = cm.read_data(value)
                         pars2[name[:-5]] = data
-                    elif name.endswith('_object'):
-                        parname = name[:-7]
-                        if parname in hints:
-                            partype = hints[parname]
-                            filename = cm.filename(parname, value)  # TODO use partype instead of parname?
-                            parobj = getattr(partype, 'restore').__call__(filename)
-                            pars2[parname] = parobj
+ 
+                    elif name.endswith('_object') or name.endswith('_obj'):
+                        if name.endswith('_object'):
+                            parname = name[:-7]
                         else:
+                            parname = name[:-4]
+
+                        if parname not in hints:
                             raise ValueError(f'No type hint for parameter {parname} of class {classname}')
+
+                        partype = hints[parname]
+                        filename = cm.filename(parname, value)  # TODO use partype instead of parname?
+                        pars2[parname] = getattr(partype, 'restore').__call__(filename)
                     else:
-                        if name not in skip_pars:
-                            pars2[name] = value
+                        pars2[name] = value
+
 
                 # TODO special cases
                 if classname == 'AtmoEvolution':
                     pars2['directory'] = cm.root_subdir('phasescreen')
-                    print(classname, pars2['source_list'])
-                    sources = [self.objs[x] for x in pars2['source_list']]  
-                    pars2['source_list'] = sources
-                if classname == 'AtmoPropagation':
-                    sources = [self.objs[x] for x in pars2['source_list']]  
-                    pars2['source_list'] = sources
 
                 # Add global params if needed
                 my_params = {k: main[k] for k in args if k in main}
@@ -97,34 +118,32 @@ class Simul():
         return output_ref
 
     def connect_objects(self, params):
-        for key, pars in params.items():
+        for dest_object, pars in params.items():
             print(pars)
             if 'inputs' not in pars:
                 continue
 
-            for input_name, input_value in pars['inputs'].items():
-                if not input_name in self.objs[key].inputs:
-                    raise ValueError(f'Object {key} does does not have an input called {input_name}')
+            for input_name, output_name in pars['inputs'].items():
+                if not input_name in self.objs[dest_object].inputs:
+                    raise ValueError(f'Object {dest_object} does does not have an input called {input_name}')
+                if not isinstance(output_name, (str, list)):
+                    raise ValueError(f'Object {dest_object}: invalid input definition type {type(output_name)}')
 
-                if isinstance(input_value, str):
-                    wanted_type = self.objs[key].inputs[input_name].type
-                    output_ref = self.resolve_output(input_value)
+                wanted_type = self.objs[dest_object].inputs[input_name].type
+
+                if isinstance(output_name, str):
+                    output_ref = self.resolve_output(output_name)
                     if not isinstance(output_ref, wanted_type):
                         raise ValueError(f'Input {input_name}: output {output_ref} is not of type {wanted_type}')
-                    setattr(self.objs[key], input_name, output_ref)
 
-                elif isinstance(input_value, list):
-                    wanted_type = self.objs[key].inputs[input_name].element_type
-                    for input_ref in input_value:
-                        output_ref = self.resolve_output(input_ref)
-                        if isinstance(output_ref, list):
-                            getattr(self.objs[key], input_name).extend(output_ref) 
-                        elif isinstance(output_ref, wanted_type):
-                            getattr(self.objs[key], input_name).append(output_ref) 
-                        else:
-                            raise ValueError(f'Input {input_name}: output {output_ref} is not of type {wanted_type}')
-                else:
-                    raise ValueError(f'Object {key}: invalid input definition type {type(input_value)}')
+                elif isinstance(output_name, list):
+                    outputs = [self.resolve_output(x) for x in output_name]
+                    output_ref = flatten(outputs)
+                    for output in output_ref:
+                        if not isinstance(output, wanted_type):
+                            raise ValueError(f'Input {input_name}: output {output} is not of type {wanted_type}')
+
+                setattr(self.objs[dest_object], input_name, output_ref)
 
     def run(self):
         params = {}
