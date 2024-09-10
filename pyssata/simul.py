@@ -42,7 +42,7 @@ class Simul():
         main = params['main']
         cm = CalibManager(main['root_dir'])
         for key, pars in params.items():
-            if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control'.split():
+            if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control dm rec'.split():
                 print(key, pars)
                 try:
                     classname = pars['class']
@@ -95,8 +95,6 @@ class Simul():
         # Initialize processing objects
         pyr = factory.get_modulated_pyramid(params['pyramid'])
         ccd = factory.get_ccd(params['detector'])
-        rec = factory.get_modalrec(params['modalrec'])
-        dm = factory.get_dm(params['dm'])
 
         # Initialize display objects
         sc_disp = SlopecDisplay(slopec, disp_factor=4)

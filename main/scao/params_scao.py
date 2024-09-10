@@ -9,6 +9,7 @@ main = {
 }
 
 dm = {
+ 'class':             'DM',
  'type':              'zernike',              # modes type
  'nmodes':            54,                     # number of modes
  'npixels':           160,                    # linear dimension of DM phase array
@@ -96,8 +97,9 @@ wind_direction = {
  'constant':          [0.]#,270.,270.,90.]   # [degrees] Wind direction value
 }
 
-modalrec = {
- 'recmat_tag':        'scao_recmat'         # reconstruction matrix tag
+rec = {
+ 'class':             'Modalrec',
+ 'recmat_object':        'scao_recmat'         # reconstruction matrix tag
 }
 
 pupil_stop = {
