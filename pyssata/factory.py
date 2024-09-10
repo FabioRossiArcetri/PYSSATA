@@ -1,21 +1,20 @@
 import numpy as np
-from pyssata.display.psf_display import PSFDisplay
+
 
 from pyssata.loop_control import LoopControl
 from pyssata.calib_manager import CalibManager
 from pyssata.base_processing_obj import BaseProcessingObj
-from pyssata.processing_objects.atmo_evolution import AtmoEvolution
+from pyssata.data_objects.ifunc import IFunc
 
 from pyssata.processing_objects.ccd import CCD
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 from pyssata.processing_objects.processing_container import ProcessingContainer
 from pyssata.processing_objects.datastore import Datastore
-from pyssata.processing_objects.modalrec import ModalRec
+from pyssata.processing_objects.modalrec import Modalrec
 from pyssata.processing_objects.int_control import IntControl
 from pyssata.processing_objects.dm import DM
 from pyssata.processing_objects.func_generator import FuncGenerator
 
-from pyssata.lib.compute_zern_ifunc import compute_zern_ifunc
 
 class Factory:
     def __init__(self, params, GPU=False, NOCM=False, SINGLEGPU=False):
@@ -148,7 +147,7 @@ class Factory:
 
     def ifunc_restore(self, tag=None, type=None, npixels=None, nmodes=None, nzern=None, 
                     obsratio=None, diaratio=None, start_mode=None, mask=None, 
-                    return_inv=None, doNotPutOnGpu=None, zeroPad=None, idx_modes=None):
+                    return_inv=None, idx_modes=None):
         """
         Restore ifunc object from disk.
 
@@ -158,34 +157,12 @@ class Factory:
         Returns:
         ifunc: Restored ifunc object.
         """
-        precision = self._main['precision']
         ifunc = None
         if tag:
-            ifunc = self._cm.read_ifunc(tag, start_mode=start_mode, nmodes=nmodes, 
-                                        zeroPad=zeroPad, 
-                                        precision=precision, idx_modes=idx_modes)
-        if tag and not ifunc:
-            print(f"ifunc {tag} not present on disk!")
-        
-        if not ifunc and type:
-            if mask is not None:
-                mask = (np.array(mask) > 0).astype(float)
-            if npixels is None:
-                raise ValueError("factory::ifunc_restore --> npixels must be set!")
-            
-            type_lower = type.lower()
-            if type_lower == 'kl':
-                ifunc = compute_kl_ifunc(npixels, nmodes, obsratio=obsratio, diaratio=diaratio, 
-                                        start_mode=start_mode, mask=mask, point4radius=point4radius, 
-                                        zeroPad=zeroPad, return_inv=return_inv)
-            elif type_lower in ['zern', 'zernike']:
-                ifunc = compute_zern_ifunc(npixels, nmodes, obsratio=obsratio, diaratio=diaratio, 
-                                        start_mode=start_mode, mask=mask, zeroPad=zeroPad, return_inv=return_inv)
-            elif type_lower == 'mixed':
-                ifunc = compute_mixed_ifunc(npixels, nzern, nmodes, obsratio=obsratio, diaratio=diaratio, 
-                                            start_mode=start_mode, mask=mask, point4radius=point4radius, 
-                                            zeroPad=zeroPad, return_inv=return_inv)
-
+            ifunc = ifunc.restore(self._cm.read_ifunc(tag, get_filename=True))
+        else:
+            ifunc = IFunc(mask=mask, type=type, npixels=npixels, nzern=nzern, obsratio=obsratio,
+                          diaratio=diaratio, start_mode=start_mode, nmodes=nmodes, idx_modes=idx_modes)
         return ifunc
 
     def get_atmo_cube_container(self, source_list, params_atmo, params_seeing):
@@ -823,70 +800,6 @@ class Factory:
         self.apply_global_params(disturbance)
         disturbance.apply_properties(params)
         return disturbance
-
-    def get_dm(self, params, GPU=None, ifunc=None, m2c=None):
-        """
-        Create a DM processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        GPU (bool, optional): Flag for using GPU
-        ifunc: Influence function object
-        m2c: M2C matrix object
-
-        Returns:
-        DM: DM processing object
-        """
-        useGPU = GPU if GPU is not None else self._gpu
-        params = self.ensure_dictionary(params)
-
-        if 'm2c_tag' in params:
-            return self.get_dm_m2c(params, GPU=useGPU, ifunc=ifunc, m2c=m2c)
-        else:
-            settling_time = self.extract(params, 'settling_time', default=None, optional=True)
-
-            pixel_pitch = self._main['pixel_pitch']
-            height = params.pop('height')
-            ifunc_tag = self.extract(params, 'ifunc_tag', default=None, optional=True)
-            dm_type = self.extract(params, 'type', default=None)
-            nmodes = self.extract(params, 'nmodes', default=None)
-            nzern = self.extract(params, 'nzern', default=None, optional=True)
-            start_mode = self.extract(params, 'start_mode', default=0, optional=True)
-            idx_modes = self.extract(params, 'idx_modes', default=None, optional=True)
-            npixels = self.extract(params, 'npixels', default=None)
-            obsratio = self.extract(params, 'obsratio', default=None)
-            diaratio = self.extract(params, 'diaratio', default=1.0, optional=True)
-            doNotPutOnGpu = self.extract(params, 'doNotPutOnGpu', default=None, optional=True)
-            pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='', optional=True)
-
-            doNotBuildRecProp = self.extract(params, 'doNotBuildRecProp', default=None, optional=True)
-            notSeenByLgs = self.extract(params, 'notSeenByLgs', default=None, optional=True)
-
-            mask = None
-            if pupil_mask_tag:
-                if phase2modes_tag:
-                    print('if phase2modes_tag is defined then pupil_mask_tag will not be used!')
-                pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=useGPU)
-                if pupilstop is None:
-                    raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
-                mask = pupilstop.A
-                if not npixels:
-                    npixels = mask.shape[0]
-
-            doRestore = False
-            if not ifunc or not isinstance(ifunc, SomeValidClassType):
-                doRestore = True
-            if doRestore:
-                ifunc = self.ifunc_restore(tag=ifunc_tag, type=dm_type, npixels=npixels, nmodes=nmodes, nzern=nzern, 
-                                        obsratio=obsratio, diaratio=diaratio, mask=mask, start_mode=start_mode, 
-                                        idx_modes=idx_modes, doNotPutOnGpu=doNotPutOnGpu)
-            if ifunc is None:
-                raise ValueError(f'Error reading influence function: {ifunc_tag}')
-
-            dm = DM(pixel_pitch, height, ifunc)
-            self.apply_global_params(dm)
-            dm.apply_properties(params)
-            return dm
 
     def get_dm_m2c(self, params, GPU=None, ifunc=None, m2c=None):
         """
@@ -2130,106 +2043,6 @@ class Factory:
         self.apply_global_params(modalanalysis_wfs)
         modalanalysis_wfs.apply_properties(params)
         return modalanalysis_wfs
-
-    def get_modalrec(self, params, recmat=None, intmat=None):
-        """
-        Create a modalrec processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        recmat (optional): Reconstruction matrix
-        intmat (optional): Interaction matrix
-
-        Returns:
-        ModalRec: modalrec object
-        """
-        params = self.ensure_dictionary(params)
-
-        intmat_tag = self.extract(params, 'intmat_tag', default=None, optional=True)
-        nmodes = self.extract(params, 'nmodes', default=None, optional=True)
-        recmat_tag = self.extract(params, 'recmat_tag', default=None, optional=True)
-        projmat_tag = self.extract(params, 'projmat_tag', default=None, optional=True)
-        filtmat_tag = self.extract(params, 'filtmat_tag', default=None, optional=True)
-
-        identity = self.extract(params, 'identity', default=False, optional=True)
-        ncutmodes = self.extract(params, 'ncutmodes', default=None, optional=True)
-        nSlopesToBeDiscarded = self.extract(params, 'nSlopesToBeDiscarded', default=None, optional=True)
-        polc = self.extract(params, 'polc', default=False)
-        dmNumber = self.extract(params, 'dmNumber', default=None, optional=True)
-        noProj = self.extract(params, 'noProj', default=False)
-        projmat = None
-
-        if params.get('mPCuRed_tag'):
-            return self.get_modalrec_cured(params)
-        if params.get('nn_python'):
-            return self.get_modalrec_nn_python(params)
-        if params.get('WeightsBiases_tag'):
-            return self.get_modalrec_nn(params)
-        if params.get('WeightsBiases1_tag'):
-            return self.get_modalrec_nn_multi(params)
-
-        if polc:
-            if identity:
-                raise ValueError('identity cannot be set with POLC.')
-            if ncutmodes is not None:
-                raise ValueError('ncutmodes cannot be set with POLC.')
-            if recmat is None:
-                recmat = self._cm.read_rec(recmat_tag, doNotPutOnGpu=doNotPutOnGpu)
-            if intmat is None:
-                intmat = self._cm.read_im(intmat_tag, doNotPutOnGpu=doNotPutOnGpu)
-            if intmat is None:
-                raise ValueError(f'WARNING: intmat is null. intmat_tag is: {intmat_tag}')
-        else:
-            if recmat is None:
-                if identity:
-                    recmat = RecMat()
-                    if nmodes is None:
-                        raise ValueError('modalrec nmodes key must be set!')
-                    recmat.recmat = np.identity(nmodes)
-                else:
-                    if recmat_tag and intmat_tag:
-                        intmat = self._cm.read_im(intmat_tag, doNotPutOnGpu=doNotPutOnGpu)
-                        if nmodes:
-                            nmodes_intmat = intmat.size[0]
-                            intmat.reduce_size(nmodes_intmat - nmodes)
-                        if nSlopesToBeDiscarded:
-                            intmat.reduce_slopes(nSlopesToBeDiscarded)
-                        recmat = RecMat()  # TODO Guido qui recmat viene sovrascritto anche se recmat_tag e' valido nell'if precedente
-                        recmat.recmat = intmat.intmat
-                    else:
-                        recmat = self._cm.read_rec(recmat_tag)
-
-            if ncutmodes:
-                if recmat is not None:
-                    recmat.reduce_size(ncutmodes)
-                else:
-                    print('recmat cannot be reduced because it is null.')
-
-        if projmat_tag and not noProj:
-            projmat = self._cm.read_rec(projmat_tag, doNotPutOnGpu=doNotPutOnGpu)
-
-        if recmat is None:
-            if projmat and recmat.proj_list and not noProj:
-                if dmNumber is not None:
-                    if dmNumber <= 0:
-                        raise ValueError('dmNumber must be > 0')
-                    projmat = RecMat() # TODO Guido qui projmat viene sovrascritto anche se e' valido nell'if precedente
-                    projmat.recmat = recmat.proj_list[dmNumber - 1]
-                else:
-                    raise ValueError('dmNumber (>0) must be defined if projmat_tag is not defined!')
-
-        if filtmat_tag:
-            filtmat = self._cm.read_data(filtmat_tag)
-            recmat_orig = recmat.recmat
-            recmat_new = np.matmul(recmat_orig, filtmat)
-            recmat.recmat = recmat_new
-            print('recmat updated with filmat!')
-            stop
-
-        modalrec = ModalRec(recmat, intmat=intmat, projmat=projmat, polc=polc)
-        self.apply_global_params(modalrec)
-        modalrec.apply_properties(params)
-        return modalrec
 
     def get_modalrec_nn(self, params):
         """
