@@ -66,7 +66,7 @@ class Simul():
                         if parname in hints:
                             partype = hints[parname]
                             filename = cm.filename(parname, value)
-                            parobj = getattr(partype, 'restore').__call__(filename)
+                            parobj = partype.restore(filename)
                             pars2[parname] = parobj
                             del pars2[name]
                         else:
