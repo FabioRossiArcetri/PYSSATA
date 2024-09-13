@@ -71,9 +71,15 @@ class Simul():
         # Initialize housekeeping objects
         factory = Factory(params['main'])
 
-        # Initialize processing objects
-        pyramid = factory.get_modulated_pyramid(params['pyramid'])
-        detector = factory.get_ccd(params['detector'])
+        # Initialize processing objects (waiting for porting of the relevant constructors)
+        pyr_params = params['pyramid'].copy()
+        ccd_params= params['detector'].copy()
+        if 'inputs' in pyr_params:
+            del pyr_params['inputs']
+        if 'inputs' in ccd_params:
+            del ccd_params['inputs']
+        pyramid = factory.get_modulated_pyramid(pyr_params)
+        detector = factory.get_ccd(ccd_params)
 
         for key, pars in params.items():
             if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control dm rec'.split():
@@ -175,7 +181,6 @@ class Simul():
 
         # Actual creation code
         self.build_objects(params)
-        self.connect_objects(params)
 
         # TODO temporary hack, locals() does not work
         for name, obj in self.objs.items():
@@ -190,17 +195,8 @@ class Simul():
 
         # Connect processing objects
         pyramid.in_ef = prop.pupil_list[0]
-        detector.in_i = pyramid.out_i
-        slopec.in_pixels = detector.out_pixels
-        rec.in_slopes = slopec.out_slopes
-        control.in_delta_comm = rec.out_modes
-        #dm.in_command = control.out_comm
-        dm.in_command = rec.out_modes
-        psf.in_ef = pyramid.in_ef
-        atmo.seeing = seeing.output
-        atmo.wind_speed = wind_speed.output
-        atmo.wind_direction = wind_direction.output
         
+        self.connect_objects(params)
         self.connect_datastore(store, params)
 
         # Build loop

@@ -20,6 +20,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         
         # Will be populated by derived class
         self.inputs = {}
+        self.outputs = {}
 
     @property
     def verbose(self):

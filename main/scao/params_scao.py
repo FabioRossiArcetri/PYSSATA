@@ -79,18 +79,27 @@ detector = {
  'photon_noise':      True,                     # activate photon noise
  'readout_noise':     True,                     # activate readout noise
  'readout_level':     1.0,                    # readout noise in [e-/pix/frame]
- 'quantum_eff':       0.32                    # quantum efficiency * total transmission
+ 'quantum_eff':       0.32,                   # quantum efficiency * total transmission
+ 'inputs': { 
+    'in_i': 'pyramid.out_i',
+ }
 }
 
 slopec = {
  'class':             'PyrSlopec',
  'pupdata_object':    'scao_pup',             # tag of the pyramid WFS pupils
  'sn_object':         'scao_sn',               # tag of the slope reference vector
+ 'inputs' : {
+   'in_pixels': 'detector.out_pixels',
+ }
 }
 
 rec = {
  'class':             'Modalrec',
- 'recmat_object':        'scao_recmat'         # reconstruction matrix tag
+ 'recmat_object':        'scao_recmat',         # reconstruction matrix tag
+ 'inputs': {
+    'in_slopes':  'slopec.out_slopes'
+ }
 }
 
 control = {
@@ -105,13 +114,19 @@ dm = {
  'nmodes':            54,                     # number of modes
  'npixels':           160,                    # linear dimension of DM phase array
  'obsratio':          0.1,                    # obstruction dimension ratio w.r.t. diameter
- 'height':            0                       # DM height [m]
+ 'height':            0,                      # DM height [m]
+ 'inputs': {
+   'in_command': 'rec.out_modes'              # TODO skip control object for now
+ }
 }
 
 psf = {
  'class':             'PSF',
  'wavelengthInNm':    1650,                 # [nm] Imaging wavelength
  'nd':                8,                    # padding coefficient for PSF computation
- 'start_time':        0.05                 # PSF integration start time
+ 'start_time':        0.05,                # PSF integration start time
+ 'inputs': {
+    'in_ef':  'pyramid.in_ef'
+ }
 }
 
