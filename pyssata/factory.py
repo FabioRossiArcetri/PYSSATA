@@ -9,9 +9,7 @@ from pyssata.data_objects.ifunc import IFunc
 from pyssata.processing_objects.ccd import CCD
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 from pyssata.processing_objects.processing_container import ProcessingContainer
-from pyssata.processing_objects.modalrec import Modalrec
 from pyssata.processing_objects.int_control import IntControl
-from pyssata.processing_objects.dm import DM
 from pyssata.processing_objects.func_generator import FuncGenerator
 
 
