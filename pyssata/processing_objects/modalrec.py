@@ -1,15 +1,72 @@
 import numpy as np
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.data_objects.intmat import Intmat
 from pyssata.data_objects.recmat import Recmat
 from pyssata.data_objects.slopes import Slopes
 from pyssata.processing_objects.cheat import Cheat
 
-
-class ModalRec(BaseProcessingObj):
+    
+class Modalrec(BaseProcessingObj):
     '''Modal reconstructor'''
 
-    def __init__(self, recmat=None, projmat=None, intmat=None, polc=None):
+    def __init__(self,
+                 nmodes: int=None,
+                 recmat: Recmat=None,
+                 projmat: Recmat=None,
+                 intmat: Intmat=None,
+                 polc: bool=False,
+                 filtmat: np.ndarray=None,
+                 identity: bool=False,
+                 ncutmodes: int=None,
+                 nSlopesToBeDiscarded: int=None,
+                 dmNumber: int=0,
+                 noProj: bool=False,
+                ):
+        super().__init__()
+
+        if polc:
+            if identity:
+                raise ValueError('identity cannot be set with POLC.')
+            if ncutmodes is not None:
+                raise ValueError('ncutmodes cannot be set with POLC.')
+        else:
+            if recmat is None:
+                if identity:
+                    recmat = Recmat()
+                    if nmodes is None:
+                        raise ValueError('modalrec nmodes key must be set!')
+                    recmat.recmat = np.identity(nmodes)
+                elif intmat:
+                    if nmodes:
+                        nmodes_intmat = intmat.size[0]
+                        intmat.reduce_size(nmodes_intmat - nmodes)
+                    if nSlopesToBeDiscarded:
+                        intmat.reduce_slopes(nSlopesToBeDiscarded)
+                    recmat = Recmat()
+                    recmat.recmat = intmat.intmat
+
+            if ncutmodes:
+                if recmat is not None:
+                    recmat.reduce_size(ncutmodes)
+                else:
+                    print('recmat cannot be reduced because it is null.')
+
+
+        if recmat is not None:
+            if projmat is None and recmat.proj_list and not noProj:
+                if dmNumber is not None:
+                    if dmNumber <= 0:
+                        raise ValueError('dmNumber must be > 0')
+                    projmat = Recmat()
+                    projmat.recmat = recmat.proj_list[dmNumber - 1]
+                else:
+                    raise ValueError('dmNumber (>0) must be defined if projmat_tag is not defined!')
+
+        if filtmat is not None and recmat is not None:
+            recmat.recmat = recmat.recmat @ filtmat
+            print('recmat updated with filmat!')
+
         self._recmat = recmat if recmat is not None else Recmat()
         self._projmat = projmat
         self._intmat = intmat
@@ -23,7 +80,6 @@ class ModalRec(BaseProcessingObj):
         self._modes = BaseValue('output modes from modal reconstructor')
         self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor')
         self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor')
-        super().__init__()
 
     def set_layer_modes_list(self):
         if self._recmat.modes2recLayer is not None:

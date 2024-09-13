@@ -3,10 +3,12 @@ import re
 import typing
 import inspect
 import importlib
+from pyssata.base_processing_obj import BaseProcessingObj
 
 from pyssata.factory import Factory
 from pyssata.lib.flatten import flatten
 from pyssata.calib_manager import CalibManager
+from pyssata.processing_objects.datastore import Datastore
 
 
 from pyssata.display.slopec_display import SlopecDisplay
@@ -47,16 +49,34 @@ class Simul():
     def _resolve(self, x):
         return self.resolve_output(x)
 
+    def resolve_output(self, output_name):
+        if '.' in output_name:
+            obj_name, attr_name = output_name.split('.')
+            output_ref = getattr(self.objs[obj_name], attr_name)
+        else:
+            output_ref = self.objs[output_name]
+        return output_ref
 
-
+    def connect_datastore(self, store, params):
+        if 'store' in params['main']:
+            for name, output_ref in params['main']['store'].items():
+                output = self.resolve_output(output_ref)
+                store.add(output, name=name)
 
     def build_objects(self, params):
         main = params['main']
         cm = CalibManager(main['root_dir'])
         skip_pars = 'class inputs'.split()
 
+        # Initialize housekeeping objects
+        factory = Factory(params['main'])
+
+        # Initialize processing objects
+        pyramid = factory.get_modulated_pyramid(params['pyramid'])
+        detector = factory.get_ccd(params['detector'])
+
         for key, pars in params.items():
-            if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control'.split():
+            if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control dm rec'.split():
                 print(key, pars)
                 try:
                     classname = pars['class']
@@ -83,10 +103,14 @@ class Simul():
                     elif name.endswith('_data'):
                         data = cm.read_data(value)
                         pars2[name[:-5]] = data
- 
-                    elif name.endswith('_object') or name.endswith('_obj'):
-                        if name.endswith('_object'):
-                            parname = name[:-7]
+
+                    elif name.endswith('_object'):
+                        parname = name[:-7]
+                        if parname in hints:
+                            partype = hints[parname]
+                            filename = cm.filename(parname, value)
+                            parobj = partype.restore(filename)
+                            pars2[parname] = parobj
                         else:
                             parname = name[:-4]
 
@@ -105,14 +129,10 @@ class Simul():
                     my_params['data_dir'] = cm.root_subdir(classname)
                 my_params.update(pars2)
                 self.objs[key] = klass(**my_params)
-
-    def resolve_output(self, output_name):
-        if '.' in output_name:
-            obj_name, attr_name = output_name.split('.')
-            output_ref = getattr(self.objs[obj_name], attr_name)
-        else:
-            output_ref = self.objs[output_name]
-        return output_ref
+            elif key == 'pyramid':
+                self.objs['pyramid'] = pyramid
+            elif key == 'detector':
+                self.objs['detector'] = detector
 
     def connect_objects(self, params):
         for dest_object, pars in params.items():
@@ -151,15 +171,8 @@ class Simul():
         # Initialize housekeeping objects
         factory = Factory(params['main'])
         loop = factory.get_loop_control()
-        store = factory.get_datastore()
+        store = Datastore(params['main']['store_dir'])
 
-        # Initialize processing objects - leftovers from conversion
-        pyr = factory.get_modulated_pyramid(params['pyramid'])
-        ccd = factory.get_ccd(params['detector'])
-        rec = factory.get_modalrec(params['modalrec'])
-        dm = factory.get_dm(params['dm'])
-        self.objs['dm'] = dm
-        
         # Actual creation code
         self.build_objects(params)
         self.connect_objects(params)
@@ -176,32 +189,26 @@ class Simul():
         psf_disp = PSFDisplay(psf.out_psf, window=14,  title='PSF')
 
         # Connect processing objects
-        pyr.in_ef = prop.pupil_list[0]
-        ccd.in_i = pyr.out_i
-        slopec.in_pixels = ccd.out_pixels
+        pyramid.in_ef = prop.pupil_list[0]
+        detector.in_i = pyramid.out_i
+        slopec.in_pixels = detector.out_pixels
         rec.in_slopes = slopec.out_slopes
         control.in_delta_comm = rec.out_modes
         #dm.in_command = control.out_comm
         dm.in_command = rec.out_modes
-        psf.in_ef = pyr.in_ef
+        psf.in_ef = pyramid.in_ef
+        atmo.seeing = seeing.output
+        atmo.wind_speed = wind_speed.output
+        atmo.wind_direction = wind_direction.output
         
-        # Set store data
-        store.add(psf.out_sr, name='sr')
-        store.add(pyr.in_ef, name='res_ef')
+        self.connect_datastore(store, params)
 
         # Build loop
-        loop.add(seeing)
-        loop.add(wind_speed)
-        loop.add(wind_direction)
-        loop.add(atmo)
-        loop.add(prop)
-        loop.add(pyr)
-        loop.add(ccd)
-        loop.add(slopec)
-        loop.add(rec)
-        loop.add(control)
-        loop.add(dm)
-        loop.add(psf)
+        for name, obj in self.objs.items():
+            if isinstance(obj, BaseProcessingObj):
+                if name not in ['control']:
+                    loop.add(obj)
+
         loop.add(store)
         loop.add(sc_disp)
         loop.add(sr_disp)
