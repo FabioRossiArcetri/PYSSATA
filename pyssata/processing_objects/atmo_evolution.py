@@ -98,7 +98,6 @@ class AtmoEvolution(BaseProcessingObj):
         if seed is not None:
             self.seed = seed
 
-        # TODO this is not really used, it can only be useful for type checks
         self.inputs['seeing'] = InputValue(object=self._seeing, type=BaseValue)
         self.inputs['wind_speed'] = InputValue(object=self._wind_speed, type=BaseValue)
         self.inputs['wind_direction'] = InputValue(object=self._wind_direction, type=BaseValue)
