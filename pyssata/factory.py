@@ -9,10 +9,7 @@ from pyssata.data_objects.ifunc import IFunc
 from pyssata.processing_objects.ccd import CCD
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 from pyssata.processing_objects.processing_container import ProcessingContainer
-from pyssata.processing_objects.datastore import Datastore
-from pyssata.processing_objects.modalrec import Modalrec
 from pyssata.processing_objects.int_control import IntControl
-from pyssata.processing_objects.dm import DM
 from pyssata.processing_objects.func_generator import FuncGenerator
 
 
@@ -597,15 +594,6 @@ class Factory:
             return self.get_lut_control(params, offset=offset)
         else:
             raise ValueError(f'Unknown control type: {control_type}')
-
-    def get_datastore(self):
-        """
-        Create a datastore processing object.
-
-        Returns:
-        Datastore: Datastore processing object
-        """
-        return Datastore()
 
     def get_demodulate(self, demodulate_params):
         """
