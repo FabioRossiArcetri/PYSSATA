@@ -52,6 +52,7 @@ class Simul():
     def resolve_output(self, output_name):
         if '.' in output_name:
             obj_name, attr_name = output_name.split('.')
+            # TODO will be replaced by input/output get/set methods
             output_ref = getattr(self.objs[obj_name], attr_name)
         else:
             output_ref = self.objs[output_name]
@@ -105,7 +106,6 @@ class Simul():
                     elif name.endswith('_dict_ref'):
                         data = {x : self.resolve_output(x) for x in value}
                         pars2[name[:-4]] = data
-                        print(data)
 
                     elif name.endswith('_ref'):
                         data = self.resolve_output(value)
@@ -171,6 +171,7 @@ class Simul():
                         if not isinstance(output, wanted_type):
                             raise ValueError(f'Input {input_name}: output {output} is not of type {wanted_type}')
 
+                # TODO will be replaced by input/output get/set methods
                 setattr(self.objs[dest_object], input_name, output_ref)
 
     def run(self):
@@ -194,7 +195,7 @@ class Simul():
         # Initialize display objects
         sc_disp = SlopecDisplay(slopec, disp_factor=4)
         sr_disp = PlotDisplay(psf.out_sr, window=11, title='SR')
-        ph_disp = PhaseDisplay(prop.pupil_list[0], window=12, disp_factor=2)
+        ph_disp = PhaseDisplay(prop.pupil_dict['on_axis_source'], window=12, disp_factor=2)
         dm_disp = PhaseDisplay(dm.out_layer, window=13, title='DM')
         psf_disp = PSFDisplay(psf.out_psf, window=14,  title='PSF')
 
