@@ -7,17 +7,54 @@ from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.make_mask import make_mask
 from pyssata.lib.toccd import toccd
 
+
 class ModulatedPyramid(BaseProcessingObj):
-    def __init__(self, wavelength_in_nm, fov_res, fp_masking, fft_res, tilt_scale, fft_sampling, 
-                 fft_padding, fft_totsize, toccd_side, final_ccd_side, fp_obs=None, pyr_tlt_coeff=None, 
-                 pyr_edge_def_ld=0.0, pyr_tip_def_ld=0.0, pyr_tip_maya_ld=0.0):
-        
+    def __init__(self,
+                 pixel_pupil: int,
+                 pixel_pitch: float,
+                 wavelengthInNm: float,
+                 fov: float,
+                 pup_diam: int,
+                 output_resolution: int,
+                 mod_amp: float = 3.0,
+                 mod_step: int = None,
+                 fov_errinf: float = 0.5,
+                 fov_errsup: float = 2,
+                 pup_dist: int = None,
+                 pup_margin: int = 2,
+                 fft_res: float = 3.0,
+                 fp_obs: float = None,
+                 pup_shifts = (0.0, 0.0),
+                 pyr_tlt_coeff: float = None,
+                 pyr_edge_def_ld: float = 0.0,
+                 pyr_tip_def_ld: float = 0.0,
+                 pyr_tip_maya_ld: float = 0.0,
+                 min_pup_dist: float = None,
+                 ):
         super().__init__()
+        
+        DpupPix = pixel_pupil
+        FoV = fov
+        ccd_side = output_resolution        
+        result = ModulatedPyramid.calc_geometry(DpupPix, pixel_pitch, wavelengthInNm, FoV, pup_diam, ccd_side,
+                                            fov_errinf=fov_errinf, fov_errsup=fov_errsup, pup_dist=pup_dist, pup_margin=pup_margin,
+                                            fft_res=fft_res, min_pup_dist=min_pup_dist, NOTEST=True)
+
+        wavelengthInNm = result['wavelengthInNm']
+        fov_res = result['fov_res']
+        fp_masking = result['fp_masking']
+        fft_res = result['fft_res']
+        tilt_scale = result['tilt_scale']
+        fft_sampling = result['fft_sampling']
+        fft_padding = result['fft_padding']
+        fft_totsize = result['fft_totsize']
+        toccd_side = result['toccd_side']
+        final_ccd_side = result['final_ccd_side']
 
         # Compute focal plane central obstruction dimension ratio                 
         fp_obsratio = fp_obs / (fft_totsize / fft_res) if fp_obs is not None else 0
 
-        self._wavelength_in_nm = wavelength_in_nm
+        self._wavelength_in_nm = wavelengthInNm
         self._fov_res = fov_res
         self._fp_masking = fp_masking
         self._fp_obsratio = fp_obsratio
@@ -33,15 +70,24 @@ class ModulatedPyramid(BaseProcessingObj):
         self._pyr_tip_def_ld = pyr_tip_def_ld
         self._pyr_tip_maya_ld = pyr_tip_maya_ld
         self._rotAnglePhInDeg = 0
-        self._mod_amp = 0
-        self._mod_steps = 0
-        self._pup_shifts = None
+        self._pup_shifts = pup_shifts
 
         if not all([fft_res, fov_res, tilt_scale, fft_sampling, fft_totsize, toccd_side, final_ccd_side]):
-            return
+            raise Exception('Not all geometry settings have been calculated')
+
+        min_mod_step = round(max([1., mod_amp / 2. * 8.])) * 2.
+        if mod_step is None:
+            mod_step = min_mod_step
+        else:
+            if mod_step < min_mod_step:
+                print(f' Attention mod_step={mod_step} is too low!')
+                print(f' Would you like to change it to {min_mod_step}? [y,n]')
+                ans = input()
+                if ans.lower() == 'y':
+                    print(' mod_step changed.')
+                    mod_step = min_mod_step
 
         self._out_i = Intensity(final_ccd_side, final_ccd_side)
-
         self._psf_tot = BaseValue(np.zeros((fft_totsize, fft_totsize)))
         self._psf_bfm = BaseValue(np.zeros((fft_totsize, fft_totsize)))
         self._out_transmission = BaseValue(0)
@@ -56,10 +102,13 @@ class ModulatedPyramid(BaseProcessingObj):
         self._myexp = np.exp(-2 * np.pi * iu * self._pyr_tlt)
 
         # Pre-computation of ttexp will be done when mod_steps will be set or re-set
+        if int(mod_step) != mod_step:
+            raise ValueError('Modulation step number is not an integer')
+
+        self._mod_amp = mod_amp
+        self._mod_steps = int(mod_step)
         self._ttexp = {}
-        # Trigger cache
-        self.mod_amp = 3
-        self.mod_steps = 32
+        self.cache_ttexp()
 
     @property
     def mod_amp(self):
@@ -427,13 +476,13 @@ class ModulatedPyramid(BaseProcessingObj):
         if phot == 0:
             print('WARNING: total intensity at PYR entrance is zero')
 
-        if self._pup_shifts is not None:
-            self._pup_shifts.trigger(t)
+        # TODO handle shifts as an input from a func generator (for time-varying shifts)
+        if self._pup_shifts is not None and self._pup_shifts != (0.0, 0.0):
             image = np.pad(pup_pyr_tot, 1, mode='constant')
             imscale = float(self._fft_totsize) / float(self._toccd_side)
 
-            pup_shiftx = self._pup_shifts.output.value[0] * imscale
-            pup_shifty = self._pup_shifts.output.value[1] * imscale
+            pup_shiftx = self._pup_shifts[0] * imscale
+            pup_shifty = self._pup_shifts[1] * imscale
 
             image = self.interpolate(image, np.arange(self._fft_totsize + 2) - pup_shiftx, 
                                      np.arange(self._fft_totsize + 2) - pup_shifty, grid=True, missing=0)
@@ -493,15 +542,17 @@ class ModulatedPyramid(BaseProcessingObj):
     def minmax(array):
         return np.min(array), np.max(array)
 
+    # TODO needed for extended source
     @staticmethod
     def zern(mode, xx, yy):
         raise NotImplementedError
 
-
+    # TODO needed for shifts
     @staticmethod
     def interpolate(image, x, y, grid=False, missing=0):
         raise NotImplementedError
 
+    # TODO needed for image rotation
     @staticmethod
     def ROT_AND_SHIFT_IMAGE(image, angle, shift, scale, use_interpolate=False):
         raise NotImplementedError

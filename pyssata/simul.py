@@ -65,11 +65,10 @@ class Simul():
         loop = factory.get_loop_control()
 
         # Initialize processing objects
-        pyramid = factory.get_modulated_pyramid(params['pyramid'])
         detector = factory.get_ccd(params['detector'])
 
         for key, pars in params.items():
-            if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control dm rec'.split():
+            if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction pyramid control dm rec'.split():
                 print(key, pars)
                 try:
                     classname = pars['class']
@@ -113,9 +112,6 @@ class Simul():
                 my_params = {k: main[k] for k in args if k in main}
                 my_params.update(pars2)
                 self.objs[key] = klass(**my_params)
-                globals()[key] = self.objs[key]       # TODO temporary hack, locals() does not work
-            elif key == 'pyramid':
-                self.objs['pyramid'] = pyramid
                 globals()[key] = self.objs[key]       # TODO temporary hack, locals() does not work
             elif key == 'detector':
                 self.objs['detector'] = detector

@@ -53,6 +53,7 @@ prop = {
 }
 
 pyramid = {
+ 'class':             'ModulatedPyramid',
  'pup_diam':          30.,                     # Pupil diameter in subaps.
  'pup_dist':          36.,                     # Separation between pupil centers in subaps.
  'fov':               2.0,                     # Requested field-of-view [arcsec]
