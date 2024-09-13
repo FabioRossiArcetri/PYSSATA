@@ -5,13 +5,13 @@ from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.ef import ElectricField
 from pyssata.lib.layers2pupil_ef import layers2pupil_ef
 from pyssata.base_list import BaseList
-from pyssata.connections import InputList
+from pyssata.connections import InputList, OutputValue
 from pyssata.data_objects.layer import Layer
 
 class AtmoPropagation(BaseProcessingObj):
     '''Atmospheric propagation'''
     def __init__(self,
-                 source_list,
+                 source_dict,
                  pixel_pupil: int,
                  pixel_pitch: float,
                  precision=0,
@@ -37,8 +37,10 @@ class AtmoPropagation(BaseProcessingObj):
         self._wavelengthInNm = wavelengthInNm
         self._propagators = None
 
-        for source in source_list:
+        for i, (name, source) in enumerate(source_dict.items()):
             self.add_source(source)
+            self.outputs[name] = OutputValue(object=self._pupil_list[i], type=ElectricField)
+            setattr(self, name, self._pupil_list[i])
             
         self.inputs['layer_list'] = InputList(object=self.layer_list, type=Layer)
 

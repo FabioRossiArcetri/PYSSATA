@@ -82,7 +82,7 @@ class Simul():
         detector = factory.get_ccd(ccd_params)
 
         for key, pars in params.items():
-            if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control dm rec'.split():
+            if key in 'pupilstop slopec psf on_axis_source prop atmo seeing wind_speed wind_direction control dm rec'.split():
                 print(key, pars)
                 try:
                     classname = pars['class']
@@ -101,6 +101,11 @@ class Simul():
                     if name.endswith('_list_ref'):
                         data = [self.resolve_output(x) for x in value]
                         pars2[name[:-4]] = data
+
+                    elif name.endswith('_dict_ref'):
+                        data = {x : self.resolve_output(x) for x in value}
+                        pars2[name[:-4]] = data
+                        print(data)
 
                     elif name.endswith('_ref'):
                         data = self.resolve_output(value)
@@ -193,9 +198,6 @@ class Simul():
         dm_disp = PhaseDisplay(dm.out_layer, window=13, title='DM')
         psf_disp = PSFDisplay(psf.out_psf, window=14,  title='PSF')
 
-        # Connect processing objects
-        pyramid.in_ef = prop.pupil_list[0]
-        
         self.connect_objects(params)
         self.connect_datastore(store, params)
 

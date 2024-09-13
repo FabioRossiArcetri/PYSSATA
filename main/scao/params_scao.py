@@ -28,7 +28,7 @@ wind_direction = {
  'constant':          [0.]#,270.,270.,90.]   # [degrees] Wind direction value
 }
 
-wfs_source = {
+on_axis_source = {
  'class':             'Source',
  'polar_coordinate':  [0.0, 0.0],           # [arcsec, degrees] source polar coordinates
  'magnitude':         8,                    # source magnitude
@@ -44,7 +44,7 @@ atmo = {
  'L0':                40,                   # [m] Outer scale
  'heights':           np.array([119.]), #,837,3045,12780]), # [m] layer heights at 0 zenith angle
  'Cn2':               np.array([0.70]), #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
- 'source_list_ref':       ['wfs_source'],
+ 'source_list_ref':       ['on_axis_source'],
  'inputs': {
     'seeing' : 'seeing.output',
     'wind_speed': 'wind_speed.output',
@@ -54,7 +54,7 @@ atmo = {
 
 prop = {
  'class':             'AtmoPropagation',
- 'source_list_ref':       ['wfs_source'],
+ 'source_dict_ref':       ['on_axis_source'],
  'inputs': {
    'layer_list': ['atmo.layer_list',
                   'pupilstop',
@@ -70,6 +70,9 @@ pyramid = {
  'output_resolution': 80,                      # Output sampling [usually corresponding to
  										    # CCD pixels]
  'wavelengthInNm':    750,                     # [nm] Pyramid wavelength
+ 'inputs': {
+     'in_ef': 'prop.on_axis_source'
+ }
 }
 
 detector = {
