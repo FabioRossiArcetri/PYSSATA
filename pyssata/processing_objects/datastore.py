@@ -14,13 +14,13 @@ from pyssata.data_objects.slopes import Slopes
 class Datastore(BaseProcessingObj):
     '''Data storage object'''
 
-    def __init__(self):
+    def __init__(self, store_dir: str):
         super().__init__()
         self._items = {}
         self._storage = {}
         self._decimation_t = 0
         self._data_filename = ''
-        self._tn_dir = ''
+        self._tn_dir = store_dir
 
     def add(self, data_obj, name=None):
         if name is None:
