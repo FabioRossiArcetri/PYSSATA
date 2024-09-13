@@ -3,6 +3,7 @@ import re
 import typing
 import inspect
 import importlib
+from pyssata.base_processing_obj import BaseProcessingObj
 
 from pyssata.factory import Factory
 from pyssata.calib_manager import CalibManager
@@ -45,6 +46,12 @@ class Simul():
             output_ref = self.objs[output_name]
         return output_ref
 
+    def connect_datastore(self, store, params):
+        if 'store' in params['main']:
+            for name, output_ref in params['main']['store'].items():
+                output = self.resolve_output(output_ref)
+                store.add(output, name=name)
+                
     def run(self):
         params = {}
         exec(open(self.param_file).read(), params)
@@ -52,6 +59,14 @@ class Simul():
         main = params['main']
         cm = CalibManager(main['root_dir'])
         store = Datastore(main['store_dir'])
+
+        # Initialize housekeeping objects
+        factory = Factory(params['main'])
+        loop = factory.get_loop_control()
+
+        # Initialize processing objects
+        pyramid = factory.get_modulated_pyramid(params['pyramid'])
+        detector = factory.get_ccd(params['detector'])
 
         for key, pars in params.items():
             if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control dm rec'.split():
@@ -99,20 +114,12 @@ class Simul():
                 my_params.update(pars2)
                 self.objs[key] = klass(**my_params)
                 globals()[key] = self.objs[key]       # TODO temporary hack, locals() does not work
-
-
-
-
-        # Initialize housekeeping objects
-        factory = Factory(params['main'])
-        loop = factory.get_loop_control()
-
-        # Initialize processing objects
-        pyr = factory.get_modulated_pyramid(params['pyramid'])
-        ccd = factory.get_ccd(params['detector'])
-
-        self.objs['pyramid'] = pyr
-        self.objs['detector'] = ccd
+            elif key == 'pyramid':
+                self.objs['pyramid'] = pyramid
+                globals()[key] = self.objs[key]       # TODO temporary hack, locals() does not work
+            elif key == 'detector':
+                self.objs['detector'] = detector
+                globals()[key] = self.objs[key]       # TODO temporary hack, locals() does not work
 
         # Initialize display objects
         sc_disp = SlopecDisplay(slopec, disp_factor=4)
@@ -129,37 +136,26 @@ class Simul():
         prop.add_layer_to_layer_list(dm.out_layer)
 
         # Connect processing objects
-        pyr.in_ef = prop.pupil_list[0]
-        ccd.in_i = pyr.out_i
-        slopec.in_pixels = ccd.out_pixels
+        pyramid.in_ef = prop.pupil_list[0]
+        detector.in_i = pyramid.out_i
+        slopec.in_pixels = detector.out_pixels
         rec.in_slopes = slopec.out_slopes
         control.in_delta_comm = rec.out_modes
         #dm.in_command = control.out_comm
         dm.in_command = rec.out_modes
-        psf.in_ef = pyr.in_ef
+        psf.in_ef = pyramid.in_ef
         atmo.seeing = seeing.output
         atmo.wind_speed = wind_speed.output
         atmo.wind_direction = wind_direction.output
         
-        # Setup datastore connections
-        if 'store' in params['main']:
-            for name, output_ref in params['main']['store'].items():
-                output = self.resolve_output(output_ref)
-                store.add(output, name=name)
+        self.connect_datastore(store, params)
 
         # Build loop
-        loop.add(seeing)
-        loop.add(wind_speed)
-        loop.add(wind_direction)
-        loop.add(atmo)
-        loop.add(prop)
-        loop.add(pyr)
-        loop.add(ccd)
-        loop.add(slopec)
-        loop.add(rec)
-        loop.add(control)
-        loop.add(dm)
-        loop.add(psf)
+        for name, obj in self.objs.items():
+            if isinstance(obj, BaseProcessingObj):
+                if name not in ['control']:
+                    loop.add(obj)
+
         loop.add(store)
         loop.add(sc_disp)
         loop.add(sr_disp)
