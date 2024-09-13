@@ -6,6 +6,7 @@ import importlib
 
 from pyssata.factory import Factory
 from pyssata.calib_manager import CalibManager
+from pyssata.processing_objects.datastore import Datastore
 
 from pyssata.display.slopec_display import SlopecDisplay
 from pyssata.display.plot_display import PlotDisplay
@@ -16,6 +17,7 @@ class Simul():
     
     def __init__(self, param_file):
         self.param_file = param_file
+        self.objs = {}
 
     def _camelcase_to_snakecase(self, s):
         tokens = re.findall('[A-Z]+[0-9a-z]*', s)
@@ -35,12 +37,22 @@ class Simul():
             hints.update(typing.get_type_hints(getattr(x, '__init__')))
         return hints
 
+    def resolve_output(self, output_name):
+        if '.' in output_name:
+            obj_name, attr_name = output_name.split('.')
+            output_ref = getattr(self.objs[obj_name], attr_name)
+        else:
+            output_ref = self.objs[output_name]
+        return output_ref
+
     def run(self):
         params = {}
         exec(open(self.param_file).read(), params)
 
         main = params['main']
         cm = CalibManager(main['root_dir'])
+        store = Datastore(main['store_dir'])
+
         for key, pars in params.items():
             if key in 'pupilstop slopec psf wfs_source prop atmo seeing wind_speed wind_direction control dm rec'.split():
                 print(key, pars)
@@ -85,16 +97,22 @@ class Simul():
                 # Add global params if needed
                 my_params = {k: main[k] for k in args if k in main}
                 my_params.update(pars2)
-                globals()[key] = klass(**my_params)  # TODO temporary hack, locals() does not work
+                self.objs[key] = klass(**my_params)
+                globals()[key] = self.objs[key]       # TODO temporary hack, locals() does not work
+
+
+
 
         # Initialize housekeeping objects
         factory = Factory(params['main'])
         loop = factory.get_loop_control()
-        store = factory.get_datastore()
 
         # Initialize processing objects
         pyr = factory.get_modulated_pyramid(params['pyramid'])
         ccd = factory.get_ccd(params['detector'])
+
+        self.objs['pyramid'] = pyr
+        self.objs['detector'] = ccd
 
         # Initialize display objects
         sc_disp = SlopecDisplay(slopec, disp_factor=4)
@@ -123,9 +141,11 @@ class Simul():
         atmo.wind_speed = wind_speed.output
         atmo.wind_direction = wind_direction.output
         
-        # Set store data
-        store.add(psf.out_sr, name='sr')
-        store.add(pyr.in_ef, name='res_ef')
+        # Setup datastore connections
+        if 'store' in params['main']:
+            for name, output_ref in params['main']['store'].items():
+                output = self.resolve_output(output_ref)
+                store.add(output, name=name)
 
         # Build loop
         loop.add(seeing)
