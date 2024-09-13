@@ -119,24 +119,18 @@ class Simul():
                         parname = name[:-7]
                         if parname in hints:
                             partype = hints[parname]
-                            filename = cm.filename(parname, value)
+                            filename = cm.filename(parname, value)  # TODO use partype instead of parname?
                             parobj = partype.restore(filename)
                             pars2[parname] = parobj
                         else:
-                            parname = name[:-4]
-
-                        if parname not in hints:
                             raise ValueError(f'No type hint for parameter {parname} of class {classname}')
 
-                        partype = hints[parname]
-                        filename = cm.filename(parname, value)  # TODO use partype instead of parname?
-                        pars2[parname] = getattr(partype, 'restore').__call__(filename)
                     else:
                         pars2[name] = value
 
                 # Add global and class-specific params if needed
                 my_params = {k: main[k] for k in args if k in main}
-                if 'data_dir' in args:
+                if 'data_dir' in args:  # TODO special case
                     my_params['data_dir'] = cm.root_subdir(classname)
                 my_params.update(pars2)
                 self.objs[key] = klass(**my_params)
