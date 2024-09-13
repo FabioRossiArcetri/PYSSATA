@@ -38,7 +38,7 @@ class ModulatedPyramid(BaseProcessingObj):
         ccd_side = output_resolution        
         result = ModulatedPyramid.calc_geometry(DpupPix, pixel_pitch, wavelengthInNm, FoV, pup_diam, ccd_side,
                                             fov_errinf=fov_errinf, fov_errsup=fov_errsup, pup_dist=pup_dist, pup_margin=pup_margin,
-                                            fft_res=fft_res, min_pup_dist=min_pup_dist, NOTEST=True)
+                                            fft_res=fft_res, min_pup_dist=min_pup_dist)
 
         wavelengthInNm = result['wavelengthInNm']
         fov_res = result['fov_res']
@@ -250,13 +250,6 @@ class ModulatedPyramid(BaseProcessingObj):
 
         padding = round((DpupPixFov * fft_res - DpupPixFov) / 2) * 2
 
-        factors = np.array([])
-        exponents = np.array([])
-
-        if not NOTEST:
-            # Placeholder for the test pyramid calculations
-            pass
-
         results = {
             'fov_res': fov_res,
             'fp_masking': fp_masking,
@@ -272,7 +265,6 @@ class ModulatedPyramid(BaseProcessingObj):
 
         return results
 
-    
     def set_extended_source(self, source):
         self._extSource = source
         self._extended_source_in_on = True
