@@ -45,7 +45,7 @@ class BaseTimeObj:
 
         ss = f"{float(seconds):.9f}".rstrip('0').rstrip('.')
         if '.' not in ss:
-            ss += '.'
+            ss += '.0'
 
         dotpos = ss.find('.')
         intpart = ss[:dotpos]
