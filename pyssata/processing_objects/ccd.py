@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from scipy.stats import poisson, gamma, norm
 from numpy.random import default_rng
@@ -6,15 +7,93 @@ from scipy.ndimage import convolve
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.pixels import Pixels
 from pyssata.data_objects.intensity import Intensity
+from pyssata.lib.calc_detector_noise import calc_detector_noise
+from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
+
+
+# TODO
+class SH:
+    pass
+
+class IdealWFS:
+    pass
+
+class ModalAnalysisWFS:
+    pass
+
 
 class CCD(BaseProcessingObj):
     '''Simple CCD from intensity field'''
-    def __init__(self, dim2d, binning=1, photon_noise=False, readout_noise=False, excess_noise=False,
+    def __init__(self, size, dt, bandw, name=None, binning=1, photon_noise=False, readout_noise=False, excess_noise=False,
                  darkcurrent_noise=False, background_noise=False, cic_noise=False, cte_noise=False,
                  readout_level=0, darkcurrent_level=0, background_level=0, cic_level=0, cte_mat=None,
-                 quantum_eff=1.0):
+                 quantum_eff=1.0, pixelGains=None, charge_diffusion=False, charge_diffusion_fwhm=None,
+                 wfs=None, pixel_pupil=None, pixel_pitch=None, sky_bg_norm=None, photon_seed=1,
+                 readout_seed=2, excess_seed=3, cic_seed=4, excess_delta=1.0, start_time=0,
+                 ADU_gain=None, ADU_bias=400, emccd_gain=None):
         super().__init__()
 
+        if wfs:
+            if not isinstance(wfs, ModalAnalysisWFS):
+                # checks detector size
+                if isinstance(wfs, SH):
+                    ccdsize = wfs.sensor_npx * wfs.subap_on_diameter
+                elif isinstance(wfs, IdealWFS):
+                    ccdsize = pixel_pupil
+                elif isinstance(wfs, ModulatedPyramid):
+                    ccdsize = wfs.output_resolution
+                else:
+                    raise ValueError(f'Unsupported WFS class: {type(wfs)}')
+                if size != ccdsize:
+                    raise ValueError(f'Incorrect detector size: {size}: should be {ccdsize} instead')
+
+            if readout_level and darkcurrent_level and background_level:
+                # Compute RON and dark current
+                if readout_level == 'auto' or darkcurrent_level == 'auto' or background_level == 'auto':
+                    noise = calc_detector_noise(1./dt, name, binning)
+                    if readout_level == 'auto':
+                        readout_level = noise[0]
+                    if darkcurrent_level == 'auto':
+                        darkcurrent_level = noise[1]
+
+            if background_level:
+                # Compute sky background
+                if background_level == 'auto':
+                    if background_noise:
+                        surf = (pixel_pupil * pixel_pitch) ** 2. / 4. * math.pi
+
+                        if sky_bg_norm:
+                            if isinstance(wfs, ModulatedPyramid):
+                                subaps = round(wfs.pup_diam ** 2. / 4. * math.pi)
+                                tot_pix = subaps * 4.
+                                fov = wfs.fov ** 2. / 4. * math.pi
+                            elif isinstance(wfs, (SH, IdealWFS)):
+                                subaps = round(wfs.subap_on_diameter ** 2. / 4. * math.pi)
+                                if subaps != 1 and subaps < 4.:
+                                    subaps = 4.
+                                tot_pix = subaps * wfs.sensor_npx ** 2.
+                                fov = wfs.sensor_fov ** 2
+                            else:
+                                raise ValueError(f'Unsupported WFS class: {type(wfs)}')
+                            background_level = \
+                                sky_bg_norm * dt * fov * surf / tot_pix * binning ** 2
+                        else:
+                            raise ValueError('sky_bg_norm key must be set to update background_level key')
+                    else:
+                        background_level = 0
+
+        # Adjust ADU / EM gain values
+        if emccd_gain is None:
+            emccd_gain = 400 if excess_noise else 1
+
+        if ADU_gain is None:
+            ADU_gain = 1 / 20 if excess_noise else 8
+
+        if ADU_gain <= 1 and (not excess_noise or emccd_gain <= 1):
+            print('ATTENTION: ADU gain is less than 1 and there is no electronic multiplication.')
+
+        self._dt = self.seconds_to_t(dt)
+        self._start_time = self.seconds_to_t(start_time)
         self._photon_noise = photon_noise
         self._readout_noise = readout_noise
         self._excess_noise = excess_noise
@@ -28,39 +107,36 @@ class CCD(BaseProcessingObj):
         self._darkcurrent_level = darkcurrent_level
         self._background_level = background_level
         self._cic_level = cic_level
-        self._cte_mat = cte_mat if cte_mat is not None else np.zeros((dim2d[0], dim2d[1], 2))
+        self._cte_mat = cte_mat if cte_mat is not None else np.zeros((size[0], size[1], 2))
         self._qe = quantum_eff
 
-        self._pixels = Pixels(dim2d[0] // binning, dim2d[1] // binning)
-        self._photon_seed = 1
-        self._readout_seed = 2
-        self._excess_seed = 3
-        self._cic_seed = 4
+        self._pixels = Pixels(size[0] // binning, size[1] // binning)
+        self._photon_seed = photon_seed
+        self._readout_seed = readout_seed
+        self._excess_seed = excess_seed
+        self._cic_seed = cic_seed
 
-        self._excess_delta = 1.0
+        self._excess_delta = excess_delta
 
         self._in_i = None
-        self._dt = 0
-        self._start_time = 0
-        self._charge_diffusion = False
-        self._charge_diffusion_fwhm = 0
+        self._charge_diffusion = charge_diffusion
+        self._charge_diffusion_fwhm = charge_diffusion_fwhm
         self._keep_ADU_bias = False
         self._doNotChangeI = False
         self._bg_remove_average = False
         self._do_not_remove_dark = False
-        self._ADU_gain = 0
-        self._ADU_bias = 0
-        self._emccd_gain = 0
-        self._bandw = 0
-        self._pixelGains = None
+        self._ADU_gain = ADU_gain
+        self._ADU_bias = ADU_bias
+        self._emccd_gain = emccd_gain
+        self._bandw = bandw
+        self._pixelGains = pixelGains
         self._notUniformQeMatrix = None
         self._one_over_notUniformQeMatrix = None
         self._notUniformQe = False
         self._normNotUniformQe = False
         self._poidev = None
         self._gaussian_noise = None
-        self._useOaalibNoiseSource = False
-        self._photon_rng = default_rng(self._photon_seed)
+        self._rng = default_rng(self._photon_seed)
 
     @property
     def in_i(self):
@@ -163,7 +239,7 @@ class CCD(BaseProcessingObj):
 
         if self._readout_noise:
             ron_vector = norm.rvs(size=ccd_frame.size, random_state=self._readout_seed)
-            ccd_frame += ron_vector.reshape(ccd_frame.shape) * self._readout_level
+            ccd_frame += (ron_vector.reshape(ccd_frame.shape) * self._readout_level).astype(ccd_frame.dtype)
 
         if self._pixelGains is not None:
             ccd_frame *= self._pixelGains
@@ -180,9 +256,9 @@ class CCD(BaseProcessingObj):
             if not self._keep_ADU_bias:
                 ccd_frame -= self._ADU_bias
 
-            ccd_frame /= self._ADU_gain
+            ccd_frame = (ccd_frame / self._ADU_gain).astype(ccd_frame.dtype)
             if self._excess_noise:
-                ccd_frame /= self._emccd_gain
+                ccd_frame = (ccd_frame / self._emccd_gain).astype(ccd_frame.dtype)
             if self._darkcurrent_noise and not self._do_not_remove_dark:
                 ccd_frame -= self._darkcurrent_level
             if self._bg_remove_average and not self._do_not_remove_dark:

@@ -64,6 +64,7 @@ pyramid = {
 }
 
 detector = {
+ 'class':             'CCD',
  'size':              [80,80],                # Detector size in pixels
  'dt':                0.001,                 # [s] Detector integration time
  'bandw':             300,                    # [nm] Sensor bandwidth

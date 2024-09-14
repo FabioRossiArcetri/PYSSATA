@@ -474,44 +474,6 @@ class Factory:
 
         return cm
 
-    def get_ccd(self, ccd_params, wfs_params=None):
-        """
-        Create a CCD processing object.
-
-        Parameters:
-        ccd_params (dict): Dictionary of parameters
-        wfs_params (dict, optional): Dictionary of pyramid/SH parameters. Required for certain 'auto' keywords
-
-        Returns:
-        CCD: CCD processing object
-        """
-        params = self.ensure_dictionary(ccd_params)
-
-        if wfs_params:
-            params = CCD.auto_params_management(self._main, wfs_params, ccd_params)
-
-        name = self.extract(params, 'name', default=None, optional=True)
-        sky_bg_norm = self.extract(params, 'sky_bg_norm', default=None, optional=True)
-        pixelGains_tag = self.extract(params, 'pixelGains_tag', default=None, optional=True)
-        charge_diffusion = self.extract(params, 'charge_diffusion', default=None, optional=True)
-        charge_diffusion_fwhm = self.extract(params, 'charge_diffusion_fwhm', default=None, optional=True)
-
-        sz = params.pop('size')
-
-        ccd = CCD(sz)
-        if charge_diffusion is not None:
-            ccd.charge_diffusion = charge_diffusion
-        if charge_diffusion_fwhm is not None:
-            ccd.charge_diff_fwhm = charge_diffusion_fwhm
-
-        if pixelGains_tag is not None:
-            pixelGains = self._cm.read_data(pixelGains_tag)
-            ccd.pixelGains = pixelGains
-
-        self.apply_global_params(ccd)
-        ccd.apply_properties(params)
-        return ccd
-
     def get_ch2ndcontrol(self, params_pyr1, params_pyr2):
         """
         Create a ch2ndcontrol processing object.
