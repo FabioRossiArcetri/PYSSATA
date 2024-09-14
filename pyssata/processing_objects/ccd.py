@@ -198,18 +198,6 @@ class CCD(BaseProcessingObj):
                 if self._doNotChangeI:
                     self._pixels.pixels = self._integrated_i.i.copy()
                 else:
-                    if self._emccd_gain == 0:
-                        self._emccd_gain = 400 if self._excess_noise else 1
-
-                    if self._ADU_gain == 0:
-                        self._ADU_gain = 1 / 20 if self._excess_noise else 8
-
-                    if self._ADU_gain <= 1 and (not self._excess_noise or self._emccd_gain <= 1):
-                        print('ATTENTION: ADU gain is less than 1 and there is no electronic multiplication.')
-
-                    if self._ADU_bias == 0:
-                        self._ADU_bias = 400
-
                     self.apply_binning()
                     self.apply_qe()
                     self.apply_noise()
