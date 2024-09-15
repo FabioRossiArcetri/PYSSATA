@@ -1,6 +1,7 @@
 import numpy as np
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.data_objects.pixels import Pixels
 from pyssata.data_objects.slopes import Slopes
 
 
@@ -46,6 +47,7 @@ class Slopec(BaseProcessingObj):
         self._accumulation_dt = accumulation_dt
         self._accumulated_pixels = np.array(accumulated_pixels)
         self._accumulated_slopes = Slopes(2)
+        self._accumulated_pixels_ptr = None   # TODO, see do_accumulation() method
 
     @property
     def in_pixels(self):
@@ -257,10 +259,19 @@ class Slopec(BaseProcessingObj):
             self._accumulated_pixels.pixels = self._pixels.pixels * factor
         else:
             self._accumulated_pixels.pixels += self._pixels.pixels * factor
-        self._accumulated_pixels_ptr = self._accumulated_pixels.pixels * (1 - factor) + self._pixels.pixels * factor
+        self._accumulated_pixels.generation_time = t
+
+        # TODO what is "accumulated_pixels_ptr" used for exacly?            
+        if self._accumulated_pixels_ptr is None:
+            acc_pixels = 0
+        else:
+            acc_pixels = self._accumulated_pixels_ptr
+        if t >= self._accumulation_dt:
+            self._accumulated_pixels_ptr = acc_pixels * (1 - factor) + self._pixels.pixels * factor
+        else:
+            self._accumulated_pixels_ptr = acc_pixels + self._pixels.pixels * factor
         if self._verbose:
             print(f'accumulation factor is: {factor}')
-        self._accumulated_pixels.generation_time = t
 
     def cleanup(self):
         if self._store_s:
