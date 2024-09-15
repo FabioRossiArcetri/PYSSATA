@@ -133,14 +133,6 @@ class IFunc:
         elif precision == np.float64:
             self.influence_function = old_if.astype(np.float64)
 
-    def cleanup(self):
-        self.free()
-
-    def free(self):
-        del self._influence_function
-        del self._mask_inf_func
-        del self._idx_inf_func
-
     def save(self, filename, hdr=None):
         hdr = hdr if hdr is not None else fits.Header()
         hdr['VERSION'] = 1
@@ -189,6 +181,4 @@ class IFunc:
         p.read(filename)
         return p
 
-    def revision_track(self):
-        return '$Rev$'
 

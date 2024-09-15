@@ -167,11 +167,6 @@ class CalibManager(BaseParameterObj):
     def read_vibrations(self, name, get_filename=False):
         return self.readfits('vibrations', name, get_filename)
 
-    def cleanup(self):
-        self._subdirs.clear()
-
     def __repr__(self):
         return 'Calibration manager'
 
-    def revision_track(self):
-        return '$Rev$'

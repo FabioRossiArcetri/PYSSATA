@@ -222,6 +222,3 @@ class FuncGenerator(BaseProcessingObj):
 
         return True
 
-    @staticmethod
-    def revision_track():
-        return "$Rev$"

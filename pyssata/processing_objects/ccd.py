@@ -244,31 +244,3 @@ class CCD(BaseProcessingObj):
         print(errmsg)
         return is_check_ok
 
-    def cleanup(self):
-        if ptr_valid(self._cte_mat):
-            self._cte_mat = None
-        if ptr_valid(self._photon_seed):
-            self._photon_seed = None
-        if ptr_valid(self._readout_seed):
-            self._readout_seed = None
-        if ptr_valid(self._excess_seed):
-            self._excess_seed = None
-        if ptr_valid(self._cic_seed):
-            self._cic_seed = None
-        if ptr_valid(self._chDiffKernel):
-            self._chDiffKernel = None
-        if ptr_valid(self._pixelGains):
-            self._pixelGains = None
-        if ptr_valid(self._notUniformQeMatrix):
-            self._notUniformQeMatrix = None
-        if ptr_valid(self._one_over_notUniformQeMatrix):
-            self._one_over_notUniformQeMatrix = None
-        if obj_valid(self._poidev):
-            del self._poidev
-        if obj_valid(self._gaussian_noise):
-            del self._gaussian_noise
-        self._integrated_i.cleanup()
-        self._pixels.cleanup()
-
-    def revision_track(self):
-        return '$Rev$'

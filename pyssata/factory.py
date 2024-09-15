@@ -2698,11 +2698,3 @@ class Factory:
         """
         return self._gpu
 
-    def revision_track(self):
-        """
-        Returns the revision of the SVN
-
-        Returns:
-        str: SVN revision
-        """
-        return '$Rev$'

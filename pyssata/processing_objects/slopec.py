@@ -248,9 +248,6 @@ class Slopec(BaseProcessingObj):
     def calc_slopes(self, t, accumulated=False):
         raise NotImplementedError(f'{self.repr()} Please implement calc_slopes in your derived class!')
 
-    def revision_track(self):
-        return '$Rev$'
-
     def do_accumulation(self, t):
         factor = float(self._loop_dt) / float(self._accumulation_dt)
         if not self._accumulated_pixels:
@@ -272,29 +269,6 @@ class Slopec(BaseProcessingObj):
             self._accumulated_pixels_ptr = acc_pixels + self._pixels.pixels * factor
         if self._verbose:
             print(f'accumulation factor is: {factor}')
-
-    def cleanup(self):
-        if self._store_s:
-            del self._store_s
-        if self._store_c:
-            del self._store_c
-        if self._intmat:
-            del self._intmat
-        if self._filt_recmat:
-            del self._filt_recmat
-        if self._filt_intmat:
-            del self._filt_intmat
-        if self._accumulated_pixels_ptr:
-            del self._accumulated_pixels_ptr
-        if self._total_counts:
-            del self._total_counts
-        if self._subap_counts:
-            del self._subap_counts
-        self._flux_per_subaperture_vector.cleanup()
-        self._max_flux_per_subaperture_vector.cleanup()
-        self._slopes.cleanup()
-        self._accumulated_pixels.cleanup()
-        self._accumulated_slopes.cleanup()
 
     def trigger(self, t):
         if self._accumulate:

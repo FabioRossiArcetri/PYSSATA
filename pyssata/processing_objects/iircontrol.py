@@ -199,30 +199,5 @@ class IIRControl(TimeControl, BaseProcessingObj):
         if self._verbose:
             print(f"first {min(6, len(self._out_comm.value))} output comm values: {self._out_comm.value[:min(6, len(self._out_comm.value))]}")
 
-    def cleanup(self):
-        del self._ist
-        del self._ost
-        del self._offset
-        del self._deltaCommHistEx
-        del self._commHistEx
-        del self._deltaCommFutureHistEx
-        del self._ostMatEx
-        del self._istMatEx
-        del self._bootstrap_ptr
-        del self._og_shaper
-        del self._time_gmt_imm
-        del self._gain_gmt_imm
-        del self._modal_start_time
-        self._delta_comm.cleanup()
-        self._out_comm.cleanup()
-        self._iirfilter.cleanup()
-        self._opticalgain.cleanup()
-        super(TimeControl, self).cleanup()
-        super(BaseProcessingObj, self).cleanup()
-
-    @staticmethod
-    def revision_track():
-        return "$Rev$"
-
     def run_check(self, time_step, errmsg=""):
         return True

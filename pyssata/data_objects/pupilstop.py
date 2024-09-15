@@ -58,9 +58,3 @@ class Pupilstop(Layer):
         pupilstop = PupilStop(dim[0], dim[1], pixel_pitch, 0, input_mask=input_mask)
         return pupilstop
 
-    def revision_track(self):
-        return '$Rev$'
-
-    def cleanup(self):
-        self._A = None
-        super().cleanup()

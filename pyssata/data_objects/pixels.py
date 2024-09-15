@@ -103,10 +103,4 @@ class Pixels(BaseDataObj):
         pixels.read(filename, hdr)
         return pixels
 
-    def revision_track(self):
-        return '$Rev$'
-
-    def cleanup(self):
-        self._pixels = None
-        super().cleanup()
 

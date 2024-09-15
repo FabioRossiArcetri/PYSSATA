@@ -148,10 +148,3 @@ class LoopControl:
         # Placeholder for profiling end and report
         pass
 
-    def cleanup(self):
-        self._elapsed = None
-        self._list = None
-        self._stop_on_data = None
-
-    def revision_track(self):
-        return '$Rev$'

@@ -122,9 +122,4 @@ class Source(BaseDataObj, BaseParameterObj):
             print(f'source.phot_density: magnitude is {self._magnitude}, and flux (output of n_phot with width=1e-9, surf=1) is {res[0]}')
         return res[0]
 
-    def revision_track(self):
-        return '$Rev$'
-
-    def cleanup(self):
-        pass
 

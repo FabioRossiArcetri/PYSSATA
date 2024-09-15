@@ -132,9 +132,3 @@ class PSF(BaseProcessingObj):
             if self.t_to_seconds(t) >= self._start_time:
                 self._int_sr.generation_time = t
 
-    @staticmethod
-    def revision_track():
-        return '$Rev$'
-
-    def cleanup(self):
-        pass

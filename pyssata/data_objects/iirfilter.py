@@ -216,18 +216,6 @@ class IIRFilter:
         obj.read(filename)
         return obj
 
-    def revision_track(self):
-        return '$Rev$'
-
-    def cleanup(self):
-        del self._ordnum
-        del self._ordden
-        del self._num
-        del self._den
-        del self._zeros
-        del self._poles
-        del self._gain
-
     def discrete_delay_tf(self, delay):
         # Placeholder for the actual discrete delay transfer function
         pass

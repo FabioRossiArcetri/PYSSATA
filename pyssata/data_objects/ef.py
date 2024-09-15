@@ -143,11 +143,3 @@ class ElectricField(BaseDataObj):
             ef.set_property(A=hdul[0].data, phaseInNm=hdul[1].data, S0=S0)
             return ef
 
-    def cleanup(self):
-        self._A = None
-        self._phaseInNm = None
-        self._S0 = 0.0
-        self.pixel_pitch = 0.0
-
-    def revision_track(self):
-        return '$Rev$'

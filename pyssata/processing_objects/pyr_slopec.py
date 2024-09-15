@@ -110,9 +110,6 @@ class PyrSlopec(Slopec):
     def _compute_flux_per_subaperture(self):
         return self._flux_per_subaperture_vector
 
-    def revision_track(self):
-        return '$Rev$'
-
     def run_check(self, time_step, errmsg=''):
         if self._shlike and self._slopes_from_intensity:
             errmsg += 'Both SHLIKE and SLOPES_FROM_INTENSITY parameters are set. Only one of these should be used.'
@@ -128,8 +125,4 @@ class PyrSlopec(Slopec):
 
         return super().run_check(time_step, errmsg=errmsg)
 
-    def cleanup(self):
-        if self._pupdata:
-            del self._pupdata
-        super().cleanup()
 
