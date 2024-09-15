@@ -110,9 +110,6 @@ class PhaseDisplay(BaseProcessingObj):
     def run_check(self, time_step):
         return self._phase is not None
 
-    def cleanup(self):
-        plt.close(self._window)
-
     @classmethod
     def from_dict(cls, params):
         return cls(**params)

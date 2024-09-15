@@ -80,5 +80,3 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
             self._loop_dt = hdr.get('LOOP_DT', np.int64(0))
             self._loop_niters = hdr.get('LOOP_NITERS', 0)
 
-    def cleanup(self):
-        pass

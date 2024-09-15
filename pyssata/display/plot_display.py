@@ -145,5 +145,3 @@ class PlotDisplay(BaseProcessingObj):
     def run_check(self, time_step, errmsg=None):
         return self._value is not None and self._history is not None
 
-    def cleanup(self):
-        pass

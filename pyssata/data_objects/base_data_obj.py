@@ -38,5 +38,3 @@ class BaseDataObj(BaseTimeObj):
         exten = 1
         return hdr, exten
 
-    def cleanup(self):
-        pass

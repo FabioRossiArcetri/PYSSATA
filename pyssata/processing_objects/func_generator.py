@@ -121,17 +121,6 @@ class FuncGenerator(BaseProcessingObj):
         i = round(t / self._loop_dt)
         return self._time_hist[i]
 
-    def cleanup(self):
-        # Cleaning up resources
-        del self._seed
-        del self._constant
-        del self._amp
-        del self._freq
-        del self._offset
-        del self._vect_amplitude
-        del self._time_hist
-        del self._output
-
     # Getters and Setters for the attributes
     @property
     def type(self):

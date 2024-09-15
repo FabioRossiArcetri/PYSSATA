@@ -283,13 +283,5 @@ class Modalrec(BaseProcessingObj):
             print(", ".join(errmsg))
         return out
 
-    def cleanup(self):
-        self._modes.cleanup()
-        self._slopes.cleanup()
-        self._recmat.cleanup()
-        self._projmat.cleanup()
-        self._layer_modes_list.cleanup()
-        self._layer_idx_list.cleanup()
-        BaseProcessingObj.cleanup(self)
 
 
