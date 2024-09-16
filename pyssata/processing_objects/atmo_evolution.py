@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 from astropy.io import fits
 
 from pyssata.base_processing_obj import BaseProcessingObj
@@ -52,10 +54,10 @@ class AtmoEvolution(BaseProcessingObj):
         rad_alpha_fov = alpha_fov * sec2rad
 
         # Compute layers dimension in pixels
-        pixel_layer = np.ceil((pixel_pupil + 2 * np.sqrt(np.sum(np.array(pupil_position) * 2)) / pixel_pitch + 
+        pixel_layer = xp.ceil((pixel_pupil + 2 * xp.sqrt(xp.sum(xp.array(pupil_position) * 2)) / pixel_pitch + 
                                2.0 * abs(heights) / pixel_pitch * rad_alpha_fov) / 2.0) * 2.0
         if fov_in_m is not None:
-            pixel_layer = np.full_like(heights, long(fov_in_m / pixel_pitch / 2.0) * 2)
+            pixel_layer = xp.full_like(heights, long(fov_in_m / pixel_pitch / 2.0) * 2)
         
         self._L0 = L0
         self._wavelengthInNm = wavelengthInNm
@@ -85,7 +87,6 @@ class AtmoEvolution(BaseProcessingObj):
             self._user_defined_phasescreen = user_defined_phasescreen
         
         # Initialize layer list with correct heights
-        self._gpu = GPU
         self._layer_list = BaseList()
 
         for i in range(self._n_phasescreens):
@@ -182,28 +183,23 @@ class AtmoEvolution(BaseProcessingObj):
             if temp_screen.shape[0] < temp_screen.shape[1]:
                 temp_screen = temp_screen.T
 
-            temp_screen -= np.mean(temp_screen)
+            temp_screen -= xp.mean(temp_screen)
             # Convert to nm
-            temp_screen *= self._wavelengthInNm / (2 * np.pi)
-
-            if self._gpu:
-                ptr = GPUarray(temp_screen)
-            else:
-                ptr = np.array(temp_screen, copy=False)
-
-            self._phasescreens.append(ptr)
+            temp_screen *= self._wavelengthInNm / (2 * xp.pi)
+            
+            self._phasescreens.append(temp_screen)
 
         else:
-            self._pixel_phasescreens = np.max(self._pixel_layer)
+            self._pixel_phasescreens = xp.max(self._pixel_layer)
 
-            if len(np.unique(self._L0)) == 1:
+            if len(xp.unique(self._L0)) == 1:
                 # Number of rectangular phase screens from a single square phasescreen
-                n_ps_from_square_ps = np.floor(self._pixel_square_phasescreens / self._pixel_phasescreens)
+                n_ps_from_square_ps = xp.floor(self._pixel_square_phasescreens / self._pixel_phasescreens)
                 # Number of square phasescreens
-                n_ps = np.ceil(float(self._n_phasescreens) / n_ps_from_square_ps)
+                n_ps = xp.ceil(float(self._n_phasescreens) / n_ps_from_square_ps)
 
                 # Seed vector
-                seed = np.arange(self._seed, self._seed + int(n_ps))
+                seed = xp.arange(self._seed, self._seed + int(n_ps))
 
                 # Square phasescreens
                 if self._make_cycle:
@@ -211,10 +207,10 @@ class AtmoEvolution(BaseProcessingObj):
                     ps_cycle = get_layers(1, pixel_square_phasescreens, pixel_square_phasescreens * self._pixel_pitch,
                                           500e-9, 1, L0=self._L0[0], par=par, START=start, SEED=seed, DIR=self._directory,
                                           FILE=filename, no_sha=True, verbose=self._verbose)
-                    ps_cycle = np.vstack([ps_cycle, ps_cycle[:, :self._pixel_pupil]])
-                    ps_cycle = np.hstack([ps_cycle, ps_cycle[:self._pixel_pupil, :]])
+                    ps_cycle = xp.vstack([ps_cycle, ps_cycle[:, :self._pixel_pupil]])
+                    ps_cycle = xp.hstack([ps_cycle, ps_cycle[:self._pixel_pupil, :]])
 
-                    square_phasescreens = [ps_cycle * 4 * np.pi]  # 4 * π is added to get the correct amplitude
+                    square_phasescreens = [ps_cycle * 4 * xp.pi]  # 4 * π is added to get the correct amplitude
                 else:
                     if hasattr(self._L0, '__len__'):
                         L0 = self._L0[0]
@@ -235,28 +231,28 @@ class AtmoEvolution(BaseProcessingObj):
                         square_ps_index += 1
                         ps_index = 0
 
-                    temp_screen = square_phasescreens[square_ps_index][int(self._pixel_phasescreens) * ps_index:
-                                                                       int(self._pixel_phasescreens) * (ps_index + 1), :]
-                    temp_screen *= np.sqrt(self._Cn2[i])
-                    temp_screen -= np.mean(temp_screen)
+                    temp_screen = xp.array(square_phasescreens[square_ps_index][int(self._pixel_phasescreens) * ps_index:
+                                                                       int(self._pixel_phasescreens) * (ps_index + 1), :])
+                    print('self._Cn2[i]', self._Cn2[i], type(self._Cn2[i]), type(self._Cn2))
+                    print('temp_screen', temp_screen, type(temp_screen))
+
+                    temp_screen *= xp.sqrt(self._Cn2[i])
+                    temp_screen -= xp.mean(temp_screen)
                     # Convert to nm
                     temp_screen *= self._wavelengthInNm / (2 * np.pi)
 
+                    temp_screen = xp.array(temp_screen)
+
                     # Flip x-axis for each odd phase-screen
                     if i % 2 != 0:
-                        temp_screen = np.flip(temp_screen, axis=1)
+                        temp_screen = xp.flip(temp_screen, axis=1)
 
                     ps_index += 1
 
-                    if self._gpu:
-                        ptr = GPUarray(temp_screen)
-                    else:
-                        ptr = np.array(temp_screen, copy=False)
-
-                    self._phasescreens.append(ptr)
+                    self._phasescreens.append(temp_screen)
 
             else:
-                seed = self._seed + np.arange(self._n_phasescreens)
+                seed = self._seed + xp.arange(self._n_phasescreens)
 
                 if len(seed) != len(self._L0):
                     raise ValueError('Number of elements in seed and L0 must be the same!')
@@ -269,17 +265,12 @@ class AtmoEvolution(BaseProcessingObj):
 
                 for i in range(self._n_phasescreens):
                     temp_screen = square_phasescreens[i][:, :self._pixel_phasescreens]
-                    temp_screen *= np.sqrt(self._Cn2[i])
-                    temp_screen -= np.mean(temp_screen)
+                    temp_screen *= xp.sqrt(self._Cn2[i])
+                    temp_screen -= xp.mean(temp_screen)
                     # Convert to nm
-                    temp_screen *= self._wavelengthInNm / (2 * np.pi)
+                    temp_screen *= self._wavelengthInNm / (2 * xp.pi)
 
-                    if self._gpu:
-                        ptr = GPUarray(temp_screen)
-                    else:
-                        ptr = np.array(temp_screen, copy=False)
-
-                    self._phasescreens.append(ptr)
+                    self._phasescreens.append(temp_screen)
 
     def shift_screens(self, t):
         seeing = self._seeing.value
@@ -289,7 +280,7 @@ class AtmoEvolution(BaseProcessingObj):
         if len(self._phasescreens) != len(wind_speed) or len(self._phasescreens) != len(wind_direction):
             raise ValueError('Error: number of elements of wind speed and/or direction does not match the number of phasescreens')
 
-        last_position = self._last_position if self._last_position is not None else np.zeros_like(wind_speed)
+        last_position = self._last_position if self._last_position is not None else xp.zeros_like(wind_speed)
         delta_time = self.t_to_seconds(t - self._last_t)
         if self._extra_delta_time and not self._last_position:
             delta_time += self._extra_delta_time
@@ -339,8 +330,8 @@ class AtmoEvolution(BaseProcessingObj):
             errmsg += ' Missing input wind direction.'
         if not isinstance(self._wind_speed, BaseValue):
             errmsg += ' Missing input speed.'
-        if not np.isclose(np.sum(self._Cn2), 1.0, atol=1e-6):
-            errmsg += f' Cn2 total must be 1. Instead is: {np.sum(self._Cn2)}.'
+        if not xp.isclose(xp.sum(self._Cn2), 1.0, atol=1e-6):
+            errmsg += f' Cn2 total must be 1. Instead is: {xp.sum(self._Cn2)}.'
 
         return self._seed > 0 and isinstance(self._seeing, BaseValue) and isinstance(self._wind_direction, BaseValue) and isinstance(self._wind_speed, BaseValue)
 

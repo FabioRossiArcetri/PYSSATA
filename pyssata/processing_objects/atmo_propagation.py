@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 from astropy.io import fits
 
 from pyssata.base_processing_obj import BaseProcessingObj
@@ -75,9 +77,9 @@ class AtmoPropagation(BaseProcessingObj):
             nlayers = len(self._layer_list)
             self._propagators = []
 
-            height_layers = np.array([layer.height for layer in self._layer_list])
-            sorted_heights = np.sort(height_layers)
-            if not (np.allclose(height_layers, sorted_heights) or np.allclose(height_layers, sorted_heights[::-1])):
+            height_layers = xp.array([layer.height for layer in self._layer_list])
+            sorted_heights = xp.sort(height_layers)
+            if not (xp.allclose(height_layers, sorted_heights) or xp.allclose(height_layers, sorted_heights[::-1])):
                 raise ValueError('Layers must be sorted from highest to lowest or from lowest to highest')
 
             for j in range(nlayers):
@@ -99,7 +101,7 @@ class AtmoPropagation(BaseProcessingObj):
         shiftXY_list = self._shiftXY_list if self._shiftXY_list else None
         rotAnglePhInDeg_list = self._rotAnglePhInDeg_list if self._rotAnglePhInDeg_list else None
         magnification_list = self._magnification_list if self._magnification_list else None
-        pupil_position = self._pupil_position if np.any(self._pupil_position) else None
+        pupil_position = xp.array(self._pupil_position) if xp.any(xp.array(self._pupil_position)) else None
 
         for i, element in enumerate(self._source_list):
             height_star = element.height

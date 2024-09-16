@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 from scipy.ndimage import rotate
 import warnings
 from scipy.interpolate import RegularGridInterpolator
@@ -14,8 +16,8 @@ def single_layer2pupil_ef(layer_ef, polar_coordinate, height_source, update_ef=N
 
     diff_height = height_source - height_layer
 
-    if (height_layer == 0 or (np.isinf(height_source) and polar_coordinate[0] == 0)) and \
-       ((shiftXY is None) or (all(shiftXY == [0, 0]))) and \
+    if (height_layer == 0 or (xp.isinf(height_source) and polar_coordinate[0] == 0)) and \
+       ((shiftXY is None) or (xp.all(shiftXY == xp.array([0, 0])))) and \
        ((pupil_position is None) or (pupil_position == 0)) and \
        ((rotAnglePhInDeg is None) or (rotAnglePhInDeg == 0)) and \
        ((magnify is None) or (magnify == 1)):
@@ -27,7 +29,7 @@ def single_layer2pupil_ef(layer_ef, polar_coordinate, height_source, update_ef=N
 
     elif diff_height > 0:
         sec2rad = 4.848e-6
-        degree2rad = np.pi / 180.
+        degree2rad = xp.pi / 180.
         r_angle = polar_coordinate[0] * sec2rad
         phi_angle = polar_coordinate[1] * degree2rad
 
@@ -38,14 +40,14 @@ def single_layer2pupil_ef(layer_ef, polar_coordinate, height_source, update_ef=N
             half_pixel_layer_x -= shiftXY[0]
             half_pixel_layer_y -= shiftXY[1]
 
-        if pupil_position is not None and pixel_layer > pixel_pupil and np.isfinite(height_source):
+        if pupil_position is not None and pixel_layer > pixel_pupil and xp.isfinite(height_source):
             pixel_position = r_angle * height_layer / pixel_pitch
-            pixel_position_x = pixel_position * np.cos(phi_angle) + pupil_position[0] / pixel_pitch
-            pixel_position_y = pixel_position * np.sin(phi_angle) + pupil_position[1] / pixel_pitch
-        elif pupil_position is not None and pixel_layer > pixel_pupil and not np.isfinite(height_source):
+            pixel_position_x = pixel_position * xp.cos(phi_angle) + pupil_position[0] / pixel_pitch
+            pixel_position_y = pixel_position * xp.sin(phi_angle) + pupil_position[1] / pixel_pitch
+        elif pupil_position is not None and pixel_layer > pixel_pupil and not xp.isfinite(height_source):
             pixel_position = r_angle * height_source / pixel_pitch
-            sky_pixel_position_x = pixel_position * np.cos(phi_angle)
-            sky_pixel_position_y = pixel_position * np.sin(phi_angle)
+            sky_pixel_position_x = pixel_position * xp.cos(phi_angle)
+            sky_pixel_position_y = pixel_position * xp.sin(phi_angle)
 
             pupil_pixel_position_x = pupil_position[0] / pixel_pitch
             pupil_pixel_position_y = pupil_position[1] / pixel_pitch
@@ -54,10 +56,10 @@ def single_layer2pupil_ef(layer_ef, polar_coordinate, height_source, update_ef=N
             pixel_position_y = (sky_pixel_position_y - pupil_pixel_position_y) * height_layer / height_source + pupil_pixel_position_y
         else:
             pixel_position = r_angle * height_layer / pixel_pitch
-            pixel_position_x = pixel_position * np.cos(phi_angle)
-            pixel_position_y = pixel_position * np.sin(phi_angle)
+            pixel_position_x = pixel_position * xp.cos(phi_angle)
+            pixel_position_y = pixel_position * xp.sin(phi_angle)
 
-        if np.isfinite(height_source):
+        if xp.isfinite(height_source):
             pixel_pupmeta = pixel_pupil
         else:
             cone_coeff = abs(height_source - abs(height_layer)) / height_source
@@ -67,24 +69,24 @@ def single_layer2pupil_ef(layer_ef, polar_coordinate, height_source, update_ef=N
             pixel_pupmeta /= magnify
             tempA = layer_ef.A
             tempP = layer_ef.phaseInNm
-            tempP[tempA == 0] = np.mean(tempP[tempA != 0])
+            tempP[tempA == 0] = xp.mean(tempP[tempA != 0])
             layer_ef.phaseInNm = tempP
 
-        xx, yy = np.meshgrid(np.arange(pixel_pupil), np.arange(pixel_pupil))
+        xx, yy = xp.meshgrid(xp.arange(pixel_pupil), xp.arange(pixel_pupil))
 
         if rotAnglePhInDeg is not None:
-            angle = (-rotAnglePhInDeg % 360) * np.pi / 180
-            x = np.cos(angle) * xx - np.sin(angle) * yy + half_pixel_layer_x + pixel_position_x
-            y = np.sin(angle) * xx + np.cos(angle) * yy + half_pixel_layer_y + pixel_position_y
+            angle = (-rotAnglePhInDeg % 360) * xp.pi / 180
+            x = xp.cos(angle) * xx - xp.sin(angle) * yy + half_pixel_layer_x + pixel_position_x
+            y = xp.sin(angle) * xx + xp.cos(angle) * yy + half_pixel_layer_y + pixel_position_y
             GRID = 0
         else:
             x = xx + half_pixel_layer_x + pixel_position_x
             y = yy + half_pixel_layer_y + pixel_position_y
             GRID = 1
 
-        points = np.vstack((x.ravel(), y.ravel())).T
-        interpolator_A = RegularGridInterpolator((np.arange(layer_ef.size[0]), np.arange(layer_ef.size[1])), layer_ef.A, bounds_error=False, fill_value=0)
-        interpolator_phase = RegularGridInterpolator((np.arange(layer_ef.size[0]), np.arange(layer_ef.size[1])), layer_ef.phaseInNm, bounds_error=False, fill_value=0)
+        points = xp.vstack((x.ravel(), y.ravel())).T
+        interpolator_A = RegularGridInterpolator((xp.arange(layer_ef.size[0]), xp.arange(layer_ef.size[1])), layer_ef.A, bounds_error=False, fill_value=0)
+        interpolator_phase = RegularGridInterpolator((xp.arange(layer_ef.size[0]), xp.arange(layer_ef.size[1])), layer_ef.phaseInNm, bounds_error=False, fill_value=0)
         pupil_ampl_temp = interpolator_A(points).reshape(pixel_pupil, pixel_pupil)
         pupil_phase_temp = interpolator_phase(points).reshape(pixel_pupil, pixel_pupil)
 

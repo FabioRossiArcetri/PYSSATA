@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 from scipy.stats import poisson, gamma, norm
 from numpy.random import default_rng
 from scipy.ndimage import convolve
@@ -28,7 +30,7 @@ class CCD(BaseProcessingObj):
         self._darkcurrent_level = darkcurrent_level
         self._background_level = background_level
         self._cic_level = cic_level
-        self._cte_mat = cte_mat if cte_mat is not None else np.zeros((dim2d[0], dim2d[1], 2))
+        self._cte_mat = cte_mat if cte_mat is not None else xp.zeros((dim2d[0], dim2d[1], 2))
         self._qe = quantum_eff
 
         self._pixels = Pixels(dim2d[0] // binning, dim2d[1] // binning)
@@ -147,10 +149,10 @@ class CCD(BaseProcessingObj):
             ccd_frame += (self._background_level + self._darkcurrent_level)
 
         if self._cte_noise:
-            ccd_frame = np.dot(np.dot(self._cte_mat[:, :, 0], ccd_frame), self._cte_mat[:, :, 1])
+            ccd_frame = xp.dot(xp.dot(self._cte_mat[:, :, 0], ccd_frame), self._cte_mat[:, :, 1])
 
         if self._cic_noise:
-            ccd_frame += np.random.binomial(1, self._cic_level, ccd_frame.shape)
+            ccd_frame += xp.random.binomial(1, self._cic_level, ccd_frame.shape)
 
         if self._charge_diffusion:
             ccd_frame = convolve(ccd_frame, self._chDiffKernel, mode='constant', cval=0.0)
@@ -174,7 +176,7 @@ class CCD(BaseProcessingObj):
             ccd_frame *= self._one_over_notUniformQeMatrix
 
         if self._photon_noise:
-            ccd_frame = np.round(ccd_frame * self._ADU_gain) + self._ADU_bias
+            ccd_frame = xp.round(ccd_frame * self._ADU_gain) + self._ADU_bias
             ccd_frame[ccd_frame < 0] = 0
 
             if not self._keep_ADU_bias:
@@ -195,15 +197,15 @@ class CCD(BaseProcessingObj):
         out_dim = self._pixels.size
 
         if in_dim[0] != out_dim[0] * self._binning:
-            ccd_frame = np.zeros(out_dim * self._binning)
+            ccd_frame = xp.zeros(out_dim * self._binning)
             ccd_frame[:in_dim[0], :in_dim[1]] = self._integrated_i.i
         else:
             ccd_frame = self._integrated_i.i.copy()
 
         if self._binning > 1:
-            tot_ccd_frame = np.sum(ccd_frame)
+            tot_ccd_frame = xp.sum(ccd_frame)
             ccd_frame = ccd_frame.reshape(out_dim[0], self._binning, out_dim[1], self._binning).sum(axis=(1, 3))
-            ccd_frame = ccd_frame * self._binning ** 2 * (tot_ccd_frame / np.sum(ccd_frame))
+            ccd_frame = ccd_frame * self._binning ** 2 * (tot_ccd_frame / xp.sum(ccd_frame))
             self._pixels.pixels = ccd_frame
         else:
             self._pixels.pixels = self._integrated_i.i.copy()
@@ -217,7 +219,7 @@ class CCD(BaseProcessingObj):
 
     def setQuadrantGains(self, quadrantsGains):
         dim2d = self._pixels.pixels.shape
-        pixelGains = np.zeros(dim2d)
+        pixelGains = xp.zeros(dim2d)
         for i in range(2):
             for j in range(2):
                 pixelGains[(dim2d[0] // self._binning // 2) * i:(dim2d[0] // self._binning // 2) * (i + 1),

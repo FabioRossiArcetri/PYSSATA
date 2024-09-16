@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 from numpy.fft import fft2, fftshift
 
 def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False, GPU=True):
@@ -26,21 +28,21 @@ def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False, GPU=True
 
     # Set up the complex array based on input dimensions and data type
     if imwidth is not None:
-        if phase.dtype == np.float64:
-            u_ef = np.zeros((imwidth, imwidth), dtype=np.complex128)
-            result = amp * np.exp(1j * phase)
+        if phase.dtype == xp.float64:
+            u_ef = xp.zeros((imwidth, imwidth), dtype=xp.complex128)
+            result = amp * xp.exp(1j * phase)
             s = result.shape
             u_ef[:s[0], :s[1]] = result
         else:
-            u_ef = np.zeros((imwidth, imwidth), dtype=np.complex64)
-            result = amp * np.exp(1j * phase)
+            u_ef = xp.zeros((imwidth, imwidth), dtype=xp.complex64)
+            result = amp * xp.exp(1j * phase)
             s = result.shape
             u_ef[:s[0], :s[1]] = result
     else:
-        if phase.dtype == np.float64:
-            u_ef = amp * np.exp(1j * phase)
+        if phase.dtype == xp.float64:
+            u_ef = amp * xp.exp(1j * phase)
         else:
-            u_ef = amp * np.exp(1j * phase)
+            u_ef = amp * xp.exp(1j * phase)
 
     # Compute FFT (forward)
     u_fp = fft2(u_ef)
@@ -50,10 +52,10 @@ def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False, GPU=True
         u_fp = fftshift(u_fp)
 
     # Compute the PSF as the square modulus of the Fourier transform
-    psf = np.abs(u_fp)**2
+    psf = xp.abs(u_fp)**2
 
     # Normalize if required
     if normalize:
-        psf /= np.sum(psf)
+        psf /= xp.sum(psf)
 
     return psf

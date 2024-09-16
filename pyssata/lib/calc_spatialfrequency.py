@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 
 def calc_spatialfrequency(dimension, precision=False):
     """
@@ -14,21 +16,21 @@ def calc_spatialfrequency(dimension, precision=False):
     - matrix: A square matrix of size [dimension X dimension].
     """
 
-    dtype = np.float64 if precision else np.float32
+    dtype = xp.float64 if precision else xp.float32
     half_dim = dimension // 2
 
-    temp_matrix = np.zeros((half_dim + 1, half_dim + 1), dtype=dtype)
-    matrix = np.zeros((dimension, dimension), dtype=dtype)
+    temp_matrix = xp.zeros((half_dim + 1, half_dim + 1), dtype=dtype)
+    matrix = xp.zeros((dimension, dimension), dtype=dtype)
 
-    x = np.arange(half_dim + 1, dtype=dtype)  # Make a row
+    x = xp.arange(half_dim + 1, dtype=dtype)  # Make a row
     for i in range(half_dim + 1):
         temp_matrix[:, i] = x**2 + i**2  # Generate 1/4 of matrix
 
     # Place temp_matrix in the top-right corner and then
     # fill the rest of the matrix by rotating temp_matrix appropriately
     matrix[half_dim - 1:, half_dim - 1:] = temp_matrix
-    matrix[:half_dim, :half_dim] = np.rot90(temp_matrix, 2)[1:, 1:]
-    matrix[:half_dim, half_dim - 1:] = np.rot90(temp_matrix, 1)[1:, :]
-    matrix[half_dim -1 :, :half_dim] = np.rot90(temp_matrix, 3)[:, 1:]
+    matrix[:half_dim, :half_dim] = xp.rot90(temp_matrix, 2)[1:, 1:]
+    matrix[:half_dim, half_dim - 1:] = xp.rot90(temp_matrix, 1)[1:, :]
+    matrix[half_dim -1 :, :half_dim] = xp.rot90(temp_matrix, 3)[:, 1:]
 
     return matrix
