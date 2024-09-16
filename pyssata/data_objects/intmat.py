@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 from astropy.io import fits
 
 from pyssata.data_objects.recmat import Recmat
@@ -15,7 +18,7 @@ class Intmat:
         self._intmat = intmat
 
     def row(self, row):
-        r = np.reshape(self._intmat[row, :], (-1,))
+        r = xp.reshape(self._intmat[row, :], (-1,))
         return {'slopes': r, 'pupdata_tag': self._pupdata_tag}
 
     def reduce_size(self, n_modes_to_be_discarded):
@@ -72,20 +75,20 @@ class Intmat:
 
     def pseudo_invert(self, matrix, n_modes_to_drop=0, w_vec=None, interactive=False):
         # TODO handle n_modes_to_drop, and w_vec
-        return np.linalg.pinv(matrix)
+        return xp.linalg.pinv(matrix)
 
     def build_from_slopes(self, slopes, disturbance):
         times = list(slopes.keys())
         nslopes = len(slopes[times[0]])
         nmodes = len(disturbance[times[0]])
-        intmat = np.zeros((nmodes, nslopes))
-        iter_per_mode = np.zeros(nmodes)
-        slope_mm = np.zeros((nmodes, 2))
-        slope_rms = np.zeros(nmodes)
+        intmat = xp.zeros((nmodes, nslopes))
+        iter_per_mode = xp.zeros(nmodes)
+        slope_mm = xp.zeros((nmodes, 2))
+        slope_rms = xp.zeros(nmodes)
 
         for t in times:
             amp = disturbance[t]
-            mode = np.where(amp)[0][0]
+            mode = xp.where(amp)[0][0]
             intmat[mode, :] += slopes[t] / amp[mode]
             iter_per_mode[mode] += 1
 

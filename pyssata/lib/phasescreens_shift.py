@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 from scipy.ndimage import rotate
 
 def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, delta_time, pixel_pitch, scale_coeff, layer_list, position=None, cycle_screens=False):
@@ -12,7 +14,7 @@ def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, de
         new_position = delta_position  # [pixel]
     
     # Get quotient and remainder
-    new_position_quo = np.floor(new_position).astype(int)
+    new_position_quo = xp.floor(new_position).astype(int)
     new_position_rem = new_position - new_position_quo
     
     for ii, p in enumerate(phasescreens):
@@ -23,8 +25,8 @@ def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, de
                 new_position[ii] = 0.
         
         if new_position[ii] + pixel_layer[ii] > p.shape[1]:
-            print(f'phasescreens size: {round(p.shape[0], 2)}')
-            print(f'requested position: {round(new_position[ii], 2)}')
+            print(f'phasescreens size: {xp.around(p.shape[0], 2)}')
+            print(f'requested position: {xp.around(new_position[ii], 2)}')
             raise ValueError(f'phasescreens_shift cannot go out of the {ii}-th phasescreen!')
         
         pos = new_position_quo[ii]
@@ -38,15 +40,15 @@ def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, de
         # Meta-pupil rotation
         if wind_direction[ii] != 0:
             if wind_direction[ii] == 90:
-                layer = np.rot90(layer, 3)
+                layer = xp.rot90(layer, 3)
             elif wind_direction[ii] == 180:
-                layer = np.rot90(layer, 2)
+                layer = xp.rot90(layer, 2)
             elif wind_direction[ii] == 270 or wind_direction[ii] == -90:
-                layer = np.rot90(layer, 1)
+                layer = xp.rot90(layer, 1)
             elif wind_direction[ii] == -180:
-                layer = np.rot90(layer, 2)
+                layer = xp.rot90(layer, 2)
             elif wind_direction[ii] == -270:
-                layer = np.rot90(layer, 3)
+                layer = xp.rot90(layer, 3)
             else:
                 layer = rotate(layer, wind_direction[ii], reshape=False, order=1)
         

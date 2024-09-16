@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 
 from pyssata.lib.online_filter import online_filter
 
@@ -10,17 +12,17 @@ def compute_comm(filter_obj, input_data, ist=None, ost=None):
     if nfilter < ninput:
         raise ValueError(f"Error: IIR filter needs no more than {nfilter} coefficients ({ninput} given)")
 
-    ordnum = np.sort(filter_obj.ordnum)
-    ordden = np.sort(filter_obj.ordden)
-    idx_onu = np.unique(ordnum, return_index=True)[1]
-    idx_odu = np.unique(ordden, return_index=True)[1]
+    ordnum = xp.sort(filter_obj.ordnum)
+    ordden = xp.sort(filter_obj.ordden)
+    idx_onu = xp.unique(ordnum, return_index=True)[1]
+    idx_odu = xp.unique(ordden, return_index=True)[1]
     onu = ordden[idx_onu]
     odu = ordden[idx_odu]
 
-    output = np.zeros_like(input_data)
+    output = xp.zeros_like(input_data)
 
     if len(onu) == 1 and len(odu) == 1:
-        idx_finite = np.where(np.isfinite(input_data))[0]
+        idx_finite = xp.where(xp.isfinite(input_data))[0]
         temp_ist = ist[idx_finite]
         temp_ost = ost[idx_finite]
         output[idx_finite] = online_filter(
@@ -35,11 +37,11 @@ def compute_comm(filter_obj, input_data, ist=None, ost=None):
     else:
         for j in range(len(idx_onu)):
             for k in range(len(idx_odu)):
-                idx = np.where((filter_obj.ordnum == onu[j]) & (filter_obj.ordden == odu[k]))[0]
+                idx = xp.where((filter_obj.ordnum == onu[j]) & (filter_obj.ordden == odu[k]))[0]
                 if len(idx) > 0:
                     ord_num = onu[j]
                     ord_den = odu[k]
-                    idx_finite = np.where(np.isfinite(input_data[idx]))[0]
+                    idx_finite = xp.where(xp.isfinite(input_data[idx]))[0]
                     if len(idx_finite) > 0:
                         idx = idx[idx_finite]
                         temp_ist = ist[idx, :ord_num]

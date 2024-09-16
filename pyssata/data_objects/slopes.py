@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 from astropy.io import fits
 
 from pyssata.data_objects.base_data_obj import BaseDataObj
@@ -10,7 +13,7 @@ class Slopes(BaseDataObj):
         if slopes is not None:
             self._slopes = slopes
         else:
-            self._slopes = np.zeros(length, dtype=float)
+            self._slopes = xp.zeros(length, dtype=float)
         self._interleave = interleave
         self._pupdata_tag = ''
 
@@ -64,9 +67,9 @@ class Slopes(BaseDataObj):
 
     def indx(self):
         if self._interleave:
-            return np.arange(0, self.size // 2) * 2
+            return xp.arange(0, self.size // 2) * 2
         else:
-            return np.arange(0, self.size // 2)
+            return xp.arange(0, self.size // 2)
 
     def indy(self):
         if self._interleave:
@@ -99,24 +102,24 @@ class Slopes(BaseDataObj):
         if pupdata is None:
             pupdata = cm.read_pupils(self._pupdata_tag)
         mask = pupdata.single_mask()
-        idx = np.where(mask)
-        fx = np.zeros_like(mask, dtype=float)
-        fy = np.zeros_like(mask, dtype=float)
+        idx = xp.where(mask)
+        fx = xp.zeros_like(mask, dtype=float)
+        fy = xp.zeros_like(mask, dtype=float)
         self.x_remap2d(fx, idx)
         self.y_remap2d(fy, idx)
         fx = fx[:fx.shape[0] // 2, fx.shape[1] // 2:]
         fy = fy[:fy.shape[0] // 2, fy.shape[1] // 2:]
-        return np.array([fx, fy])
+        return xp.array([fx, fy])
 
     def rotate(self, angle, flipx=False, flipy=False):
         sx = self.xslopes
         sy = self.yslopes
-        alpha = np.arctan2(sy, sx) + np.radians(angle)
-        modulus = np.sqrt(sx**2 + sy**2)
+        alpha = xp.arctan2(sy, sx) + xp.radians(angle)
+        modulus = xp.sqrt(sx**2 + sy**2)
         signx = -1 if flipx else 1
         signy = -1 if flipy else 1
-        self.xslopes = np.cos(alpha) * modulus * signx
-        self.yslopes = np.sin(alpha) * modulus * signy
+        self.xslopes = xp.cos(alpha) * modulus * signx
+        self.yslopes = xp.sin(alpha) * modulus * signy
 
     def save(self, filename, hdr=None):
         if hdr is None:

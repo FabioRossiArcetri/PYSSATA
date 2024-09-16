@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 from astropy.io import fits
 
 from pyssata.data_objects.base_data_obj import BaseDataObj
@@ -63,9 +66,9 @@ class Recmat(BaseDataObj):
         self._proj_list = []
         n = modes2recLayer.shape
         for i in range(n[0]):
-            idx = np.where(modes2recLayer[i, :] > 0)[0]
-            proj = np.zeros((n[1], len(idx)), dtype=float)
-            proj[idx, :] = np.identity(len(idx))
+            idx = xp.where(modes2recLayer[i, :] > 0)[0]
+            proj = xp.zeros((n[1], len(idx)), dtype=float)
+            proj[idx, :] = xp.identity(len(idx))
             self._proj_list.append(proj)
 
     def reduce_size(self, nModesToBeDiscarded):

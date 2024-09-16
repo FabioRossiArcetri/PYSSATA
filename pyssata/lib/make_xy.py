@@ -9,6 +9,8 @@
 ###############################################################################
 
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 
 
 def make_xy(sampling, ratio, dtype=None, polar=False, vector=False,
@@ -38,7 +40,7 @@ def make_xy(sampling, ratio, dtype=None, polar=False, vector=False,
     polar: bool, optional
            If True, return domain sampling in polar coordinates. Default
            value is False (use cartesian coordinates)
-    dtype: np.dtype, optional
+    dtype: xp.dtype, optional
            If set, the result will have this dtype. Otherwise, it will be
            inferred by the dtype of *sampling* and *ratio*
     vector: bool, optional
@@ -131,7 +133,7 @@ def make_xy(sampling, ratio, dtype=None, polar=False, vector=False,
 
     Examples
     --------
-    Compute a tilt plane on a round pupil
+    Compute a tilt plane on a xp.around pupil
 
     >>> x, y = make_xy(256, 1.0)
     >>> pupil = x*0
@@ -160,19 +162,19 @@ def make_xy(sampling, ratio, dtype=None, polar=False, vector=False,
         if even_sampling and zero_sampled:
             x0 += 0.5
 
-    x = (np.arange(size, dtype=dtype) - x0) / (sampling / 2.0) * ratio
+    x = (xp.arange(size, dtype=dtype) - x0) / (sampling / 2.0) * ratio
 
     if fft and not quarter:
         if even_sampling:
-            x = np.roll(x, -sampling / 2)
+            x = xp.roll(x, -sampling / 2)
         else:
-            x = np.roll(x, -(sampling - 1) / 2)
+            x = xp.roll(x, -(sampling - 1) / 2)
 
     if vector:
         return x
 
-    x = np.tile(x, (size, 1))
-    y = np.transpose(x).copy()
+    x = xp.tile(x, (size, 1))
+    y = xp.transpose(x).copy()
     if polar:
         x, y = _xy_to_polar(x, y)
 
@@ -181,8 +183,8 @@ def make_xy(sampling, ratio, dtype=None, polar=False, vector=False,
 
 def _xy_to_polar(x, y):
 
-    r = np.sqrt(x * x + y * y)
-    y = np.arctan2(y, x)
+    r = xp.sqrt(x * x + y * y)
+    y = xp.arctan2(y, x)
     return r, y
 
 # ___oOo___

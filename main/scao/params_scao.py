@@ -1,4 +1,4 @@
-import numpy as np
+from pyssata import xp
 
 main = {
  'root_dir':          './calib/SCAO',         # Root directory for calibration manager
@@ -20,7 +20,7 @@ seeing = {
 
 wind_speed = {
  'class':             'FuncGenerator',
- 'constant':          [200.]#,10.,20.,10.]      # [m/s] Wind speed value
+ 'constant':          [20.]#,10.,20.,10.]      # [m/s] Wind speed value
 }
 
 wind_direction = {
@@ -42,8 +42,8 @@ pupilstop = {                                 # Default parameters (circular pup
 atmo = {
  'class':             'AtmoEvolution',
  'L0':                40,                   # [m] Outer scale
- 'heights':           np.array([119.]), #,837,3045,12780]), # [m] layer heights at 0 zenith angle
- 'Cn2':               np.array([0.70]), #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
+ 'heights':           xp.array([119.]), #,837,3045,12780]), # [m] layer heights at 0 zenith angle
+ 'Cn2':               xp.array([0.70]), #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
  'source_list_ref':       ['on_axis_source'],
  'inputs': {
     'seeing' : 'seeing.output',
@@ -108,7 +108,7 @@ rec = {
 control = {
  'class':             'IntControl',
  'delay':             2,                      # Total temporal delay in time steps
- 'int_gain':          0.5 * np.ones(54)       # Integrator gain (for 'INT' control)
+ 'int_gain':          0.5 * xp.ones(54)       # Integrator gain (for 'INT' control)
 }
 
 dm = {

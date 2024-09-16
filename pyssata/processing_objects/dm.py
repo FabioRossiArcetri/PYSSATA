@@ -1,6 +1,8 @@
 import numpy as np
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
+from pyssata import gpuEnabled
+from pyssata import xp
 
 from pyssata.data_objects.ifunc import IFunc
 from pyssata.data_objects.layer import Layer
@@ -17,7 +19,7 @@ class DM(BaseProcessingObj):
                  nmodes: int=None,
                  nzern: int=None,
                  start_mode: int=None,
-                 idx_modes: np.ndarray=None,
+                 idx_modes: xp.ndarray=None,
                  npixels: int=None,
                  obsratio: float=None,
                  diaratio: float=None,
@@ -42,7 +44,7 @@ class DM(BaseProcessingObj):
         s = self._ifunc.mask_inf_func.shape
         nmodes_if = self._ifunc.size[0]
         
-        self._if_commands = np.zeros(nmodes_if, dtype=self._ifunc.type)
+        self._if_commands = xp.zeros(nmodes_if, dtype=self._ifunc.type)
         self._layer = Layer(s[0], s[1], pixel_pitch, height)
         self._layer.A = self._ifunc.mask_inf_func
         
@@ -67,16 +69,16 @@ class DM(BaseProcessingObj):
         commands = self._integrated_commands * self._gain
 
 
-        temp_matrix = np.zeros(self._layer.size, dtype=np.float64 if self._precision else np.float32)
+        temp_matrix = xp.zeros(self._layer.size, dtype=xp.float64 if self._precision else xp.float32)
         
         # Compute phase only if commands vector is not zero
-        if np.sum(np.abs(commands)) != 0:
+        if xp.sum(xp.abs(commands)) != 0:
             if len(commands) > len(self._if_commands):
                 raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
             
             self._if_commands[:len(commands)] = self._sign * commands
             
-            temp_matrix[self._ifunc.idx_inf_func] = np.dot(self._if_commands, self._ifunc.ptr_ifunc)
+            temp_matrix[self._ifunc.idx_inf_func] = xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
 
         self._layer.phaseInNm = temp_matrix
 
