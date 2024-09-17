@@ -417,7 +417,7 @@ class ModulatedPyramid(BaseProcessingObj):
 
         self._fft_padding = int(self._fft_padding)
 
-        pup_pyr_tot = xp.roll(pup_pyr_tot, xp.array( [[self._fft_padding//2, self._fft_padding//2], [0,1]]) )
+        pup_pyr_tot = xp.roll(pup_pyr_tot, xp.array( [self._fft_padding//2, self._fft_padding//2]), [0,1] )
 
         factor = 1.0 / xp.sum(self._flux_factor_vector)
         pup_pyr_tot *= factor
