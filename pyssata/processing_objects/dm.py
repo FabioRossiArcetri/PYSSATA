@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata.base_value import BaseValue
+from pyssata.connections import InputValue
 
 from pyssata.data_objects.ifunc import IFunc
 from pyssata.data_objects.layer import Layer
@@ -22,7 +24,9 @@ class DM(BaseProcessingObj):
                  pupilstop: Pupilstop=None,
                  ):
         super().__init__()
-        
+        self._command = None
+        self.inputs['in_command'] = InputValue(object=self._command, type=BaseValue)
+
         mask = None
         if pupilstop:
             mask = pupilstop.A

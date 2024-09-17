@@ -1,5 +1,6 @@
 import numpy as np
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.connections import InputValue, OutputValue
 from pyssata.processing_objects.timecontrol import TimeControl
 from pyssata.base_value import BaseValue
 from pyssata.lib.compute_comm import compute_comm
@@ -8,6 +9,7 @@ class IIRControl(TimeControl, BaseProcessingObj):
     '''Infinite Impulse Response filter based Time Control'''
     def __init__(self, iirfilter, delay=0):
         super().__init__()
+        BaseProcessingObj.__init__(self)
 
         self._iirfilter = iirfilter
         typeIIR = iirfilter.num.dtype
@@ -19,10 +21,11 @@ class IIRControl(TimeControl, BaseProcessingObj):
         self._ost = np.zeros_like(iirfilter.den)
 
         self._out_comm = BaseValue()
-
-        BaseProcessingObj.__init__(self)
-
         self._delta_comm = None
+
+        self.inputs['in_delta_comm'] = InputValue(object=self._delta_comm, type=np.ndarray)
+        self.outputs['out_comm'] = OutputValue(object=self._out_comm, type=BaseValue)
+
         self._opticalgain = None
         self._og_shaper = None
         self._offset = None

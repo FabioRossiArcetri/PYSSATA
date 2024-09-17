@@ -2,9 +2,10 @@ import numpy as np
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.data_objects.ef import ElectricField
 from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.calc_psf import calc_psf
-
+from pyssata.connections import InputValue
 
 class PSF(BaseProcessingObj):
     def __init__(self,
@@ -27,6 +28,7 @@ class PSF(BaseProcessingObj):
         self._count = 0
 
         self.reset_integration()
+        self.inputs['in_ef'] = InputValue(object=self._in_ef, type=ElectricField)
 
     @property
     def in_ef(self):

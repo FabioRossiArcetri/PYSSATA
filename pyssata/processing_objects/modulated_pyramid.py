@@ -2,6 +2,8 @@ import numpy as np
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.connections import InputValue, OutputValue
+from pyssata.data_objects.ef import ElectricField
 from pyssata.lib.make_xy import make_xy
 from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.make_mask import make_mask
@@ -36,6 +38,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self._mod_amp = 0
         self._mod_steps = 0
         self._pup_shifts = None
+        self._in_ef = None
 
         if not all([fft_res, fov_res, tilt_scale, fft_sampling, fft_totsize, toccd_side, final_ccd_side]):
             return
@@ -45,6 +48,12 @@ class ModulatedPyramid(BaseProcessingObj):
         self._psf_tot = BaseValue(np.zeros((fft_totsize, fft_totsize)))
         self._psf_bfm = BaseValue(np.zeros((fft_totsize, fft_totsize)))
         self._out_transmission = BaseValue(0)
+
+        self.inputs['in_ef'] = InputValue(object=self.in_ef, type=ElectricField)
+        self.outputs['out_i'] = OutputValue(object=self.out_i, type=Intensity)
+        self.outputs['out_psf_tot'] = OutputValue(object=self._psf_tot, type=BaseValue)
+        self.outputs['out_psf_bfm'] = OutputValue(object=self._psf_bfm, type=BaseValue)
+        self.outputs['out_transmission'] = OutputValue(object=self._out_transmission, type=BaseValue)
 
         self._pyr_tlt = self.get_pyr_tlt(fft_sampling, fft_padding)
         self._tlt_f = self.get_tlt_f(fft_sampling, fft_padding)

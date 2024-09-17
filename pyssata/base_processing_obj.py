@@ -17,6 +17,10 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         self._verbose = 0
         self._loop_dt = np.int64(0)
         self._loop_niters = 0
+        
+        # Will be populated by derived class
+        self.inputs = {}
+        self.outputs = {}
 
     @property
     def verbose(self):

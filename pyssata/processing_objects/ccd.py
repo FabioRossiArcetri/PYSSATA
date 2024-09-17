@@ -4,6 +4,7 @@ from numpy.random import default_rng
 from scipy.ndimage import convolve
 
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.connections import InputValue, OutputValue
 from pyssata.data_objects.pixels import Pixels
 from pyssata.data_objects.intensity import Intensity
 
@@ -61,6 +62,9 @@ class CCD(BaseProcessingObj):
         self._gaussian_noise = None
         self._useOaalibNoiseSource = False
         self._photon_rng = default_rng(self._photon_seed)
+
+        self.inputs['in_i'] = InputValue(object=self.in_i, type=Intensity)
+        self.outputs['out_pixels'] = OutputValue(object=self.out_pixels, type=Pixels)
 
     @property
     def in_i(self):

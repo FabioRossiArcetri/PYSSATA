@@ -8,10 +8,11 @@ from pyssata.data_objects.layer import Layer
 from pyssata.lib.cv_coord import cv_coord
 from pyssata.lib.phasescreen_manager import phasescreens_manager
 from pyssata.lib.phasescreens_shift import phasescreens_shift
+from pyssata.connections import InputValue
 
 
 class AtmoEvolution(BaseProcessingObj):
-    def __init__(self, L0, pixel_pitch, heights, Cn2, pixel_pupil, directory, source_list, wavelengthInNm: float=500.0,
+    def __init__(self, L0, pixel_pitch, heights, Cn2, pixel_pupil, data_dir, source_list, wavelengthInNm: float=500.0,
                  zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed: int=1, precision=None,
                  verbose=None, GPU=False, user_defined_phasescreen: str='', force_mcao_fov=False, make_cycle=None,
                  fov_in_m=None, pupil_position=None):
@@ -65,9 +66,11 @@ class AtmoEvolution(BaseProcessingObj):
         self._Cn2 = Cn2
         self._pixel_pupil = pixel_pupil
         self._pixel_layer = pixel_layer
-        self._directory = directory
+        self._data_dir = data_dir
         self._make_cycle = make_cycle
-        self._wind_direction = BaseValue(0)
+        self._seeing = None
+        self._wind_speed = None
+        self._wind_direction = None
 
         if pixel_phasescreens is None:
             self._pixel_square_phasescreens = 8192
@@ -94,6 +97,11 @@ class AtmoEvolution(BaseProcessingObj):
         
         if seed is not None:
             self.seed = seed
+
+        self.inputs['seeing'] = InputValue(object=self._seeing, type=BaseValue)
+        self.inputs['wind_speed'] = InputValue(object=self._wind_speed, type=BaseValue)
+        self.inputs['wind_direction'] = InputValue(object=self._wind_direction, type=BaseValue)
+
 
     @property
     def seed(self):
@@ -166,8 +174,8 @@ class AtmoEvolution(BaseProcessingObj):
         return self._pixel_layer
 
     @property
-    def directory(self):
-        return self._directory
+    def data_dir(self):
+        return self._data_dir
 
     def compute(self):
         # Phase screens list
@@ -209,7 +217,7 @@ class AtmoEvolution(BaseProcessingObj):
                 if self._make_cycle:
                     pixel_square_phasescreens = self._pixel_square_phasescreens - self._pixel_pupil
                     ps_cycle = get_layers(1, pixel_square_phasescreens, pixel_square_phasescreens * self._pixel_pitch,
-                                          500e-9, 1, L0=self._L0[0], par=par, START=start, SEED=seed, DIR=self._directory,
+                                          500e-9, 1, L0=self._L0[0], par=par, START=start, SEED=seed, DIR=self._data_dir,
                                           FILE=filename, no_sha=True, verbose=self._verbose)
                     ps_cycle = np.vstack([ps_cycle, ps_cycle[:, :self._pixel_pupil]])
                     ps_cycle = np.hstack([ps_cycle, ps_cycle[:self._pixel_pupil, :]])
@@ -222,7 +230,7 @@ class AtmoEvolution(BaseProcessingObj):
                         L0 = self._L0
                     L0 = np.array([L0])
                     square_phasescreens = phasescreens_manager(L0, self._pixel_square_phasescreens,
-                                                               self._pixel_pitch, self._directory,
+                                                               self._pixel_pitch, self._data_dir,
                                                                seed=seed, precision=self._precision,
                                                                verbose=self._verbose)
 
@@ -263,7 +271,7 @@ class AtmoEvolution(BaseProcessingObj):
 
                 # Square phasescreens
                 square_phasescreens = phasescreens_manager(self._L0, self._pixel_square_phasescreens,
-                                                           self._pixel_pitch, self._directory,
+                                                           self._pixel_pitch, self._data_dir,
                                                            seed=seed, precision=self._precision,
                                                            verbose=self._verbose)
 

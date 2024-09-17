@@ -1,6 +1,8 @@
 import numpy as np
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.connections import InputValue, OutputValue
+from pyssata.data_objects.pixels import Pixels
 from pyssata.data_objects.slopes import Slopes
 
 # Default values
@@ -79,6 +81,9 @@ class Slopec(BaseProcessingObj):
             self._cm = cm
         if sn_tag:
             self.load_sn(sn_tag)
+
+        self.inputs['in_pixels'] = InputValue(object=self.in_pixels, type=Pixels)
+        self.outputs['out_slopes'] = OutputValue(object=self.out_slopes, type=Slopes)
 
     @property
     def in_pixels(self):
@@ -274,6 +279,8 @@ class Slopec(BaseProcessingObj):
             errmsg += 'Slopes null are not valid'
         if self._weight_from_accumulated and self._accumulate:
             errmsg += 'weightFromAccumulated and accumulate must not be set together'
+        if errmsg != '':
+            print(errmsg)
         return not (self._weight_from_accumulated and self._accumulate) and self._pixels and self._slopes and ((not self._use_sn) or (self._use_sn and self._sn))
 
     def calc_slopes(self, t, accumulated=False):

@@ -1,6 +1,8 @@
 import numpy as np
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.connections import InputValue
+from pyssata.connections import OutputValue
 from pyssata.data_objects.intmat import Intmat
 from pyssata.data_objects.recmat import Recmat
 from pyssata.data_objects.slopes import Slopes
@@ -77,9 +79,15 @@ class Modalrec(BaseProcessingObj):
         self._control_list = []
         self._past_step_list = []
 
+        self._slopes = None
         self._modes = BaseValue('output modes from modal reconstructor')
         self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor')
         self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor')
+
+        self.inputs['in_slopes'] = InputValue(object=self._slopes, type=Slopes)
+        self.outputs['out_modes'] = OutputValue(object=self._modes, type=BaseValue)
+        self.outputs['out_pseudo_ol_modes'] = OutputValue(object=self._modes, type=BaseValue)
+        self.outputs['out_modes_first_step'] = OutputValue(object=self._modes, type=BaseValue)
 
     def set_layer_modes_list(self):
         if self._recmat.modes2recLayer is not None:
