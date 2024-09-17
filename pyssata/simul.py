@@ -172,7 +172,7 @@ class Simul():
         params = {}
         exec(open(self.param_file).read(), params)
         del params['__builtins__']
-        del params['np']
+        del params['xp']
 
         # Initialize housekeeping objects
         factory = Factory(params['main'])

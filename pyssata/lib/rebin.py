@@ -10,6 +10,8 @@
 #########################################################
 
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 
 def rebin2d(a, shape, sample=False):
     '''
@@ -20,7 +22,7 @@ def rebin2d(a, shape, sample=False):
 
     if sample:
         slices = [ slice(0,old, float(old)/new) for old,new in zip(a.shape,shape) ]
-        idx = np.mgrid[slices].astype(np.int32)
+        idx = xp.mgrid[slices].astype(xp.int32)
         return a[tuple(idx)]
 
     else:

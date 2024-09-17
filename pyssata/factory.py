@@ -1,6 +1,5 @@
 import numpy as np
 
-
 from pyssata.loop_control import LoopControl
 from pyssata.calib_manager import CalibManager
 from pyssata.base_processing_obj import BaseProcessingObj
@@ -216,7 +215,7 @@ class Factory:
         if not theta_temp:
             theta_temp = self.extract(params_launcher, 'theta', default=[0.0, 0.0])
 
-        if isinstance(zfocus_temp, (list, np.ndarray)) and len(zfocus_temp) > 1:
+        if isinstance(zfocus_temp, (list, xp.ndarray)) and len(zfocus_temp) > 1:
             params_zfocus = {'func_type': 'TIME_HIST', 'time_hist': zfocus_temp}
             params_theta = {'func_type': 'TIME_HIST', 'time_hist': theta_temp}
         else:
@@ -283,7 +282,7 @@ class Factory:
         oversampling = self.extract(params, 'oversampling', default=1.0)
         estTFparams = self.extract(params, 'estTFparams', default=False)
 
-        omega = 2 * np.pi * freq
+        omega = 2 * xp.pi * freq
         alpha = 0.0
         gx = 10.0 if sinusSingleFreq else 40.0
         gomega = 0
@@ -337,7 +336,7 @@ class Factory:
         zfocus_temp = self.extract(params_zlayer, 'zfocus', default=-1)
         theta_temp = self.extract(params_zlayer, 'theta', default=[0.0, 0.0])
 
-        if isinstance(zfocus_temp, (list, np.ndarray)) and len(zfocus_temp) > 1:
+        if isinstance(zfocus_temp, (list, xp.ndarray)) and len(zfocus_temp) > 1:
             params_zfocus = {'func_type': 'TIME_HIST', 'time_hist': zfocus_temp}
             params_theta = {'func_type': 'TIME_HIST', 'time_hist': theta_temp}
         else:
@@ -727,8 +726,8 @@ class Factory:
                 map_data = map_data[0]
             if map_data.ndim == 3:
                 map_temp = map_data
-                idx_mask = np.where(mask)
-                map_data = np.array([map_temp[i, :, :].ravel()[idx_mask] for i in range(map_temp.shape[0])])
+                idx_mask = xp.where(mask)
+                map_data = xp.array([map_temp[i, :, :].ravel()[idx_mask] for i in range(map_temp.shape[0])])
             disturbance = DisturbanceMap(map_data.shape, pixel_pitch, height, mask, map_data, GPU=useGPU, cycle=map_cycle)
         elif dataPackageDir:
             disturbance = DisturbanceM1Elt(dataPackageDir, dm_npixels, pixel_pitch, dynamic=dynamic, 
@@ -857,7 +856,7 @@ class Factory:
                 raise ValueError(f'Error reading influence function: {ifunc_tag}')
             m2c = M2C()
             nmodes_m2c = nmodes - start_mode if start_mode else nmodes
-            m2c.set_m2c(np.identity(nmodes_m2c))
+            m2c.set_m2c(xp.identity(nmodes_m2c))
 
         dm_m2c = DM_M2C(pixel_pitch, height, ifunc, m2c, GPU=useGPU)
         self.apply_global_params(dm_m2c)
@@ -1055,7 +1054,7 @@ class Factory:
         polar_coordinate += error_coord
 
         if 'zenithAngleInDeg' in self._main:
-            airmass = 1.0 / np.cos(np.radians(self._main['zenithAngleInDeg']))
+            airmass = 1.0 / xp.cos(xp.radians(self._main['zenithAngleInDeg']))
         else:
             airmass = 1.0
         height *= airmass
@@ -1369,9 +1368,9 @@ class Factory:
             B = self._cm.read_data(B_tag)
 
         if A is None and ff is not None:
-            A = np.diag(ff)
+            A = xp.diag(ff)
         if B is None and gain is not None:
-            B = np.diag(gain)
+            B = xp.diag(gain)
 
         intc = IntControlMat(A, B, delay=delay)
 
@@ -1422,7 +1421,7 @@ class Factory:
         Kernel: Kernel processing object
         """
         if 'zenithAngleInDeg' in self._main:
-            airmass = 1.0 / np.cos(np.radians(self._main['zenithAngleInDeg']))
+            airmass = 1.0 / xp.cos(xp.radians(self._main['zenithAngleInDeg']))
         else:
             airmass = 1.0
 
@@ -1571,19 +1570,19 @@ class Factory:
             print('WARNING: modes_tag will be ignored in factory.get_lift, because mode_basis input is defined')
 
         if regul is not None:
-            regul = np.diag(regul)
+            regul = xp.diag(regul)
 
-        if isinstance(chrom_lambdas, (list, np.ndarray)) and len(chrom_lambdas) == 1:
+        if isinstance(chrom_lambdas, (list, xp.ndarray)) and len(chrom_lambdas) == 1:
             chrom_lambdas = chrom_lambdas[0]
-        if isinstance(chrom_lambda0, (list, np.ndarray)) and len(chrom_lambda0) == 1:
+        if isinstance(chrom_lambda0, (list, xp.ndarray)) and len(chrom_lambda0) == 1:
             chrom_lambda0 = chrom_lambda0[0]
-        if isinstance(chrom_photo, (list, np.ndarray)) and len(chrom_photo) == 1:
+        if isinstance(chrom_photo, (list, xp.ndarray)) and len(chrom_photo) == 1:
             chrom_photo = chrom_photo[0]
         chrom = {'_lambdas': chrom_lambdas, '_lambda0': chrom_lambda0, '_photo': chrom_photo}
 
-        rad2asec = 3600.0 * 360.0 / (2 * np.pi)
+        rad2asec = 3600.0 * 360.0 / (2 * xp.pi)
         wavelengthInM = params_lens['wavelengthInNm'] * 1e-9
-        if isinstance(wavelengthInM, (list, np.ndarray)) and len(wavelengthInM) == 1:
+        if isinstance(wavelengthInM, (list, xp.ndarray)) and len(wavelengthInM) == 1:
             wavelengthInM = wavelengthInM[0]
         diameterInM = self._main['pixel_pupil'] * self._main['pixel_pitch'] / params_lens['subap_on_diameter']
         oversamp = (wavelengthInM / diameterInM * rad2asec) / (2 * params_lens['sensor_fov'] / params_lens['sensor_npx'])
@@ -1615,12 +1614,12 @@ class Factory:
                 ifunc = self._cm.read_ifunc(modes_tag)
                 ifuncMat = ifunc.influence_function
                 ifuncMask = ifunc.mask_inf_func
-                ifuncIdx = np.where(ifuncMask)
-                mode_basis = np.zeros((nmodes_mb, pupdiam ** 2), dtype=float)
+                ifuncIdx = xp.where(ifuncMask)
+                mode_basis = xp.zeros((nmodes_mb, pupdiam ** 2), dtype=float)
                 for i in range(nmodes_mb):
                     mode_basis[i, ifuncIdx] = ifuncMat[i, :]
 
-        airefInRad = params_ref['constant'] / (wavelengthInM * 1e9) * 2 * np.pi
+        airefInRad = params_ref['constant'] / (wavelengthInM * 1e9) * 2 * xp.pi
         if gain is not None:
             gain = gain[0]
 
@@ -1712,9 +1711,9 @@ class Factory:
             ifuncMat_aberr = ifunc_aberr.influence_function
             ifuncMask_aberr = ifunc_aberr.mask_inf_func
             sMaskAber = ifuncMask_aberr.shape
-            ifuncIdx_aberr = np.where(ifuncMask_aberr)
-            map_aberr_2d = np.dot(aberr_coeff, ifuncMat_aberr)
-            map_aberr = np.zeros(sMaskAber, dtype=aberr_coeff.dtype)
+            ifuncIdx_aberr = xp.where(ifuncMask_aberr)
+            map_aberr_2d = xp.dot(aberr_coeff, ifuncMat_aberr)
+            map_aberr = xp.zeros(sMaskAber, dtype=aberr_coeff.dtype)
             map_aberr[ifuncIdx_aberr] = map_aberr_2d
 
         subapdata = self._cm.read_subaps(params['subapdata_tag'])
@@ -1732,7 +1731,7 @@ class Factory:
             range_y = [jSaMap * dimSaPup, (jSaMap + 1) * dimSaPup]
 
             pup_mask_ith = pup_mask[range_x[0]:range_x[1], range_y[0]:range_y[1]]
-            idx_pup_mask_ith = np.where(pup_mask_ith)
+            idx_pup_mask_ith = xp.where(pup_mask_ith)
             if len(idx_pup_mask_ith[0]) == 0:
                 print(f'factory.get_lift_sh_slopec: mask is zero for i={i}')
                 continue
@@ -1748,33 +1747,33 @@ class Factory:
                     ifunc = self._cm.read_ifunc(modes_tag)
                     ifuncMat = ifunc.influence_function
                     ifuncMask = ifunc.mask_inf_func
-                    ifuncIdx = np.where(ifuncMask)
+                    ifuncIdx = xp.where(ifuncMask)
                     ifuncMask_diameter = ifuncMask.shape[0]
-                    mode_basis_ith = np.zeros((lift_params['nmodes_est'], ifuncMask_diameter ** 2), dtype=ifuncMat.dtype)
+                    mode_basis_ith = xp.zeros((lift_params['nmodes_est'], ifuncMask_diameter ** 2), dtype=ifuncMat.dtype)
                     for j in range(lift_params['nmodes_est']):
                         mode_basis_ith[j, ifuncIdx] = ifuncMat[j, :]
             else:
                 mode_basis_ith = mode_basis
                 ifuncMask = pup_mask
-                ifuncIdx = np.where(ifuncMask)
+                ifuncIdx = xp.where(ifuncMask)
                 ifuncMask_diameter = ifuncMask.shape[0]
 
             lift_params_ith = lift_params.copy()
 
             if ifuncMask_diameter == self._main['pixel_pupil']:
                 ifuncMask = ifuncMask[range_x[0]:range_x[1], range_y[0]:range_y[1]]
-                ifuncIdx = np.where(ifuncMask)
+                ifuncIdx = xp.where(ifuncMask)
                 mode_basis_ith = mode_basis_ith.reshape((lift_params['nmodes_est'], self._main['pixel_pupil'], self._main['pixel_pupil']))
                 mode_basis_ith = mode_basis_ith[:, range_x[0]:range_x[1], range_y[0]:range_y[1]]
                 mode_basis_temp = mode_basis_ith.reshape((lift_params['nmodes_est'], dimSaPup ** 2))
 
-                isItPiston = np.zeros(lift_params['nmodes_est'], dtype=int)
-                isItGood = np.zeros(lift_params['nmodes_est'], dtype=int)
+                isItPiston = xp.zeros(lift_params['nmodes_est'], dtype=int)
+                isItGood = xp.zeros(lift_params['nmodes_est'], dtype=int)
                 for j in range(lift_params['nmodes_est']):
                     temp = mode_basis_ith[j, :, :][ifuncIdx]
-                    if np.max(temp) != np.min(temp):
-                        yhist, xhist = np.histogram(temp, bins=int((np.max(temp) - np.min(temp)) * 0.01))
-                        idxYhistTemp = np.where(yhist > np.sum(yhist) * 1e-3)[0]
+                    if xp.max(temp) != xp.min(temp):
+                        yhist, xhist = xp.histogram(temp, bins=int((xp.max(temp) - xp.min(temp)) * 0.01))
+                        idxYhistTemp = xp.where(yhist > xp.sum(yhist) * 1e-3)[0]
                         if len(idxYhistTemp) == 1:
                             isItPiston[j] = 2
                         elif len(idxYhistTemp) == 2:
@@ -1782,10 +1781,10 @@ class Factory:
                     else:
                         isItPiston[j] = 2
 
-                idxPiston = np.where(isItPiston == 1)[0]
+                idxPiston = xp.where(isItPiston == 1)[0]
                 isItGood = (isItPiston <= 1).astype(int)
                 if len(idxPiston) == 2:
-                    isItBad = np.zeros(len(idxPiston), dtype=bool)
+                    isItBad = xp.zeros(len(idxPiston), dtype=bool)
                     for j in range(len(idxPiston)):
                         for k in range(len(idxPiston)):
                             if k > j:
@@ -1793,19 +1792,19 @@ class Factory:
                             tempj = mode_basis_ith[idxPiston[j], :, :][ifuncIdx]
                             tempk = mode_basis_ith[idxPiston[k], :, :][ifuncIdx]
                             temp = tempj + tempk
-                            yhist, xhist = np.histogram(temp, bins=int((np.max(temp) - np.min(temp)) * 0.01))
-                            idxYhistTemp = np.where(yhist > np.max(yhist) * 1e-3)[0]
+                            yhist, xhist = xp.histogram(temp, bins=int((xp.max(temp) - xp.min(temp)) * 0.01))
+                            idxYhistTemp = xp.where(yhist > xp.max(yhist) * 1e-3)[0]
                             if len(idxYhistTemp) == 1:
-                                if np.sum(tempj) > np.sum(tempk):
+                                if xp.sum(tempj) > xp.sum(tempk):
                                     isItBad[j] = True
                                 else:
                                     isItBad[k] = True
-                    idxIsItBad = np.where(isItBad)[0]
+                    idxIsItBad = xp.where(isItBad)[0]
                     if len(idxIsItBad) > 0:
                         isItGood[idxPiston[idxIsItBad]] = 0
 
                 if len(idxPiston) == 3:
-                    isItBad = np.zeros(len(idxPiston), dtype=bool)
+                    isItBad = xp.zeros(len(idxPiston), dtype=bool)
                     for j in range(len(idxPiston)):
                         for k in range(len(idxPiston)):
                             for l in range(len(idxPiston)):
@@ -1815,13 +1814,13 @@ class Factory:
                                 tempk = mode_basis_ith[idxPiston[k], :, :][ifuncIdx]
                                 templ = mode_basis_ith[idxPiston[l], :, :][ifuncIdx]
                                 temp = tempj + tempk + templ
-                                if np.max(temp) == np.min(temp):
+                                if xp.max(temp) == xp.min(temp):
                                     isItBad[j] = True
-                    idxIsItBad = np.where(isItBad)[0]
+                    idxIsItBad = xp.where(isItBad)[0]
                     if len(idxIsItBad) > 0:
                         isItGood[idxPiston[idxIsItBad]] = 0
 
-                idxTestMB = np.where(isItGood)[0]
+                idxTestMB = xp.where(isItGood)[0]
                 print('countTestMB', len(idxTestMB))
 
                 lift_params_ith['nmodes_est'] = len(idxTestMB)
@@ -1840,25 +1839,25 @@ class Factory:
 
             n_mode_basis_ith = mode_basis_ith.shape[0]
             mode_basis_ith_3d = mode_basis_ith.reshape((n_mode_basis_ith, dimSaPup, dimSaPup))
-            mode_basis_ith_2d_idx = np.zeros((n_mode_basis_ith, len(idx_pup_mask_ith[0])), dtype=mode_basis_ith.dtype)
+            mode_basis_ith_2d_idx = xp.zeros((n_mode_basis_ith, len(idx_pup_mask_ith[0])), dtype=mode_basis_ith.dtype)
             for j in range(n_mode_basis_ith):
                 mode_basis_ith_2d_idx[j, :] = mode_basis_ith_3d[j, :, :].flatten()[idx_pup_mask_ith]
 
-            inv_mode_basis_ith = np.linalg.pinv(mode_basis_ith_2d_idx)
+            inv_mode_basis_ith = xp.linalg.pinv(mode_basis_ith_2d_idx)
 
             if mode_basis is not None:
-                projMatTemp = np.dot(mode_basis_ith_2d_idx, inv_mode_basis_ith)
+                projMatTemp = xp.dot(mode_basis_ith_2d_idx, inv_mode_basis_ith)
                 if ifuncMask_diameter == self._main['pixel_pupil']:
                     if projMatTemp.shape[0] != lift_params['nmodes_est']:
-                        projMatIth = np.zeros((projMatTemp.shape[0], lift_params['nmodes_est']), dtype=projMatTemp.dtype)
+                        projMatIth = xp.zeros((projMatTemp.shape[0], lift_params['nmodes_est']), dtype=projMatTemp.dtype)
                         projMatIth[:, idxModalBaseAll[i]] = projMatTemp
                     else:
                         projMatIth = projMatTemp
                 else:
                     projMatIth = projMatTemp
-                projMat = np.hstack((projMat, projMatIth)) if projMat is not None else projMatIth
+                projMat = xp.hstack((projMat, projMatIth)) if projMat is not None else projMatIth
 
-            aberr_coeff_ith = np.dot(inv_mode_basis_ith, aberr_ith[idx_pup_mask_ith])
+            aberr_coeff_ith = xp.dot(inv_mode_basis_ith, aberr_ith[idx_pup_mask_ith])
             wfs_aberr_params = {'constant': aberr_coeff_ith}
 
             lift_list.append(
@@ -1871,7 +1870,7 @@ class Factory:
             )
 
         for i in range(lift_params['nmodes_est']):
-            normFact = sum(1 for j in idxModalBaseAll if np.min(np.abs(j - i)) == 0)
+            normFact = sum(1 for j in idxModalBaseAll if xp.min(xp.abs(j - i)) == 0)
             if normFact > 0:
                 projMat[:, i] /= normFact
 
@@ -1911,7 +1910,7 @@ class Factory:
         else:
             nmodes = params.pop('nmodes')
             m2c = M2C()
-            m2c.set_m2c(np.identity(nmodes))
+            m2c.set_m2c(xp.identity(nmodes))
 
         m2crec = M2CRec(m2c)
 
@@ -2155,21 +2154,21 @@ class Factory:
             pupdata = self._cm.read_pupils(pupdata_tag)
 
             # Compute IFried from pupdata
-            pup2Dfull = np.zeros(pupdata.framesize, dtype=float)
+            pup2Dfull = xp.zeros(pupdata.framesize, dtype=float)
             pup2Dfull[pupdata.ind_pup[0, :]] = 1
-            idx1 = np.where(np.sum(pup2Dfull, axis=1) > 0)
-            idx2 = np.where(np.sum(pup2Dfull, axis=0) > 0)
+            idx1 = xp.where(xp.sum(pup2Dfull, axis=1) > 0)
+            idx2 = xp.where(xp.sum(pup2Dfull, axis=0) > 0)
 
             pup2D = pup2Dfull[idx2[0][0]:idx2[0][-1] + 1, idx1[0][0]:idx1[0][-1] + 1]
             sPup2D = pup2D.shape
 
-            I_fried = np.zeros((sPup2D[0] + 1, sPup2D[1] + 1), dtype=float)
+            I_fried = xp.zeros((sPup2D[0] + 1, sPup2D[1] + 1), dtype=float)
             I_fried[:-1, :-1] += pup2D
             I_fried[1:, :-1] += pup2D
             I_fried[:-1, 1:] += pup2D
             I_fried[1:, 1:] += pup2D
 
-            I_fried = np.transpose(I_fried > 0)
+            I_fried = xp.transpose(I_fried > 0)
         else:
             I_fried = self._cm.read_data(I_fried_tag)
 
@@ -2473,7 +2472,7 @@ class Factory:
         if mod_step_original:
             mod_step = mod_step_original
         else:
-            mod_step = round(max([1., mod_amp / 2. * 8.])) * 2.
+            mod_step = np.around(max([1., mod_amp / 2. * 8.])) * 2.
 
         if mod_step_original and mod_step_original < mod_step:
             print(f' Attention mod_step={mod_step_original} is too low!')
@@ -2664,8 +2663,8 @@ class Factory:
         y += field_center[1]
 
         source_list = []
-        phi = np.degrees(np.arctan2(y, x))
-        r = np.sqrt(x**2 + y**2)
+        phi = xp.degrees(xp.arctan2(y, x))
+        r = xp.sqrt(x**2 + y**2)
 
         for i in range(len(x)):
             p = {

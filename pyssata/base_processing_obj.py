@@ -1,4 +1,3 @@
-import numpy as np
 from astropy.io import fits
 
 from pyssata.base_time_obj import BaseTimeObj
@@ -15,7 +14,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         BaseTimeObj.__init__(self, precision)
         BaseParameterObj.__init__(self)
         self._verbose = 0
-        self._loop_dt = np.int64(0)
+        self._loop_dt = 0
         self._loop_niters = 0
         
         # Will be populated by derived class
