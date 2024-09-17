@@ -22,7 +22,7 @@ else:
     xp = np
 
 def cpuArray(v):
-    if isinstance(v,np.ndarray) or isinstance(v, np.float64):
+    if isinstance(v, (np.ndarray, np.float64, np.int64)):
         return v
     else:
         return v.get()
