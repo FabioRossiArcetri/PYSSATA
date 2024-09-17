@@ -2,6 +2,7 @@ import os
 import numpy as np
 from pyssata import gpuEnabled
 from pyssata import xp
+from pyssata import cpuArray
 from astropy.io import fits
 
 from pyssata.lib.calc_phasescreen import calc_phasescreen
@@ -45,7 +46,7 @@ def phasescreens_manager(L0, dimension, pixel_pitch, directory, seed=None, preci
         else:
             # Calculate the phase screen if it does not exist
             phasescreen = calc_phasescreen(L0i, dimension, pixel_pitch, seed=element, precision=precision, verbose=verbose)
-            fits.writeto(os.path.join(directory, phasescreen_name), phasescreen, overwrite=True)
+            fits.writeto(os.path.join(directory, phasescreen_name), cpuArray(phasescreen), overwrite=True)
         
         # Add the phase screen to the list
         phasescreens.append(phasescreen)

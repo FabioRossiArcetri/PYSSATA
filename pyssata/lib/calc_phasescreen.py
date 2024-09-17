@@ -1,6 +1,7 @@
 import numpy as np
 from pyssata import gpuEnabled
 from pyssata import xp
+from pyssata import cpuArray
 
 from pyssata.lib.calc_spatialfrequency import calc_spatialfrequency
 
@@ -29,7 +30,7 @@ def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=False, verbos
     if verbose:
         print("Compute random matrices")
 
-    xp.random.seed(seed)
+    xp.random.seed(cpuArray(seed))
     re_gauss = xp.random.standard_normal((half_dim + 1, 2 * half_dim + 1))
     im_gauss = xp.random.standard_normal((half_dim + 1, 2 * half_dim + 1))
 
