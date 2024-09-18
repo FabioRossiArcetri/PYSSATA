@@ -16,6 +16,9 @@ from pyssata.display.plot_display import PlotDisplay
 from pyssata.display.phase_display import PhaseDisplay
 from pyssata.display.psf_display import PSFDisplay
 
+import yaml
+import io
+
 class Simul():
     '''
     Simulation organizer
@@ -170,9 +173,10 @@ class Simul():
 
     def run(self):
         params = {}
-        exec(open(self.param_file).read(), params)
-        del params['__builtins__']
-        del params['np']
+
+        # Read YAML file
+        with open(self.param_file, 'r') as stream:
+            params = yaml.safe_load(stream)
 
         # Initialize housekeeping objects
         factory = Factory(params['main'])

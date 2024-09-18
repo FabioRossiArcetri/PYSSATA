@@ -35,7 +35,7 @@ class AtmoEvolution(BaseProcessingObj):
             print(f'Atmo_Evolution: airmass is: {self._airmass}')
         else:
             self._airmass = 1.0
-        heights = heights * self._airmass
+        heights = xp.array(heights) * self._airmass
 
         # Conversion coefficient from arcseconds to radians
         sec2rad = 4.848e-6
@@ -65,7 +65,7 @@ class AtmoEvolution(BaseProcessingObj):
         self._pixel_pitch = pixel_pitch
         self._n_phasescreens = len(heights)
         self._heights = heights
-        self._Cn2 = Cn2
+        self._Cn2 = xp.array(Cn2)
         self._pixel_pupil = pixel_pupil
         self._pixel_layer = pixel_layer
         self._data_dir = data_dir

@@ -1,11 +1,13 @@
 
 from pyssata.processing_objects.iircontrol import IIRControl
 from pyssata.lib.int2iirfilter import int2iirfilter
-
+import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
     
 class IntControl(IIRControl):
     def __init__(self, int_gain, ff=None, delay=0, offset=None, og_shaper=None):
-        iirfilter = int2iirfilter(int_gain, ff=ff)
+        iirfilter = int2iirfilter(xp.array(int_gain), ff=ff)
 
         # Initialize IIRControl object
         super().__init__(iirfilter, delay=delay)
