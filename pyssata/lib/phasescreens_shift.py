@@ -19,7 +19,7 @@ def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, de
     
     for ii, p in enumerate(phasescreens):
         # Check if we need to cycle the screens
-        print(ii, new_position[ii], pixel_layer[ii], p.shape[1])
+        # print(ii, new_position[ii], pixel_layer[ii], p.shape[1]) # Verbose?
         if cycle_screens:
             if new_position[ii] + pixel_layer[ii] > p.shape[1]:
                 new_position[ii] = 0.
@@ -30,7 +30,7 @@ def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, de
             raise ValueError(f'phasescreens_shift cannot go out of the {ii}-th phasescreen!')
         
         pos = new_position_quo[ii]
-        print(pos, pixel_layer)
+        # print(pos, pixel_layer) # Verbose?
         ps_Shift1 = p[0: int(pixel_layer[ii]), pos: int(pos + pixel_layer[ii])]
         ps_Shift2 = p[0: int(pixel_layer[ii]), pos + 1: int(pos + pixel_layer[ii]) + 1]
         ps_ShiftInterp = (1 - new_position_rem[ii]) * ps_Shift1 + new_position_rem[ii] * ps_Shift2
@@ -54,6 +54,6 @@ def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, de
         
         layer_list[ii].phaseInNm = layer * scale_coeff
 
-    print(f'Phasescreen_shift: {new_position=}')    
+    # print(f'Phasescreen_shift: {new_position=}') # Verbose?
     # Update position output
     return new_position

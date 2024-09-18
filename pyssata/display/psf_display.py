@@ -6,12 +6,14 @@ from pyssata import cpuArray
 import matplotlib.pyplot as plt
 
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.connections import InputValue
+from pyssata.base_value import BaseValue
 
 
-class PSFDisplay(BaseProcessingObj):
-    def __init__(self, psf=None, wsize=[600, 600], window=23, title='PSF'):
+class PsfDisplay(BaseProcessingObj):
+    def __init__(self, disp_factor=1, wsize=[600, 600], window=23, title='PSF'):
         super().__init__()
-        self._psf = psf
+        self._psf = None
         self._wsize = wsize
         self._window = window
         self._log = False
@@ -19,6 +21,8 @@ class PSFDisplay(BaseProcessingObj):
         self._title = title
         self._opened = False
         self._first = True
+        self._disp_factor = disp_factor
+        self.inputs['psf'] = InputValue(object=self._psf, type=BaseValue)
 
     @property
     def psf(self):
@@ -98,7 +102,6 @@ class PSFDisplay(BaseProcessingObj):
 #            plt.colorbar()
             self.fig.canvas.draw()
             plt.pause(0.001)
-
 
     def run_check(self, time_step):
         return self._psf is not None

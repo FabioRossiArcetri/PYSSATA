@@ -6,24 +6,27 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.connections import InputValue
+from pyssata.base_value import BaseValue
 
 
 class PlotDisplay(BaseProcessingObj):
-    def __init__(self, value=None, histlen=200, wsize=(600, 400), window=23, yrange=(0, 0), oplot=False, color=1, psym=-4, title=''):
+    def __init__(self, disp_factor=1, histlen=200, wsize=(600, 400), window=23, yrange=(0, 0), oplot=False, color=1, psym=-4, title=''):
         super().__init__()
         
         self._wsize = wsize
         self._window = window
         self.set_histlen(histlen)
         self._yrange = yrange
-
-        self._value = value
+        self._value = None
         self._oplot = oplot
         self._color = color
         self._psym = psym
         self._title = title
         self._opened = False
         self._first = True
+        self._disp_factor = disp_factor
+        self.inputs['value'] = InputValue(object=self._value, type=BaseValue)
 
     @property
     def value(self):

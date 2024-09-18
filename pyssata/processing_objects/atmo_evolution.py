@@ -135,7 +135,7 @@ class AtmoEvolution(BaseProcessingObj):
 
     @wind_direction.setter
     def wind_direction(self, value):
-        print('wind_direction', value)
+        # print('wind_direction', value) # Verbose?
         self._wind_direction = value
 
     @property
@@ -241,8 +241,8 @@ class AtmoEvolution(BaseProcessingObj):
 
                     temp_screen = xp.array(square_phasescreens[square_ps_index][int(self._pixel_phasescreens) * ps_index:
                                                                        int(self._pixel_phasescreens) * (ps_index + 1), :])
-                    print('self._Cn2[i]', self._Cn2[i], type(self._Cn2[i]), type(self._Cn2))
-                    print('temp_screen', temp_screen, type(temp_screen))
+                    # print('self._Cn2[i]', self._Cn2[i], type(self._Cn2[i]), type(self._Cn2))  # Verbose?
+                    # print('temp_screen', temp_screen, type(temp_screen))  # Verbose?
 
                     temp_screen *= xp.sqrt(self._Cn2[i])
                     temp_screen -= xp.mean(temp_screen)

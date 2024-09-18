@@ -256,8 +256,8 @@ class Modalrec(BaseProcessingObj):
         if slope_ptr is None:
             if isinstance(self._slopes, Slopes):
                 slope_ptr = self._slopes.ptr_slopes
-                print('Slopes')
                 if self._verbose:
+                    print('Slopes')
                     print(f"modalrec.compute_modes slope RMS: {xp.sqrt(xp.mean(slope_ptr**2))}")
             elif isinstance(self._slopes, BaseValue):
                 slope_ptr = self._slopes.ptr_value
