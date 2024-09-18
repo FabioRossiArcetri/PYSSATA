@@ -1,6 +1,10 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.connections import InputValue, OutputValue
 from pyssata.data_objects.pixels import Pixels
 from pyssata.data_objects.slopes import Slopes
 
@@ -48,6 +52,9 @@ class Slopec(BaseProcessingObj):
         self._accumulated_pixels = np.array(accumulated_pixels)
         self._accumulated_slopes = Slopes(2)
         self._accumulated_pixels_ptr = None   # TODO, see do_accumulation() method
+
+        self.inputs['in_pixels'] = InputValue(object=self.in_pixels, type=Pixels)
+        self.outputs['out_slopes'] = OutputValue(object=self.out_slopes, type=Slopes)
 
     @property
     def in_pixels(self):
@@ -215,7 +222,7 @@ class Slopec(BaseProcessingObj):
 
     def set_filtmat(self, filtmat):
         self._filt_intmat = filtmat[:, :, 0]
-        self._filt_recmat = np.transpose(filtmat[:, :, 1])
+        self._filt_recmat = xp.transpose(filtmat[:, :, 1])
         self._do_filter_modes = True
 
     def remove_filtmat(self):
@@ -228,7 +235,7 @@ class Slopec(BaseProcessingObj):
         im = intmat[:nmodes, :]
         rm = recmat[:, :nmodes]
 
-        output = np.stack((im, np.transpose(rm)), axis=-1)
+        output = xp.stack((im, xp.transpose(rm)), axis=-1)
         self.writefits(filename, output)
         print(f'saved {filename}')
 
@@ -243,6 +250,8 @@ class Slopec(BaseProcessingObj):
             errmsg += 'Slopes null are not valid'
         if self._weight_from_accumulated and self._accumulate:
             errmsg += 'weightFromAccumulated and accumulate must not be set together'
+        if errmsg != '':
+            print(errmsg)
         return not (self._weight_from_accumulated and self._accumulate) and self._pixels and self._slopes and ((not self._use_sn) or (self._use_sn and self._sn))
 
     def calc_slopes(self, t, accumulated=False):
@@ -281,7 +290,7 @@ class Slopec(BaseProcessingObj):
 
         if self._pixels.generation_time == t:
             self.calc_slopes(t)
-            if not np.isfinite(self._slopes.slopes).all():
+            if not xp.isfinite(self._slopes.slopes).all():
                 raise ValueError('slopes have non-finite elements')
             if self._sn is not None and self._use_sn:
                 if self._verbose:
@@ -300,7 +309,7 @@ class Slopec(BaseProcessingObj):
                 else:
                     self._slopes.subtract(self._sn)
 
-            self._slopes_ave.value = [np.mean(self._slopes.xslopes), np.mean(self._slopes.yslopes)]
+            self._slopes_ave.value = [xp.mean(self._slopes.xslopes), xp.mean(self._slopes.yslopes)]
             self._slopes_ave.generation_time = t
 
             if self._remove_mean:
@@ -313,8 +322,8 @@ class Slopec(BaseProcessingObj):
 
         else:
             if self._return0:
-                self._slopes.xslopes = np.zeros_like(self._slopes.xslopes)
-                self._slopes.yslopes = np.zeros_like(self._slopes.yslopes)
+                self._slopes.xslopes = xp.zeros_like(self._slopes.xslopes)
+                self._slopes.yslopes = xp.zeros_like(self._slopes.yslopes)
 
         if self._update_slope_high_speed:
             if self._gain_slope_high_speed == 0.0:
@@ -326,29 +335,29 @@ class Slopec(BaseProcessingObj):
                 if len(comm.value) > 0:
                     commands.append(comm.value)
             if self._pixels.generation_time == t:
-                self._store_s = np.array([self._gain_slope_high_speed * self._slopes.xslopes, self._gain_slope_high_speed * self._slopes.yslopes])
-                self._store_c = np.array(commands)
+                self._store_s = xp.array([self._gain_slope_high_speed * self._slopes.xslopes, self._gain_slope_high_speed * self._slopes.yslopes])
+                self._store_c = xp.array(commands)
             else:
                 if len(commands) > 0 and self._store_s is not None and self._store_c is not None:
-                    temp = np.dot(np.array(commands) - self._store_c, self._intmat)
+                    temp = xp.dot(xp.array(commands) - self._store_c, self._intmat)
                     self._store_s *= self._ff_slope_high_speed
                     self._slopes.xslopes = self._store_s[0] - temp[:len(temp)//2]
                     self._slopes.yslopes = self._store_s[1] - temp[len(temp)//2:]
                     self._slopes.generation_time = t
 
         if self._do_filter_modes:
-            m = np.dot(self._slopes.ptr_slopes, self._filt_recmat)
-            sl0 = np.dot(m, self._filt_intmat)
+            m = xp.dot(self._slopes.ptr_slopes, self._filt_recmat)
+            sl0 = xp.dot(m, self._filt_intmat)
             sl = self._slopes.slopes
             if len(sl) != len(sl0):
                 raise ValueError(f'mode filtering goes wrong: original slopes size is: {len(sl)} while filtered slopes size is: {len(sl0)}')
             self._slopes.slopes -= sl0
             if self._verbose:
-                print(f'Slopes have been filtered. New slopes min, max and rms : {np.min(self._slopes.slopes)}, {np.max(self._slopes.slopes)}  //  {np.sqrt(np.mean(self._slopes.slopes**2))}')
-            if not np.isfinite(self._slopes.slopes).all():
+                print(f'Slopes have been filtered. New slopes min, max and rms : {xp.min(self._slopes.slopes)}, {xp.max(self._slopes.slopes)}  //  {xp.sqrt(xp.mean(self._slopes.slopes**2))}')
+            if not xp.isfinite(self._slopes.slopes).all():
                 raise ValueError('slopes have non-finite elements')
 
         if self._do_rec:
-            m = np.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
+            m = xp.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
             self._slopes.slopes = m
 

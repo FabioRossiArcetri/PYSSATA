@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 from astropy.io import fits
 
 from pyssata.data_objects.base_data_obj import BaseDataObj
@@ -11,9 +14,9 @@ class Pixels(BaseDataObj):
         self._validate_bits(bits)
         self._signed = signed
         self._type = self._get_type(bits, signed)
-        self._pixels = np.zeros((dimx, dimy), dtype=self._type)
+        self._pixels = xp.zeros((dimx, dimy), dtype=self._type)
         self._bpp = bits
-        self._bytespp = (bits + 7) // 8  # bits rounded to the next multiple of 8
+        self._bytespp = (bits + 7) // 8  # bits xp.arounded to the next multiple of 8
 
         super().__init__()
 
@@ -23,14 +26,14 @@ class Pixels(BaseDataObj):
 
     def _get_type(self, bits, signed):
         type_matrix = [
-            [np.uint8, np.int8],
-            [np.uint16, np.int16],
-            [np.uint32, np.int32],
-            [np.uint32, np.int32],
-            [np.uint64, np.int64],
-            [np.uint64, np.int64],
-            [np.uint64, np.int64],
-            [np.uint64, np.int64]
+            [xp.uint8, xp.int8],
+            [xp.uint16, xp.int16],
+            [xp.uint32, xp.int32],
+            [xp.uint32, xp.int32],
+            [xp.uint64, xp.int64],
+            [xp.uint64, xp.int64],
+            [xp.uint64, xp.int64],
+            [xp.uint64, xp.int64]
         ]
         return type_matrix[(bits - 1) // 8][signed]
 
@@ -66,7 +69,7 @@ class Pixels(BaseDataObj):
         self._pixels *= factor
 
     def set_size(self, size):
-        self._pixels = np.zeros(size, dtype=self._type)
+        self._pixels = xp.zeros(size, dtype=self._type)
 
     def save(self, filename, hdr=None):
         if hdr is None:

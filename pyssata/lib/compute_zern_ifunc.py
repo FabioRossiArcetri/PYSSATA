@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 
 from pyssata.lib.make_mask import make_mask
 from pyssata.lib.zernike_generator import ZernikeGenerator
@@ -10,16 +12,16 @@ def compute_zern_ifunc(dim, nzern, obsratio=0.0, diaratio=1.0, start_mode=0, mas
         mask, idx = make_mask(dim, obsratio, diaratio, get_idx=True)
     else:
         mask = mask.astype(float)
-        idx = np.where(mask)[0]
+        idx = xp.where(mask)[0]
 
     zg = ZernikeGenerator(dim)
-    zern_phase_3d = np.stack([zg.getZernike(z) for z in range(2, nzern + 2)])
+    zern_phase_3d = xp.stack([zg.getZernike(z) for z in range(2, nzern + 2)])
     zern_phase_3d = zern_phase_3d[start_mode:]
     nzern -= start_mode
 
-    zern_phase_2d = np.array([zern_phase_3d[i][idx] for i in range(nzern)])
+    zern_phase_2d = xp.array([zern_phase_3d[i][idx] for i in range(nzern)])
     
-    zern_phase_2d = zern_phase_2d / np.std(zern_phase_2d, axis=1, keepdims=True)
+    zern_phase_2d = zern_phase_2d / xp.std(zern_phase_2d, axis=1, keepdims=True)
 
     return zern_phase_2d.astype(float), mask
 

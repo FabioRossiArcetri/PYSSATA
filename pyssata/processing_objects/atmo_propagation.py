@@ -1,16 +1,18 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 from astropy.io import fits
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.ef import ElectricField
 from pyssata.lib.layers2pupil_ef import layers2pupil_ef
-from pyssata.base_list import BaseList
-
+from pyssata.connections import InputList, OutputValue
+from pyssata.data_objects.layer import Layer
 
 class AtmoPropagation(BaseProcessingObj):
     '''Atmospheric propagation'''
     def __init__(self,
-                 source_list,
+                 source_dict,
                  pixel_pupil: int,
                  pixel_pitch: float,
                  precision=0,
@@ -25,30 +27,40 @@ class AtmoPropagation(BaseProcessingObj):
         self._pixel_pupil = pixel_pupil
         self._pixel_pitch = pixel_pitch
         self._precision = precision
-        self._pupil_list = BaseList()
+        self._source_dict = source_dict
+        self._pupil_dict = {}
         self._layer_list = []
-        self._source_list = []
         self._shiftXY_list = []
         self._rotAnglePhInDeg_list = []
         self._magnification_list = []
         self._pupil_position = pupil_position
         self._doFresnel = doFresnel
         self._wavelengthInNm = wavelengthInNm
+        self._propagators = None
 
-        for source in source_list:
-            self.add_source(source)
+        for name, source in source_dict.items():
+            self.add_source(name, source)
+            self.outputs[name] = OutputValue(object=self._pupil_dict[name], type=ElectricField)
+            setattr(self, name, self._pupil_dict[name])   # TODO it will be removed when output get/set methods will be used
+            
+        self.inputs['layer_list'] = InputList(object=self.layer_list, type=Layer)
+
+    def add_source(self, name, source):
+        ef = ElectricField(self._pixel_pupil, self._pixel_pupil, self._pixel_pitch)
+        ef.S0 = source.phot_density()
+        self._pupil_dict[name] = ef
 
     @property
-    def pupil_list(self):
-        return self._pupil_list
+    def pupil_dict(self):
+        return self._pupil_dict
 
     @property
     def layer_list(self):
         return self._layer_list
 
     @layer_list.setter
-    def layer_list(self, value):
-        self._layer_list = value
+    def layer_list(self, layer_list):
+        self._layer_list = layer_list
         self._propagators = None
 
     @property
@@ -75,9 +87,9 @@ class AtmoPropagation(BaseProcessingObj):
             nlayers = len(self._layer_list)
             self._propagators = []
 
-            height_layers = np.array([layer.height for layer in self._layer_list])
-            sorted_heights = np.sort(height_layers)
-            if not (np.allclose(height_layers, sorted_heights) or np.allclose(height_layers, sorted_heights[::-1])):
+            height_layers = xp.array([layer.height for layer in self._layer_list])
+            sorted_heights = xp.sort(height_layers)
+            if not (xp.allclose(height_layers, sorted_heights) or xp.allclose(height_layers, sorted_heights[::-1])):
                 raise ValueError('Layers must be sorted from highest to lowest or from lowest to highest')
 
             for j in range(nlayers):
@@ -99,21 +111,21 @@ class AtmoPropagation(BaseProcessingObj):
         shiftXY_list = self._shiftXY_list if self._shiftXY_list else None
         rotAnglePhInDeg_list = self._rotAnglePhInDeg_list if self._rotAnglePhInDeg_list else None
         magnification_list = self._magnification_list if self._magnification_list else None
-        pupil_position = self._pupil_position if np.any(self._pupil_position) else None
+        pupil_position = xp.array(self._pupil_position) if xp.any(xp.array(self._pupil_position)) else None
 
-        for i, element in enumerate(self._source_list):
-            height_star = element.height
-            polar_coordinate_star = element.polar_coordinate
+        for name, source in self._source_dict.items():
+            height_star = source.height
+            polar_coordinate_star = source.polar_coordinate
+            pupil = self._pupil_dict[name]
 
-            self._pupil_list[i].reset()
+            pupil.reset()
             layers2pupil_ef(self._layer_list, height_star, polar_coordinate_star,
-                            update_ef=self._pupil_list[i], shiftXY_list=shiftXY_list,
+                            update_ef=pupil, shiftXY_list=shiftXY_list,
                             rotAnglePhInDeg_list=rotAnglePhInDeg_list, magnify_list=magnification_list,
                             pupil_position=pupil_position, doFresnel=self._doFresnel,
                             propagators=self._propagators, wavelengthInNm=self._wavelengthInNm)
 
-            self._pupil_list[i].generation_time = t
-        self._pupil_list.generation_time = t
+            pupil.generation_time = t
 
     def trigger(self, t):
         self.propagate(t)
@@ -128,28 +140,14 @@ class AtmoPropagation(BaseProcessingObj):
     def add_layer(self, layer):
         self.add_layer_to_layer_list(layer)
 
-    def add_source(self, source):
-        self._source_list.append(source)
-        ef = ElectricField(self._pixel_pupil, self._pixel_pupil, self._pixel_pitch)
-        ef.S0 = source.phot_density()
-        self._pupil_list.append(ef)
-
-    def pupil(self, num):
-        if num >= len(self._pupil_list):
-            raise ValueError(f'Pupil #{num} does not exist')
-        return self._pupil_list[num]
-
-    def copy(self):
-        prop = AtmoPropagation([], self._pixel_pupil, self._pixel_pitch, precision=self._precision)
-        for layer in self._layer_list:
-            prop.add_layer(layer)
-        for source in self._source_list:
-            prop.add_source(source)
-        return prop
-
     def run_check(self, time_step):
+        # TODO here for no better place, we need something like a "setup()" method called before the loop starts
+        self._shiftXY_list = [layer.shiftXYinPixel if hasattr(layer, 'shiftXYinPixel') else [0, 0] for layer in self.layer_list]
+        self._rotAnglePhInDeg_list = [layer.rotInDeg if hasattr(layer, 'rotInDeg') else 0 for layer in self.layer_list]
+        self._magnification_list = [max(layer.magnification, 1.0) if hasattr(layer, 'magnification') else 1.0 for layer in self.layer_list]
+
         errmsg = ''
-        if not (len(self._source_list) > 0):
+        if not (len(self._source_dict) > 0):
             errmsg += 'no source'
         if not (len(self._layer_list) > 0):
             errmsg += 'no layers'
@@ -157,7 +155,7 @@ class AtmoPropagation(BaseProcessingObj):
             errmsg += 'pixel pupil <= 0'
         if not (self._pixel_pitch > 0):
             errmsg += 'pixel pitch <= 0'
-        return (len(self._source_list) > 0 and
+        return (len(self._source_dict) > 0 and
                 len(self._layer_list) > 0 and
                 self._pixel_pupil > 0 and
                 self._pixel_pitch > 0), errmsg

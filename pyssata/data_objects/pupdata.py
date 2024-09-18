@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 from astropy.io import fits
 
 from pyssata.data_objects.base_data_obj import BaseDataObj
@@ -6,11 +9,11 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 class PupData(BaseDataObj):
     def __init__(self):
         super().__init__()
-        self._radius = np.zeros(4, dtype=float)
-        self._cx = np.zeros(4, dtype=float)
-        self._cy = np.zeros(4, dtype=float)
-        self._ind_pup = np.empty((4, 0), dtype=int)
-        self._framesize = np.zeros(2, dtype=int)
+        self._radius = xp.zeros(4, dtype=float)
+        self._cx = xp.zeros(4, dtype=float)
+        self._cy = xp.zeros(4, dtype=float)
+        self._ind_pup = xp.empty((4, 0), dtype=int)
+        self._framesize = xp.zeros(2, dtype=int)
         
     @property
     def radius(self):
@@ -62,12 +65,12 @@ class PupData(BaseDataObj):
         return tmp
 
     def single_mask(self):
-        f = np.zeros(self._framesize, dtype=float)
+        f = xp.zeros(self._framesize, dtype=float)
         f[self._ind_pup[0, :]] = 1
         return f
 
     def complete_mask(self):
-        f = np.zeros(self._framesize, dtype=float)
+        f = xp.zeros(self._framesize, dtype=float)
         for i in range(4):
             f[self._ind_pup[i, :]] = 1
         return f

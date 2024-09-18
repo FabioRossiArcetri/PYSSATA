@@ -3,6 +3,8 @@ Copied from arte.types.mask
 Commenting out unused imports
 '''
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 #from arte.types.region_of_interest import RegionOfInterest
 #from arte.utils.image_moments import ImageMoments
 #from skimage import feature
@@ -33,7 +35,7 @@ class BaseMask():
         return self._mask
     
     def as_masked_array(self):
-        return np.ma.array(np.ones(self._shape),
+        return xp.ma.array(xp.ones(self._shape),
                            mask=self.mask())
         
     def shape(self):
@@ -53,7 +55,7 @@ class BaseMask():
     
     def __eq__(self, other):
         if isinstance(other, BaseMask):
-            return np.array_equal(self.mask(), other.mask())
+            return xp.array_equal(self.mask(), other.mask())
         return False
 
     def __hash__(self):
@@ -118,14 +120,14 @@ class CircularMask(BaseMask):
         if self._maskRadius is None:
             self._maskRadius = min(self._shape) / 2.
         if self._maskCenter is None:
-            self._maskCenter = 0.5 * np.array([self._shape[0],
+            self._maskCenter = 0.5 * xp.array([self._shape[0],
                                                self._shape[1]])
 
         r = self._maskRadius
         cc = self._maskCenter
-        y, x = np.mgrid[0.5: self._shape[0] + 0.5:1,
+        y, x = xp.mgrid[0.5: self._shape[0] + 0.5:1,
                         0.5: self._shape[1] + 0.5:1]
-        self._mask = np.where(
+        self._mask = xp.where(
             ((x - cc[1]) ** 2 + (y - cc[0]) ** 2) <= r ** 2, False, True)
 
     def asTransmissionValue(self):
@@ -138,10 +140,10 @@ class CircularMask(BaseMask):
         transmission_value: ndarray[int]
             transmission mask as a numpy array with dtype int
         '''
-        return np.logical_not(self._mask).astype(int)
+        return xp.logical_not(self._mask).astype(int)
     
     #def as_masked_array(self):
-    #    return np.ma.array(np.array(self.asTransmissionValue(), dtype=float),
+    #    return xp.ma.array(xp.array(self.asTransmissionValue(), dtype=float),
     #                       mask=self.mask())
 
     def radius(self):
@@ -202,29 +204,29 @@ class CircularMask(BaseMask):
             a circular mask included in the mask of `maskedArray`
 
         '''
-        assert isinstance(maskedArray, np.ma.masked_array)
+        assert isinstance(maskedArray, xp.ma.masked_array)
         shape = maskedArray.shape
         if method == CircularMask.FITTING_METHOD_IMAGE_MOMENTS:
             again = 0.995
             while again:
                 im = ImageMoments(maskedArray.mask.astype(int) * -1 + 1)
-                centerYX = np.roll(im.centroid(), 1)
-                radius = again * np.min(im.semiAxes())
+                centerYX = xp.roll(im.centroid(), 1)
+                radius = again * xp.min(im.semiAxes())
                 circularMask = CircularMask(shape, radius, centerYX)
-                if np.in1d(circularMask.in_mask_indices(),
-                           np.argwhere(maskedArray.mask.flatten() == False)).all():
+                if xp.in1d(circularMask.in_mask_indices(),
+                           xp.argwhere(maskedArray.mask.flatten() == False)).all():
                     again = False
                 if radius < 1:
                     raise Exception("Couldn't estimate a CircularMask")
                 else:
                     again *= 0.9
         elif method == CircularMask.FITTING_METHOD_RANSAC:
-            img = np.asarray(maskedArray.mask.astype(float) * -1 + 1)
+            img = xp.asarray(maskedArray.mask.astype(float) * -1 + 1)
             img[img > 0] = 128
             edge = img.copy()
             edge = feature.canny(img, keywords.pop('sigmaCanny', 2))
 
-            coords = np.column_stack(np.nonzero(edge))
+            coords = xp.column_stack(xp.nonzero(edge))
 
             model, inliers = measure.ransac(
                 coords, measure.CircleModel,
@@ -246,7 +248,7 @@ class CircularMask(BaseMask):
             circularMask = CircularMask(img.shape, r, [cx,cy])
 
         elif method == CircularMask.FITTING_METHOD_CENTER_OF_GRAVITY:
-            img = np.asarray(maskedArray.mask.astype(int) * -1 + 1)
+            img = xp.asarray(maskedArray.mask.astype(int) * -1 + 1)
             regions = measure.regionprops(img)
             bubble = regions[0]
             y0, x0 = bubble.centroid
@@ -257,7 +259,7 @@ class CircularMask(BaseMask):
             
         elif method == CircularMask.FITTING_METHOD_CORRELATION:
             
-            img = np.asarray(maskedArray.mask.astype(int) * -1 + 1)
+            img = xp.asarray(maskedArray.mask.astype(int) * -1 + 1)
             regions = measure.regionprops(img)
             bubble = regions[0]
 
@@ -273,11 +275,11 @@ class CircularMask(BaseMask):
             def _cost_disk(params):
                 x0, y0, r = params
                 coords = draw.disk((x0, y0), r, shape=img.shape)
-                template = np.zeros_like(img)
+                template = xp.zeros_like(img)
                 template[coords] = 1
                 if display:
                     CircularMask._dispnobl(template + img, fign)
-                return -np.sum((template > 0) & (img > 0))
+                return -xp.sum((template > 0) & (img > 0))
 
             res = optimize.minimize(_cost_disk, initial_guess,
                                     method='Nelder-Mead', **keywords)
@@ -293,8 +295,8 @@ class CircularMask(BaseMask):
         else:
             raise ValueError("Unknown method %s" % method)
 
-        if not np.in1d(circularMask.in_mask_indices(),
-                       np.argwhere(maskedArray.mask.flatten() == False)).all():
+        if not xp.in1d(circularMask.in_mask_indices(),
+                       xp.argwhere(maskedArray.mask.flatten() == False)).all():
             warnings.warn(
                 "The generated CircularMask is not completely included in the passed masked array")
         return circularMask
@@ -350,21 +352,21 @@ class AnnularMask(CircularMask):
         if self._maskRadius is None:
             self._maskRadius = min(self._shape) / 2.
         if self._maskCenter is None:
-            self._maskCenter = 0.5 * np.array([self._shape[0],
+            self._maskCenter = 0.5 * xp.array([self._shape[0],
                                                self._shape[1]])
 
         r = self._maskRadius
         cc = self._maskCenter
-        y, x = np.mgrid[0.5: self._shape[0] + 0.5:1,
+        y, x = xp.mgrid[0.5: self._shape[0] + 0.5:1,
                         0.5: self._shape[1] + 0.5:1]
 
         tmp = ((x - cc[1]) ** 2 + (y - cc[0]) ** 2) <= r ** 2
         if self._inRadius == 0:
-            self._mask = np.where(tmp, False, True)
+            self._mask = xp.where(tmp, False, True)
         else:
             cc = CircularMask(self._shape, self._inRadius, self._maskCenter)
             tmp[cc.asTransmissionValue() > 0] = False
-            self._mask = np.where(tmp, False, True)
+            self._mask = xp.where(tmp, False, True)
 
     @staticmethod
     def fromMaskedArray(maskedArray):

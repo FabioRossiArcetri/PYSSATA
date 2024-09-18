@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.processing_objects.pyr_slopec import PyrSlopec
 from pyssata.display.pupil_display import pupil_display
+from pyssata import cpuArray
 
 class SlopecDisplay(BaseProcessingObj):
     def __init__(self, slopec=None, disp_factor=1):
@@ -95,8 +96,8 @@ class SlopecDisplay(BaseProcessingObj):
                 else:
                     TARGET = None
                 title = self._title if self._title else 'Slope Display'
-                _, _, _, self.fig, self.ax = pupil_display(self._slopec.in_pixels.pixels, sx, sy, 
-                                                           map_data, self._slopec.in_pixels.pixels.shape[0], title=title, TARGET=TARGET,
+                _, _, _, self.fig, self.ax = pupil_display(cpuArray(self._slopec.in_pixels.pixels), cpuArray(sx), cpuArray(sy), 
+                                                           cpuArray(map_data), self._slopec.in_pixels.pixels.shape[0], title=title, TARGET=TARGET,
                                                            do_image_show=True)
 
     def run_check(self, time_step):

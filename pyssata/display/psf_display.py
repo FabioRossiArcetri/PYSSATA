@@ -1,4 +1,8 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+from pyssata import cpuArray
+
 import matplotlib.pyplot as plt
 
 from pyssata.base_processing_obj import BaseProcessingObj
@@ -74,13 +78,13 @@ class PSFDisplay(BaseProcessingObj):
         psf = self._psf
         if psf.generation_time == t:
 
-            image = psf.value
+            image = cpuArray(psf.value)
 
             if self._image_p2v > 0:
-                image = np.maximum(image, self._image_p2v**(-1.) * np.max(image))
+                image = xp.maximum(image, self._image_p2v**(-1.) * xp.max(image))
             
             if self._log:
-                image = np.log10(image)
+                image = xp.log10(image)
 
             if not self._opened:
                 self.set_w()

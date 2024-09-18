@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+from pyssata import cpuArray
 
 from pyssata.processing_objects.slopec import Slopec
 from pyssata.data_objects.slopes import Slopes
@@ -75,7 +78,7 @@ class PyrSlopec(Slopec):
         pixels = self._accumulated_pixels.pixels if accumulated else self._pixels.pixels
 
         if self._verbose:
-            print('Average pixel counts:', np.sum(pixels) / len(self._pupdata.ind_pup))
+            print('Average pixel counts:', xp.sum(pixels) / len(self._pupdata.ind_pup))
 
         threshold = self._thr_value if self._thr_value != -1 else None
         sx, sy, flux = pyr_compute_slopes(pixels, self._pupdata.ind_pup, self._shlike, self._slopes_from_intensity, self._norm_factor, threshold)
@@ -91,9 +94,11 @@ class PyrSlopec(Slopec):
             self._flux_per_subaperture_vector.value = flux
             self._flux_per_subaperture_vector.generation_time = t
 
-            px = pixels.flat[self._pupdata.ind_pup].ravel()
-            self._total_counts.value = np.sum(px)
-            self._subap_counts.value = np.sum(px) / self._pupdata.n_subap
+            print(self._pupdata.ind_pup, type(self._pupdata.ind_pup))
+
+            px = xp.array(cpuArray(pixels).flat[self._pupdata.ind_pup].ravel())
+            self._total_counts.value = xp.sum(px)
+            self._subap_counts.value = xp.sum(px) / self._pupdata.n_subap
 
             if self._slopes_from_intensity:
                 self._slopes.slopes = [sx, sy]
@@ -105,7 +110,7 @@ class PyrSlopec(Slopec):
             self._subap_counts.generation_time = t
 
         if 1:#if self._verbose:
-            print(f'Slopes min, max and rms: {np.min([sx, sy])}, {np.max([sx, sy])}  //  {np.sqrt(np.mean([sx**2, sy**2]))}')
+            print(f'Slopes min, max and rms: {xp.min(xp.array([sx, sy]))}, {xp.max(xp.array([sx, sy]))}  //  {xp.sqrt(xp.mean(xp.array([sx**2, sy**2])))}')
 
     def _compute_flux_per_subaperture(self):
         return self._flux_per_subaperture_vector

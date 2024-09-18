@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 from astropy.io import fits
 
 class IIRFilter:
@@ -14,22 +17,22 @@ class IIRFilter:
         self.init()
 
     def init(self):
-        self._ordnum = np.array([], dtype=float)
-        self._ordden = np.array([], dtype=float)
-        self._num = np.array([], dtype=float)
-        self._den = np.array([], dtype=float)
-        self._zeros = np.array([], dtype=float)
-        self._poles = np.array([], dtype=float)
-        self._gain = np.array([], dtype=float)
+        self._ordnum = xp.array([], dtype=float)
+        self._ordden = xp.array([], dtype=float)
+        self._num = xp.array([], dtype=float)
+        self._den = xp.array([], dtype=float)
+        self._zeros = xp.array([], dtype=float)
+        self._poles = xp.array([], dtype=float)
+        self._gain = xp.array([], dtype=float)
         return True
 
     def set_property(self, nfilter=None, ordnum=None, ordden=None, num=None, den=None, zeros=None, poles=None, gain=None, **extra):
         if nfilter is not None:
             self._nfilter = nfilter
         if ordnum is not None:
-            self._ordnum = np.array(ordnum)
+            self._ordnum = xp.array(ordnum)
         if ordden is not None:
-            self._ordden = np.array(ordden)
+            self._ordden = xp.array(ordden)
         if num is not None:
             self.set_num(num)
         if den is not None:
@@ -54,38 +57,38 @@ class IIRFilter:
         }
 
     def set_num(self, num):
-        self._num = np.array(num)
-        zeros = np.zeros((self._nfilter, self._num.shape[1] - 1))
-        gain = np.zeros(self._nfilter)
+        self._num = xp.array(num)
+        zeros = xp.zeros((self._nfilter, self._num.shape[1] - 1))
+        gain = xp.zeros(self._nfilter)
         for i in range(self._nfilter):
             if self._ordnum[i] > 1:
-                zeros[i, :self._ordnum[i] - 1] = np.roots(self._num[i, :self._ordnum[i]])
+                zeros[i, :self._ordnum[i] - 1] = xp.roots(self._num[i, :self._ordnum[i]])
             gain[i] = self._num[i, self._ordnum[i] - 1]
         self._zeros = zeros
         self._gain = gain
 
     def set_den(self, den):
-        self._den = np.array(den)
-        poles = np.zeros((self._nfilter, self._den.shape[1] - 1))
+        self._den = xp.array(den)
+        poles = xp.zeros((self._nfilter, self._den.shape[1] - 1))
         for i in range(self._nfilter):
             if self._ordden[i] > 1:
-                poles[i, :self._ordden[i] - 1] = np.roots(self._den[i, :self._ordden[i]])
+                poles[i, :self._ordden[i] - 1] = xp.roots(self._den[i, :self._ordden[i]])
         self._poles = poles
 
     def set_zeros(self, zeros):
-        self._zeros = np.array(zeros)
-        num = np.zeros((self._nfilter, self._zeros.shape[1] + 1))
+        self._zeros = xp.array(zeros)
+        num = xp.zeros((self._nfilter, self._zeros.shape[1] + 1))
         for i in range(self._nfilter):
             if self._ordnum[i] > 1:
-                num[i, :self._ordnum[i]] = np.poly(self._zeros[i, :self._ordnum[i] - 1])
+                num[i, :self._ordnum[i]] = xp.poly(self._zeros[i, :self._ordnum[i] - 1])
         self._num = num
 
     def set_poles(self, poles):
-        self._poles = np.array(poles)
-        den = np.zeros((self._nfilter, self._poles.shape[1] + 1))
+        self._poles = xp.array(poles)
+        den = xp.zeros((self._nfilter, self._poles.shape[1] + 1))
         for i in range(self._nfilter):
             if self._ordden[i] > 1:
-                den[i, :self._ordden[i]] = np.poly(self._poles[i, :self._ordden[i] - 1])
+                den[i, :self._ordden[i]] = xp.poly(self._poles[i, :self._ordden[i] - 1])
         self._den = den
 
     def set_gain(self, gain, verbose=False):
@@ -97,7 +100,7 @@ class IIRFilter:
             nfilter = self._nfilter
         if self._gain is None:
             for i in range(nfilter):
-                if np.isfinite(gain[i]):
+                if xp.isfinite(gain[i]):
                     if self._ordnum[i] > 1:
                         self._num[i, :] *= gain[i]
                     else:
@@ -106,25 +109,25 @@ class IIRFilter:
                     gain[i] = self._num[i, self._ordden - 1]
         else:
             for i in range(nfilter):
-                if np.isfinite(gain[i]):
+                if xp.isfinite(gain[i]):
                     if self._ordnum[i] > 1:
                         self._num[i, :] *= (gain[i] / self._gain[i])
                     else:
                         self._num[i, self._ordden - 1] = gain[i] / self._gain[i]
                 else:
                     gain[i] = self._gain[i]
-        self._gain = np.array(gain)
+        self._gain = xp.array(gain)
         if verbose:
             print('new gain:', self._gain)
 
     def complexRTF(self, mode, fs, delay, freq=None, verbose=False):
         if delay > 1:
-            dm = np.array([0.0, 1.0])
-            nm = np.array([1.0, 0.0])
+            dm = xp.array([0.0, 1.0])
+            nm = xp.array([1.0, 0.0])
             wTf = self.discrete_delay_tf(delay - 1)
         else:
-            dm = np.array([1.0])
-            nm = np.array([1.0])
+            dm = xp.array([1.0])
+            nm = xp.array([1.0])
             wTf = self.discrete_delay_tf(delay)
         nw = wTf[:, 0]
         dw = wTf[:, 1]
@@ -158,23 +161,23 @@ class IIRFilter:
             plt.show()
 
     def is_stable(self, mode, nm=None, dm=None, nw=None, dw=None, gain=None, no_margin=False, verbose=False):
-        nm = nm if nm is not None else np.array([1, 0])
-        nw = nw if nw is not None else np.array([1, 0])
-        dm = dm if dm is not None else np.array([0, 1])
-        dw = dw if dw is not None else np.array([0, 1])
+        nm = nm if nm is not None else xp.array([1, 0])
+        nw = nw if nw is not None else xp.array([1, 0])
+        dm = dm if dm is not None else xp.array([0, 1])
+        dw = dw if dw is not None else xp.array([0, 1])
 
-        temp1 = np.polymul(dm, dw)
+        temp1 = xp.polymul(dm, dw)
         while temp1[-1] == 0:
             temp1 = temp1[:-1]
-        DDD = np.polymul(temp1, self._den[mode, :])
+        DDD = xp.polymul(temp1, self._den[mode, :])
         while DDD[-1] == 0:
             DDD = DDD[:-1]
 
-        temp2 = np.polymul(nm, nw)
+        temp2 = xp.polymul(nm, nw)
         while temp2[-1] == 0:
             temp2 = temp2[:-1]
-        NNN = np.polymul(temp2, self._num[mode, :])
-        if np.sum(np.abs(NNN)) != 0:
+        NNN = xp.polymul(temp2, self._num[mode, :])
+        if xp.sum(xp.abs(NNN)) != 0:
             while NNN[-1] == 0:
                 NNN = NNN[:-1]
 

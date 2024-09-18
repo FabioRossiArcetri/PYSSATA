@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+from pyssata import cpuArray
 
 def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm_fact=None, threshold=None):
     """
@@ -22,16 +25,19 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
         raise ValueError('INTENSITY_BASED and SHLIKE keywords cannot be set together.')
 
     # Extract intensity arrays for each sub-pupil
-    intensity = [frame.flat[ind_pup[:, i]].reshape(-1) for i in range(4)]
+    intensity = xp.array( [cpuArray(frame).flat[cpuArray(ind_pup)[:, i]].reshape(-1) for i in range(4)] )
 
     # Compute total intensity
-    flux = np.sum([np.sum(arr) for arr in intensity])
+    flux = xp.sum(xp.array([xp.sum(arr) for arr in intensity]))
     
     if threshold is not None:
         # Apply thresholding
-        intensity = [np.maximum(arr - threshold, 0) for arr in intensity]
+        intensity = [xp.maximum(arr - threshold, 0) for arr in intensity]
     
-    total_intensity = np.sum([np.sum(arr) for arr in intensity])
+    total_intensity = np.sum([np.sum(cpuArray(arr)) for arr in intensity])
+
+    total_intensity = xp.array(total_intensity)
+
     n_subap = ind_pup.shape[0]
 
     if total_intensity > 0:
@@ -39,13 +45,13 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
             factor = 1.0 / norm_fact
         elif INTENSITY_BASED:
             factor = 4 * n_subap / total_intensity
-            sx = factor * np.concatenate([intensity[0], intensity[1]])
-            sy = factor * np.concatenate([intensity[2], intensity[3]])
+            sx = factor * xp.concatenate([intensity[0], intensity[1]])
+            sy = factor * xp.concatenate([intensity[2], intensity[3]])
         else:
             if not SHLIKE:
                 factor = n_subap / total_intensity
             else:
-                inv_factor = np.array([np.sum(arr) for arr in intensity])
+                inv_factor = xp.array([xp.sum(arr) for arr in intensity])
                 inv_factor[inv_factor <= 0] = 1e-6
                 factor = 1.0 / inv_factor
                 factor[inv_factor <= 0] = 0.0
@@ -54,10 +60,10 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
             sy = (intensity[1] + intensity[2] - intensity[3] - intensity[0]) * factor
     else:
         if INTENSITY_BASED:
-            sx = np.zeros(2 * n_subap)
-            sy = np.zeros(2 * n_subap)
+            sx = xp.zeros(2 * n_subap)
+            sy = xp.zeros(2 * n_subap)
         else:
-            sx = np.zeros(n_subap)
-            sy = np.zeros(n_subap)
+            sx = xp.zeros(n_subap)
+            sy = xp.zeros(n_subap)
 
     return sx, sy, flux

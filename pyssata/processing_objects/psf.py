@@ -1,10 +1,13 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.data_objects.ef import ElectricField
 from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.calc_psf import calc_psf
-
+from pyssata.connections import InputValue
 
 class PSF(BaseProcessingObj):
     def __init__(self,
@@ -27,6 +30,7 @@ class PSF(BaseProcessingObj):
         self._count = 0
 
         self.reset_integration()
+        self.inputs['in_ef'] = InputValue(object=self._in_ef, type=ElectricField)
 
     @property
     def in_ef(self):
@@ -36,8 +40,8 @@ class PSF(BaseProcessingObj):
     def in_ef(self, in_ef):
         self._in_ef = in_ef
         s = [dim * self._nd for dim in in_ef.size]
-        self._psf.value = np.zeros(s)
-        self._int_psf.value = np.zeros(s)
+        self._psf.value = xp.zeros(s)
+        self._int_psf.value = xp.zeros(s)
         self._ref = None
 
     @property
@@ -110,7 +114,7 @@ class PSF(BaseProcessingObj):
             if self.t_to_seconds(t) >= self._start_time:
                 self._count += 1
 
-            s = [round(dim * self._nd) for dim in self._in_ef.size]
+            s = [np.around(dim * self._nd) for dim in self._in_ef.size]
 
             if not self._ref:
                 self._ref = Intensity(s[0], s[1])

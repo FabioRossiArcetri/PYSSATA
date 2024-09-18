@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 from astropy.io import fits
 
 from pyssata.data_objects.base_data_obj import BaseDataObj
@@ -9,11 +12,11 @@ class Intensity(BaseDataObj):
         super().__init__()
         
         if type_str is None:
-            self.type = np.float32 if precision == 0 else np.float64
+            self.type = xp.float32 if precision == 0 else xp.float64
         else:
-            self.type = np.dtype(type_str)
+            self.type = xp.dtype(type_str)
         
-        self._i = np.zeros((dimx, dimy), dtype=self.type)
+        self._i = xp.zeros((dimx, dimy), dtype=self.type)
 
     @property
     def i(self):

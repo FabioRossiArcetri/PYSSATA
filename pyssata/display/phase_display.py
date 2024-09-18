@@ -1,4 +1,8 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+from pyssata import cpuArray
+
 import matplotlib.pyplot as plt
 
 from pyssata.base_processing_obj import BaseProcessingObj
@@ -74,8 +78,8 @@ class PhaseDisplay(BaseProcessingObj):
     def trigger(self, t):
         phase = self._phase
         if phase.generation_time == t:
-            frame = phase.phaseInNm * (phase.A > 0).astype(float)
-            idx = np.where(phase.A > 0)[0]
+            frame = cpuArray(phase.phaseInNm * (phase.A > 0).astype(float))
+            idx = np.where(cpuArray(phase.A) > 0)[0]
             frame[idx] -= np.mean(frame[idx])
 
             if self._verbose:

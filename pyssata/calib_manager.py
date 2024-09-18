@@ -17,6 +17,7 @@ class CalibManager(BaseParameterObj):
         super().__init__()
         self._subdirs = {
             'phasescreen': 'phasescreens/',
+            'AtmoEvolution': 'phasescreens/',
             'slopenull': 'slopenulls/',
             'sn': 'slopenulls/',
             'background': 'backgrounds/',

@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 from astropy.io import fits
 
 from pyssata.lib.compute_zern_ifunc import compute_zern_ifunc
@@ -12,9 +15,9 @@ def compute_mixed_ifunc(*args, **kwargs):
 
 class IFunc:
     def __init__(self,
-                 ifunc: np.array=None,
+                 ifunc: xp.array=None,
                  type: str=None,
-                 mask: np.array=None,
+                 mask: xp.array=None,
                  npixels: int=None,
                  nzern: int=None,
                  obsratio: float=None,
@@ -24,13 +27,13 @@ class IFunc:
                  idx_modes=None,
                 ):
         self._doZeroPad = False
-        self._precision = np.float32
+        self._precision = xp.float32
         
         if ifunc is None:
             if type is None:
                 raise ValueError('At least one of ifunc and type must be set')
             if mask is not None:
-                mask = (np.array(mask) > 0).astype(float)
+                mask = (xp.array(mask) > 0).astype(float)
             if npixels is None:
                 raise ValueError("If ifunc is not set, then npixels must be set!")
             
@@ -46,7 +49,7 @@ class IFunc:
         
         self._influence_function = ifunc
         self._mask_inf_func = mask
-        self._idx_inf_func = np.where(mask)
+        self._idx_inf_func = xp.where(mask)
         self.cut(start_mode=start_mode, nmodes=nmodes, idx_modes=idx_modes)
 
     @property
@@ -62,16 +65,16 @@ class IFunc:
             sIfunc = ifunc.shape
             tIfunc = ifunc.dtype
 
-            if tIfunc == np.float32:
+            if tIfunc == xp.float32:
                 if sIfunc[0] < sIfunc[1]:
-                    ifuncPad = np.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=np.float32)
+                    ifuncPad = xp.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=xp.float32)
                 else:
-                    ifuncPad = np.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=np.float32)
-            elif tIfunc == np.float64:
+                    ifuncPad = xp.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=xp.float32)
+            elif tIfunc == xp.float64:
                 if sIfunc[0] < sIfunc[1]:
-                    ifuncPad = np.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=np.float64)
+                    ifuncPad = xp.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=xp.float64)
                 else:
-                    ifuncPad = np.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=np.float64)
+                    ifuncPad = xp.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=xp.float64)
 
             if sIfunc[0] < sIfunc[1]:
                 ifuncPad[:, self._idx_inf_func] = ifunc
@@ -79,7 +82,7 @@ class IFunc:
                 ifuncPad[self._idx_inf_func, :] = ifunc
             ifunc = ifuncPad
 
-        self._influence_function = np.array(ifunc)
+        self._influence_function = xp.array(ifunc)
 
     @property
     def mask_inf_func(self):
@@ -87,8 +90,8 @@ class IFunc:
 
     @mask_inf_func.setter
     def mask_inf_func(self, mask_inf_func):
-        self._mask_inf_func = np.array(mask_inf_func)
-        self._idx_inf_func = np.where(mask_inf_func)
+        self._mask_inf_func = xp.array(mask_inf_func)
+        self._idx_inf_func = xp.where(mask_inf_func)
 
     @property
     def idx_inf_func(self):
@@ -119,7 +122,7 @@ class IFunc:
         return self._precision
 
     def inverse(self):
-        return np.linalg.pinv(self._influence_function)
+        return xp.linalg.pinv(self._influence_function)
 
     @precision.setter
     def precision(self, precision):
@@ -128,10 +131,10 @@ class IFunc:
 
         self._precision = precision
         old_if = self._influence_function
-        if precision == np.float32:
-            self.influence_function = old_if.astype(np.float32)
-        elif precision == np.float64:
-            self.influence_function = old_if.astype(np.float64)
+        if precision == xp.float32:
+            self.influence_function = old_if.astype(xp.float32)
+        elif precision == xp.float64:
+            self.influence_function = old_if.astype(xp.float64)
 
     def save(self, filename, hdr=None):
         hdr = hdr if hdr is not None else fits.Header()

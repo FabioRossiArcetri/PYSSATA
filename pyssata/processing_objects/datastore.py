@@ -1,5 +1,7 @@
 import os
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 from collections import OrderedDict
 import pickle
 import time
@@ -36,7 +38,7 @@ class Datastore(BaseProcessingObj):
         self._storage[name] = data
 
     def save(self, filename, compress=False):
-        times = {k: np.array(list(v.keys())) for k, v in self._storage.items() if isinstance(v, OrderedDict)}
+        times = {k: xp.array(list(v.keys())) for k, v in self._storage.items() if isinstance(v, OrderedDict)}
         data = self._storage
         with open(filename, 'wb') as handle:
             data_to_save = {'data': data, 'times': times}
@@ -66,10 +68,10 @@ class Datastore(BaseProcessingObj):
             for k, v in self._storage.items():
                 if isinstance(v, OrderedDict) and len(v) > 0:
                     filename = os.path.join(prefix, f'{k}.fits')
-                    times = np.array(list(v.keys())) / float(self._time_resolution)
-                    data = np.array(list(v.values()))
-                    if saveFloat and data.dtype == np.float64:
-                        data = data.astype(np.float32)
+                    times = xp.array(list(v.keys())) / float(self._time_resolution)
+                    data = xp.array(list(v.values()))
+                    if saveFloat and data.dtype == xp.float64:
+                        data = data.astype(xp.float32)
                     savemat(filename, {'data': data, 'times': times}, do_compression=compress)
                 else:
                     self._save_to_sav(prefix, k, v, compress)
@@ -137,7 +139,7 @@ class Datastore(BaseProcessingObj):
         if times is None:
             h = self._storage[name]
             times = list(h.keys())
-        return times if as_list else self.t_to_seconds(np.array(times))
+        return times if as_list else self.t_to_seconds(xp.array(times))
 
     def values(self, name, as_list=False, init=0):
         init = int(init)
@@ -149,7 +151,7 @@ class Datastore(BaseProcessingObj):
             values = list(h.values())[init:]
         else:
             values = h[init:]
-        return values if as_list else np.array(values)
+        return values if as_list else xp.array(values)
 
     def size(self, name, dimensions=False):
         if not self.has_key(name):
@@ -160,19 +162,19 @@ class Datastore(BaseProcessingObj):
 
     def mean(self, name, init=0, dim=None):
         values = self.values(name, init=init)
-        return np.mean(values, axis=dim)
+        return xp.mean(values, axis=dim)
 
     def stddev(self, name, init=0, dim=None):
         values = self.values(name, init=init)
-        return np.std(values, axis=dim)
+        return xp.std(values, axis=dim)
 
     def rms(self, name, init=0, dim=None):
         values = self.values(name, init=init)
-        return np.sqrt(np.mean(np.square(values), axis=dim))
+        return xp.sqrt(xp.mean(xp.square(values), axis=dim))
 
     def variance(self, name, init=0, dim=None):
         values = self.values(name, init=init)
-        return np.var(values, axis=dim)
+        return xp.var(values, axis=dim)
 
     def plot(self, name, init=0, map=False, over=False, resolution=1e9, **kwargs):
         import matplotlib.pyplot as plt

@@ -1,4 +1,6 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
@@ -20,7 +22,7 @@ class FuncGenerator(BaseProcessingObj):
 
         if seed is not None:
             if str(seed).strip() == 'auto':
-                seed = round(np.random.random() * 1e4)
+                seed = xp.around(xp.random.random() * 1e4)
             self._seed = seed
 
         # Initialize attributes based on the type
@@ -92,19 +94,19 @@ class FuncGenerator(BaseProcessingObj):
             if not self._active:
                 s = 0.0
             else:
-                s = self._constant + self._amp * np.sin(self._freq * 2 * np.pi * seconds + self._offset)
+                s = xp.array( self._amp ) * xp.sin(self._freq * 2 * xp.pi * seconds + self._offset) + xp.array(self._constant)
 
         elif self._type == 'LINEAR':
             if not self._active:
                 s = 0.0
             else:
-                s = self._constant + self._slope * seconds
+                s = self._slope * seconds + self._constant
 
         elif self._type == 'RANDOM':
             if not self._active:
                 s = 0.0
             else:
-                s = self._constant + np.random.normal(size=len(self._amp)) * self._amp
+                s = xp.random.normal(size=len(self._amp)) * self._amp + self._constant
 
         elif self._type in ['VIB_HIST', 'VIB_PSD', 'PUSH', 'PUSHPULL', 'TIME_HIST']:
             s = self.get_time_hist_at_time(t)
@@ -117,8 +119,8 @@ class FuncGenerator(BaseProcessingObj):
 
     def get_time_hist_at_time(self, t):
         if not self._active:
-            return np.zeros_like(self._time_hist[0])
-        i = round(t / self._loop_dt)
+            return xp.zeros_like(self._time_hist[0])
+        i = xp.around(t / self._loop_dt)
         return self._time_hist[i]
 
     # Getters and Setters for the attributes
