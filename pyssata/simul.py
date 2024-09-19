@@ -168,7 +168,6 @@ class Simul():
 
     def run(self):
         params = {}
-
         # Read YAML file
         with open(self.param_file, 'r') as stream:
             params = yaml.safe_load(stream)
