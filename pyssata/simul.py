@@ -124,7 +124,6 @@ class Simul():
                     my_params['data_dir'] = cm.root_subdir(classname)
                 my_params.update(pars2)
                 self.objs[key] = klass(**my_params)
-                globals()[key] = self.objs[key]       # TODO temporary hack, locals() does not work
 
     def connect_objects(self, params):
         for dest_object, pars in params.items():
@@ -177,11 +176,11 @@ class Simul():
             globals()[name] = obj
                         
         # Initialize display objects
-        sc_disp = SlopecDisplay(slopec, disp_factor=4)
-        sr_disp = PlotDisplay(psf.out_sr, window=11, title='SR')
-        ph_disp = PhaseDisplay(prop.pupil_dict['on_axis_source'], window=12, disp_factor=2)
-        dm_disp = PhaseDisplay(dm.out_layer, window=13, title='DM')
-        psf_disp = PSFDisplay(psf.out_psf, window=14,  title='PSF')
+        sc_disp = SlopecDisplay(self.objs['slopec'], disp_factor=4)
+        sr_disp = PlotDisplay(self.objs['psf'].out_sr, window=11, title='SR')
+        ph_disp = PhaseDisplay(self.objs['prop'].pupil_dict['on_axis_source'], window=12, disp_factor=2)
+        dm_disp = PhaseDisplay(self.objs['dm'].out_layer, window=13, title='DM')
+        psf_disp = PSFDisplay(self.objs['psf'].out_psf, window=14,  title='PSF')
 
         self.connect_objects(params)
         self.connect_datastore(store, params)
@@ -191,8 +190,8 @@ class Simul():
             if isinstance(obj, BaseProcessingObj):
                 if name not in ['control']:
                     loop.add(obj)
-
         loop.add(store)
+    
        # loop.add(sc_disp)
        # loop.add(sr_disp)
        # loop.add(ph_disp)
