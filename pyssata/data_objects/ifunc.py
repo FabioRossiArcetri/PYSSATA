@@ -1,6 +1,7 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
+from pyssata import standard_dtype
 
 from astropy.io import fits
 
@@ -28,12 +29,13 @@ class IFunc:
                 ):
         self._doZeroPad = False
         self._precision = xp.float32
-        
+        self.dtype = standard_dtype
+
         if ifunc is None:
             if type is None:
                 raise ValueError('At least one of ifunc and type must be set')
             if mask is not None:
-                mask = (xp.array(mask) > 0).astype(float)
+                mask = (xp.array(mask, dtype=self.dtype) > 0).astype(self.dtype)
             if npixels is None:
                 raise ValueError("If ifunc is not set, then npixels must be set!")
             
@@ -63,26 +65,17 @@ class IFunc:
             if self._mask_inf_func is None:
                 raise ValueError("if doZeroPad is set, mask_inf_func must be set before setting ifunc.")
             sIfunc = ifunc.shape
-            tIfunc = ifunc.dtype
-
-            if tIfunc == xp.float32:
-                if sIfunc[0] < sIfunc[1]:
-                    ifuncPad = xp.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=xp.float32)
-                else:
-                    ifuncPad = xp.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=xp.float32)
-            elif tIfunc == xp.float64:
-                if sIfunc[0] < sIfunc[1]:
-                    ifuncPad = xp.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=xp.float64)
-                else:
-                    ifuncPad = xp.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=xp.float64)
 
             if sIfunc[0] < sIfunc[1]:
+                ifuncPad = xp.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=ifunc.dtype)
                 ifuncPad[:, self._idx_inf_func] = ifunc
             else:
+                ifuncPad = xp.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=ifunc.dtype)
                 ifuncPad[self._idx_inf_func, :] = ifunc
+
             ifunc = ifuncPad
 
-        self._influence_function = xp.array(ifunc)
+        self._influence_function = xp.array(ifunc, dtype=self.dtype)
 
     @property
     def mask_inf_func(self):
@@ -90,7 +83,7 @@ class IFunc:
 
     @mask_inf_func.setter
     def mask_inf_func(self, mask_inf_func):
-        self._mask_inf_func = xp.array(mask_inf_func)
+        self._mask_inf_func = xp.array(mask_inf_func, dtype=self.dtype)
         self._idx_inf_func = xp.where(mask_inf_func)
 
     @property

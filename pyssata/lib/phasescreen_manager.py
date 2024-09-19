@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata import cpuArray
 from astropy.io import fits

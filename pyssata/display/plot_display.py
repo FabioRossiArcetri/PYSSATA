@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 import matplotlib.pyplot as plt

@@ -1,5 +1,4 @@
 import numpy as np
-from pyssata import gpuEnabled
 from pyssata import xp
 
 from astropy.io import fits

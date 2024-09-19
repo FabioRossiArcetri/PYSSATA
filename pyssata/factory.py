@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from pyssata.loop_control import LoopControl
@@ -15,35 +15,16 @@ from pyssata.processing_objects.func_generator import FuncGenerator
 
 
 class Factory:
-    def __init__(self, params, GPU=False, NOCM=False, SINGLEGPU=False):
+    def __init__(self, params, NOCM=False):
         """
         Initialize the factory object.
 
         Parameters:
         params (dict): Dictionary or struct with main simulation parameters
-        GPU (bool, optional): If set, GPU-accelerated objects will be used when available
         NOCM (bool, optional): If set, no calibration manager will be created inside the factory
-        SINGLEGPU (bool, optional): If set, only the first GPU in the system will be used
-        """
-        self._gpu = False
+        """        
         self._main = self.ensure_dictionary(params)
-
-        if GPU:
-            if not SINGLEGPU:
-                print('    ***    ------->>>>>> factory will use all GPUs <<<<<<-------    ***')
-            else:
-                print('    ***    ------->>>>>> factory will use 1 GPU  <<<<<<-------    ***')
         
-        if (GPU or SINGLEGPU) and self.has_gpu():
-            self._gpu = True
-        
-        if SINGLEGPU and self.has_gpu():
-            required_version = 1.48
-            actual_version = self.cuda_version()
-            if actual_version < required_version:
-                raise Exception(f'SINGLEGPU keyword needs the GPU_SIMUL module version {required_version} or better, found version {actual_version} instead')
-            self.cuda_set_device_count(1)
-
         self._global_params = ['verbose', 'precision']
         self._main['precision'] = self._main.get('precision', 0)
 
@@ -79,35 +60,6 @@ class Factory:
             dictionary.pop(key, None)
         return dictionary
 
-    def has_gpu(self):
-        """
-        Check if the system has GPU capabilities.
-
-        Returns:
-        bool: True if GPU is available, False otherwise
-        """
-        # Placeholder for actual GPU check
-        return True
-
-    def cuda_version(self):
-        """
-        Get the CUDA version.
-
-        Returns:
-        float: CUDA version
-        """
-        # Placeholder for actual CUDA version check
-        return 1.5
-
-    def cuda_set_device_count(self, count):
-        """
-        Set the number of CUDA devices.
-
-        Parameters:
-        count (int): Number of CUDA devices to set
-        """
-        # Placeholder for setting CUDA device count
-        pass
 
     def extract(self, dictionary, key, default=None, optional=False):
         """
@@ -423,7 +375,7 @@ class Factory:
         if pupil_mask_tag:
             if phase2modes_tag:
                 print('if phase2modes_tag is defined then pupil_mask_tag will not be used!')
-            pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=useGPU)
+            pupilstop = self._cm.read_pupilstop(pupil_mask_tag)
             if not pupilstop:
                 raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
             mask = pupilstop.A
@@ -445,7 +397,7 @@ class Factory:
                                     rad=rad, ifunc=ifunc, phase2modes=phase2modes,
                                     startZero=startZero, onlyLo=onlyLo, onlyHo=onlyHo,
                                     startingPosition=startingPosition,
-                                    GPU=useGPU, precision=precision, cut_modes=cut_modes,
+                                    precision=precision, cut_modes=cut_modes,
                                     cut_coeff=cut_coeff, cut_from_OL=cut_from_OL,
                                     firstDimNiter=firstDimNiter, zenithAngleInDeg=zenithAngleInDeg)
 
@@ -632,18 +584,16 @@ class Factory:
 
         return DerPreControl(nModes, nStep, delay=delay)
 
-    def get_disturbance(self, disturbance_params, GPU=None):
+    def get_disturbance(self, disturbance_params):
         """
         Create a disturbance processing object.
 
         Parameters:
         disturbance_params (dict): Dictionary of parameters
-        GPU (bool, optional): Flag for using GPU
 
         Returns:
         Disturbance: Disturbance processing object
-        """
-        useGPU = GPU if GPU is not None else self._gpu
+        """        
 
         params = self.ensure_dictionary(disturbance_params)
 
@@ -667,7 +617,6 @@ class Factory:
         dm_shiftXYinPixel = self.extract(params, 'dm_shiftXYinPixel', default=None)
         dm_rotInDeg = self.extract(params, 'dm_rotInDeg', default=None)
         dm_magnification = self.extract(params, 'dm_magnification', default=None)
-        doNotPutOnGpu = self.extract(params, 'doNotPutOnGpu', default=None)
         dt = self.extract(params, 'dt', default=None)
         pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='')
         m2c_tag = params.get('m2c') or params.get('m2c_tag')
@@ -713,7 +662,7 @@ class Factory:
         if pupil_mask_tag:
             if phase2modes_tag:
                 print('if phase2modes_tag is defined then pupil_mask_tag will not be used!')
-            pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=useGPU)
+            pupilstop = self._cm.read_pupilstop(pupil_mask_tag)
             if pupilstop is None:
                 raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
             mask = pupilstop.A
@@ -729,18 +678,18 @@ class Factory:
             if map_data.ndim == 3:
                 map_temp = map_data
                 idx_mask = xp.where(mask)
-                map_data = xp.array([map_temp[i, :, :].ravel()[idx_mask] for i in range(map_temp.shape[0])])
-            disturbance = DisturbanceMap(map_data.shape, pixel_pitch, height, mask, map_data, GPU=useGPU, cycle=map_cycle)
+                map_data = xp.array([map_temp[i, :, :].ravel()[idx_mask] for i in range(map_temp.shape[0])], dtype=self.dtype)
+            disturbance = DisturbanceMap(map_data.shape, pixel_pitch, height, mask, map_data, cycle=map_cycle)
         elif dataPackageDir:
             disturbance = DisturbanceM1Elt(dataPackageDir, dm_npixels, pixel_pitch, dynamic=dynamic, 
-                                        hardpact=hardpact, softpact=softpact, t0=t0, GPU=useGPU)
+                                        hardpact=hardpact, softpact=softpact, t0=t0)
         else:
             if not m2c:
                 nmodes_temp = nmodes
             influence_function = self.ifunc_restore(tag=influence_function_tag, type=dm_type, npixels=dm_npixels, 
                                                     nmodes=nmodes_temp, nzern=dm_nzern, obsratio=dm_obsratio, 
                                                     diaratio=dm_diaratio, start_mode=dm_start_mode, idx_modes=dm_idx_modes, 
-                                                    mask=mask, doNotPutOnGpu=doNotPutOnGpu)
+                                                    mask=mask)
             if influence_function is None:
                 raise ValueError(f'Error reading influence function: {influence_function_tag}')
 
@@ -782,7 +731,7 @@ class Factory:
             disturbance = Disturbance(func_type, nmodes, pixel_pitch, height, influence_function, time_hist=time_hist, amp=amp, 
                                     vect_amplitude=vect_amplitude, m2c=m2c, precision=precision, psd=psd, fr_psd=fr_psd, 
                                     continuous_psd=continuous_psd, seed=seed, ncycles=ncycles, shiftXYinPixel=dm_shiftXYinPixel, 
-                                    rotInDeg=dm_rotInDeg, magnification=dm_magnification, verbose=verbose, GPU=useGPU)
+                                    rotInDeg=dm_rotInDeg, magnification=dm_magnification, verbose=verbose)
             if amp_factor == 0.0:
                 disturbance.active = False
 
@@ -790,20 +739,18 @@ class Factory:
         disturbance.apply_properties(params)
         return disturbance
 
-    def get_dm_m2c(self, params, GPU=None, ifunc=None, m2c=None):
+    def get_dm_m2c(self, params, ifunc=None, m2c=None):
         """
         Create a DM_M2C processing object.
 
         Parameters:
-        params (dict): Dictionary of parameters
-        GPU (bool, optional): Flag for using GPU
+        params (dict): Dictionary of parameters        
         ifunc: Influence function object
         m2c: M2C matrix object
 
         Returns:
         DM_M2C: DM_M2C processing object
         """
-        useGPU = GPU if GPU is not None else self._gpu
 
         params = self.ensure_dictionary(params)
         settling_time = self.extract(params, 'settling_time', default=None)
@@ -818,8 +765,7 @@ class Factory:
         idx_modes = self.extract(params, 'idx_modes', default=None)
         npixels = self.extract(params, 'npixels', default=None)
         obsratio = self.extract(params, 'obsratio', default=None)
-        diaratio = self.extract(params, 'diaratio', default=None)
-        doNotPutOnGpu = self.extract(params, 'doNotPutOnGpu', default=None)
+        diaratio = self.extract(params, 'diaratio', default=None)        
         pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='')
 
         doNotBuildRecProp = self.extract(params, 'doNotBuildRecProp', default=None)
@@ -829,7 +775,7 @@ class Factory:
         if pupil_mask_tag:
             if phase2modes_tag:
                 print('if phase2modes_tag is defined then pupil_mask_tag will not be used!')
-            pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=useGPU)
+            pupilstop = self._cm.read_pupilstop(pupil_mask_tag)
             if pupilstop is None:
                 raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
             mask = pupilstop.A
@@ -840,7 +786,7 @@ class Factory:
             if not ifunc:
                 ifunc = self.ifunc_restore(tag=ifunc_tag, type=dm_type, npixels=npixels, nzern=nzern, 
                                         obsratio=obsratio, diaratio=diaratio, mask=mask, 
-                                        idx_modes=idx_modes, doNotPutOnGpu=doNotPutOnGpu)
+                                        idx_modes=idx_modes)
             if ifunc is None:
                 raise ValueError(f'Error reading influence function: {ifunc_tag}')
             if not m2c:
@@ -853,14 +799,14 @@ class Factory:
             if not ifunc:
                 ifunc = self.ifunc_restore(tag=ifunc_tag, type=dm_type, npixels=npixels, nmodes=nmodes, nzern=nzern, 
                                         obsratio=obsratio, diaratio=diaratio, mask=mask, start_mode=start_mode, 
-                                        idx_modes=idx_modes, doNotPutOnGpu=doNotPutOnGpu)
+                                        idx_modes=idx_modes)
             if ifunc is None:
                 raise ValueError(f'Error reading influence function: {ifunc_tag}')
             m2c = M2C()
             nmodes_m2c = nmodes - start_mode if start_mode else nmodes
             m2c.set_m2c(xp.identity(nmodes_m2c))
 
-        dm_m2c = DM_M2C(pixel_pitch, height, ifunc, m2c, GPU=useGPU)
+        dm_m2c = DM_M2C(pixel_pitch, height, ifunc, m2c)
         self.apply_global_params(dm_m2c)
         dm_m2c.apply_properties(params)
         return dm_m2c
@@ -1510,7 +1456,7 @@ class Factory:
 
         return container
 
-    def get_lift(self, params, params_lens, params_ref, params_control, mode_basis=None, pup_mask=None, GPU=None, display=None):
+    def get_lift(self, params, params_lens, params_ref, params_control, mode_basis=None, pup_mask=None, display=None):
         """
         Create a LIFT processing object.
 
@@ -1520,14 +1466,12 @@ class Factory:
         params_ref (dict): Dictionary of parameters for the reference aberration
         params_control (dict): Dictionary of control parameters
         mode_basis (array, optional): Array with modal basis for LIFT modal estimation
-        pup_mask (array, optional): Array with pupil mask
-        GPU (bool, optional): Use GPU if available
+        pup_mask (array, optional): Array with pupil mask        
         display (bool, optional): Display settings
 
         Returns:
         LIFT: LIFT processing object
-        """
-        useGPU = GPU if GPU is not None else self._gpu
+        """        
 
         params = self.ensure_dictionary(params)
         params_lens = self.ensure_dictionary(params_lens)
@@ -1617,7 +1561,7 @@ class Factory:
                 ifuncMat = ifunc.influence_function
                 ifuncMask = ifunc.mask_inf_func
                 ifuncIdx = xp.where(ifuncMask)
-                mode_basis = xp.zeros((nmodes_mb, pupdiam ** 2), dtype=float)
+                mode_basis = xp.zeros((nmodes_mb, pupdiam ** 2), dtype=self.dtype)
                 for i in range(nmodes_mb):
                     mode_basis[i, ifuncIdx] = ifuncMat[i, :]
 
@@ -1645,15 +1589,14 @@ class Factory:
 
         return lift
 
-    def get_lift_sh_slopec(self, params, mode_basis=None, pup_mask=None, GPU=None):
+    def get_lift_sh_slopec(self, params, mode_basis=None, pup_mask=None):
         """
         Create a LIFT SH Slopec processing object.
 
         Parameters:
         params (dict): Dictionary of parameters
         mode_basis (array, optional): Array with modal basis for LIFT modal estimation
-        pup_mask (array, optional): Array with pupil mask
-        GPU (bool, optional): Use GPU if available
+        pup_mask (array, optional): Array with pupil mask        
 
         Returns:
         LIFT_SH_Slopec: LIFT SH Slopec processing object
@@ -1698,8 +1641,7 @@ class Factory:
         aberr_start_mode = self.extract(params, 'aberr_start_mode', default=None)
         aberr_npixels = self.extract(params, 'aberr_npixels', default=None)
         aberr_obsratio = self.extract(params, 'aberr_obsratio', default=None)
-        aberr_diaratio = self.extract(params, 'aberr_diaratio', default=None)
-        doNotPutOnGpu = self.extract(params, 'aberr_doNotPutOnGpu', default=None)
+        aberr_diaratio = self.extract(params, 'aberr_diaratio', default=None)        
 
         if aberr_map_tag:
             map_aberr = self._cm.read_data(aberr_map_tag)
@@ -1708,7 +1650,7 @@ class Factory:
             ifunc_aberr = self.ifunc_restore(
                 tag=aberr_ifunc_tag, type=aberr_type, npixels=aberr_npixels, nmodes=nmodes_aberr,
                 nzern=aberr_nzern, obsratio=aberr_obsratio, diaratio=aberr_diaratio,
-                start_mode=aberr_start_mode, mask=pup_mask, doNotPutOnGpu=doNotPutOnGpu
+                start_mode=aberr_start_mode, mask=pup_mask
             )
             ifuncMat_aberr = ifunc_aberr.influence_function
             ifuncMask_aberr = ifunc_aberr.mask_inf_func
@@ -1942,14 +1884,13 @@ class Factory:
         npixels = self.extract(params, 'npixels', default=None)
         pupil_mask_tag = self.extract(params, 'pupil_mask_tag', default='')
         obsratio = self.extract(params, 'obsratio', default=None)
-        diaratio = self.extract(params, 'diaratio', default=None)
-        doNotPutOnGpu = self.extract(params, 'doNotPutOnGpu', default=None)
+        diaratio = self.extract(params, 'diaratio', default=None)        
         zeroPad = self.extract(params, 'zeroPadp2m', default='')
 
         if pupil_mask_tag:
             if phase2modes_tag:
                 print('if phase2modes_tag is defined then pupil_mask_tag will not be used!')
-            pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=GPU)
+            pupilstop = self._cm.read_pupilstop(pupil_mask_tag)
             if pupilstop is None:
                 raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
             mask = pupilstop.A
@@ -1960,8 +1901,7 @@ class Factory:
             phase2modes = self.ifunc_restore(
                 tag=phase2modes_tag, type=type_, npixels=npixels, nmodes=nmodes,
                 nzern=nzern, obsratio=obsratio, diaratio=diaratio, start_mode=start_mode,
-                idx_modes=idx_modes, mask=mask, doNotPutOnGpu=doNotPutOnGpu,
-                return_inv=True, zeroPad=zeroPad
+                idx_modes=idx_modes, mask=mask, return_inv=True, zeroPad=zeroPad
             )
             if phase2modes is None:
                 raise ValueError(f'Error reading influence function: {phase2modes_tag}')
@@ -2010,7 +1950,7 @@ class Factory:
         if pupil_mask_tag:
             if phase2modes_tag:
                 print('if phase2modes_tag is defined then pupil_mask_tag will not be used!')
-            pupilstop = self._cm.read_pupilstop(pupil_mask_tag, GPU=useGPU)
+            pupilstop = self._cm.read_pupilstop(pupil_mask_tag)
             if pupilstop is None:
                 raise ValueError(f'Pupil mask tag {pupil_mask_tag} not found.')
             mask = pupilstop.A
@@ -2156,7 +2096,7 @@ class Factory:
             pupdata = self._cm.read_pupils(pupdata_tag)
 
             # Compute IFried from pupdata
-            pup2Dfull = xp.zeros(pupdata.framesize, dtype=float)
+            pup2Dfull = xp.zeros(pupdata.framesize, dtype=self.dtype)
             pup2Dfull[pupdata.ind_pup[0, :]] = 1
             idx1 = xp.where(xp.sum(pup2Dfull, axis=1) > 0)
             idx2 = xp.where(xp.sum(pup2Dfull, axis=0) > 0)
@@ -2164,7 +2104,7 @@ class Factory:
             pup2D = pup2Dfull[idx2[0][0]:idx2[0][-1] + 1, idx1[0][0]:idx1[0][-1] + 1]
             sPup2D = pup2D.shape
 
-            I_fried = xp.zeros((sPup2D[0] + 1, sPup2D[1] + 1), dtype=float)
+            I_fried = xp.zeros((sPup2D[0] + 1, sPup2D[1] + 1), dtype=self.dtype)
             I_fried[:-1, :-1] += pup2D
             I_fried[1:, :-1] += pup2D
             I_fried[:-1, 1:] += pup2D
@@ -2261,30 +2201,26 @@ class Factory:
 
         return container
 
-    def get_sh(self, params, GPU=None):
+    def get_sh(self, params):
         """
-        Builds a `sh` or `sh_gpu` processing object.
+        Builds a `sh` processing object.
 
         Parameters:
-        params (dict): Dictionary of parameters
-        GPU (bool, optional): Use GPU if available
+        params (dict): Dictionary of parameters        
 
         Returns:
-        Sh or ShGpu: A new `sh` or `sh_gpu` processing object
+        Sh: A new `sh` processing object
         """
-        useGPU = GPU if GPU is not None else self._gpu
+        
         params = self.ensure_dictionary(params)
 
-        convolGaussSpotSize = self.extract(params, 'convolGaussSpotSize', default=None)
-        useGPUfromParams = self.extract(params, 'useGPU', default=None)
-        if useGPUfromParams is not None:
-            useGPU = useGPUfromParams
-
+        convolGaussSpotSize = self.extract(params, 'convolGaussSpotSize', default=None)        
+        
         if 'xyshift' in params:
-            sh = self.get_sh_shift(params, GPU=GPU)
+            sh = self.get_sh_shift(params)
             return sh
         if 'xytilt' in params:
-            sh = self.get_sh_tilt(params, GPU=GPU)
+            sh = self.get_sh_tilt(params)
             return sh
 
         wavelengthInNm = params.pop('wavelengthInNm')
@@ -2300,10 +2236,7 @@ class Factory:
 
         lenslet = Lenslet(n_subap_on_diameter)
 
-        if useGPU:
-            sh = ShGpu(wavelengthInNm, lenslet, sensor_fov, sensor_pxscale, sensor_npx, FoVres30mas=FoVres30mas)
-        else:
-            sh = Sh(wavelengthInNm, lenslet, sensor_fov, sensor_pxscale, sensor_npx, FoVres30mas=FoVres30mas, gkern=gkern)
+        sh = Sh(wavelengthInNm, lenslet, sensor_fov, sensor_pxscale, sensor_npx, FoVres30mas=FoVres30mas, gkern=gkern)
 
         self.apply_global_params(sh)
 
@@ -2338,18 +2271,17 @@ class Factory:
 
         return sh
 
-    def get_sh_shift(self, params, GPU=None):
+    def get_sh_shift(self, params):
         """
         Builds a `sh_shift` processing object.
 
         Parameters:
-        params (dict): Dictionary of parameters
-        GPU (bool, optional): Use GPU if available
+        params (dict): Dictionary of parameters        
 
         Returns:
         ShShift: A new `sh_shift` processing object
         """
-        GPU = GPU if GPU is not None else self._gpu
+
         params = self.ensure_dictionary(params)
 
         shiftWavelengthInNm = params.pop('shiftWavelengthInNm')
@@ -2357,21 +2289,19 @@ class Factory:
         qe_factor = params.pop('qe_factor_shift')
         resize_fact = params.pop('resize_fact')
 
-        sh_shift = ShShift(params, self._main, shiftWavelengthInNm, xyshift, qe_factor, resize_fact, GPU=self._GPU)
+        sh_shift = ShShift(params, self._main, shiftWavelengthInNm, xyshift, qe_factor, resize_fact)
         return sh_shift
 
-    def get_sh_tilt(self, params, GPU=None):
+    def get_sh_tilt(self, params):
         """
         Builds a `sh_tilt` processing object.
 
         Parameters:
         params (dict): Dictionary of parameters
-        GPU (bool, optional): Use GPU if available
 
         Returns:
         ShTilt: A new `sh_tilt` processing object
         """
-        GPU = GPU if GPU is not None else self._gpu
         params = self.ensure_dictionary(params)
         params_tilt = {}
 
@@ -2391,25 +2321,23 @@ class Factory:
         xyTilt = params.pop('xyTilt')
         qe_factor = params.pop('qe_factor_tilt')
 
-        sh_tilt = ShTilt(params, params_tilt, self._main, tiltWavelengthInNm, xyTilt, qe_factor, GPU=self._GPU)
+        sh_tilt = ShTilt(params, params_tilt, self._main, tiltWavelengthInNm, xyTilt, qe_factor)
         return sh_tilt
 
-    def get_modulated_pyramid(self, params, GPU=None):
+    def get_modulated_pyramid(self, params):
         """
-        Builds a `modulated_pyramid` or `modulated_pyramid_gpu` processing object.
+        Builds a `modulated_pyramid` processing object.
 
         Parameters:
-        params (dict): Dictionary of parameters
-        GPU (bool, optional): Use GPU if available
+        params (dict): Dictionary of parameters        
 
         Returns:
-        ModulatedPyramid or ModulatedPyramidGpu: A new `modulated_pyramid` or `modulated_pyramid_gpu` processing object
+        ModulatedPyramid : A new `modulated_pyramid` processing object
         """
         if 'xyTilt' in params:
-            pyr = self.get_pyr_tilt(params, GPU=GPU)
+            pyr = self.get_pyr_tilt(params)
             return pyr
-
-        useGPU = GPU if GPU is not None else self._gpu
+        
         params = self.ensure_dictionary(params)
 
         DpupPix = self._main['pixel_pupil']
@@ -2446,18 +2374,11 @@ class Factory:
         toccd_side = result['toccd_side']
         final_ccd_side = result['final_ccd_side']
 
-        if useGPU:
-            pyr = ModulatedPyramidGpu(wavelengthInNm, fov_res, fp_masking, fft_res, tilt_scale,
-                                    fft_sampling, fft_padding, fft_totsize, toccd_side, final_ccd_side,
-                                    fp_obs=fp_obs, pyr_tlt_coeff=pyr_tlt_coeff,
-                                    pyr_edge_def_ld=pyr_edge_def_ld, pyr_tip_def_ld=pyr_tip_def_ld,
-                                    pyr_tip_maya_ld=pyr_tip_maya_ld)
-        else:
-            pyr = ModulatedPyramid(wavelengthInNm, fov_res, fp_masking, fft_res, tilt_scale,
-                                fft_sampling, fft_padding, fft_totsize, toccd_side, final_ccd_side,
-                                fp_obs=fp_obs, pyr_tlt_coeff=pyr_tlt_coeff,
-                                pyr_edge_def_ld=pyr_edge_def_ld, pyr_tip_def_ld=pyr_tip_def_ld,
-                                pyr_tip_maya_ld=pyr_tip_maya_ld)
+        pyr = ModulatedPyramid(wavelengthInNm, fov_res, fp_masking, fft_res, tilt_scale,
+                            fft_sampling, fft_padding, fft_totsize, toccd_side, final_ccd_side,
+                            fp_obs=fp_obs, pyr_tlt_coeff=pyr_tlt_coeff,
+                            pyr_edge_def_ld=pyr_edge_def_ld, pyr_tip_def_ld=pyr_tip_def_ld,
+                            pyr_tip_maya_ld=pyr_tip_maya_ld)
 
         pup_shifts_std = self.extract(params, 'pup_shifts_std', default=[0, 0], optional=True)
         pup_shifts_seed = self.extract(params, 'pup_shifts_seed', default=None, optional=True)
@@ -2493,18 +2414,17 @@ class Factory:
 
         return pyr
 
-    def get_pyr_tilt(self, params, GPU=None):
+    def get_pyr_tilt(self, params):
         """
         Builds a `pyr_tilt` processing object.
 
         Parameters:
         params (dict): Dictionary of parameters
-        GPU (bool, optional): Use GPU if available
 
         Returns:
         PyrTilt: A new `pyr_tilt` processing object
         """
-        GPU = GPU if GPU is not None else self._gpu
+        
         params = self.ensure_dictionary(params)
         params_tilt = {}
 
@@ -2529,7 +2449,7 @@ class Factory:
 
         pyr = PyrTilt(params, params_tilt, self._main, tiltWavelengthInNm,
                     xyTilt, qe_factor, delta_pup_dist=delta_pup_dist,
-                    pup_shifts=pup_shifts, pyr_tlt_coeff=pyr_tlt_coeff, GPU=GPU)
+                    pup_shifts=pup_shifts, pyr_tlt_coeff=pyr_tlt_coeff)
         return pyr
 
     def get_optgaincontrol(self, params):
@@ -2567,26 +2487,24 @@ class Factory:
         self.apply_global_params(disp)
         return disp
 
-    def get_sh_slopec(self, params, GPU=None, recmat=None, device=None, mode_basis=None, pup_mask=None):
+    def get_sh_slopec(self, params, recmat=None, device=None, mode_basis=None, pup_mask=None):
         """
-        Builds a `sh_slopec` or `sh_slopec_gpu` processing object.
+        Builds a `sh_slopec`  processing object.
 
         Parameters:
         params (dict): Dictionary of parameters
-        GPU (bool, optional): Use GPU if available
         recmat (objref, optional): Reconstruction matrix
-        device (optional): Device to use for GPU
         mode_basis (objref, optional): Mode basis
         pup_mask (objref, optional): Pupil mask
 
         Returns:
-        ShSlopec or ShSlopecGpu: A new `sh_slopec` or `sh_slopec_gpu` processing object
+        ShSlopec: A new `sh_slopec` or `sh_slopec` processing object
         """
         params = self.ensure_dictionary(params)
         lifted_sh = self.extract(params, 'lifted_sh', default=False)
         
         if lifted_sh:
-            sc = self.get_lift_sh_slopec(params, mode_basis=mode_basis, pup_mask=pup_mask, GPU=GPU)
+            sc = self.get_lift_sh_slopec(params, mode_basis=mode_basis, pup_mask=pup_mask)
             return sc
 
         computation_time = self.extract(params, 'computation_time', default=None)
@@ -2602,18 +2520,14 @@ class Factory:
             sc = ShMatchedSlopec()
             sc.matched_filter = self._cm.read_data(matched_tag)
         else:
-            useGPU = GPU if GPU is not None else False
-            if useGPU:
-                sc = ShSlopecGpu(device=device)
-            else:
-                sc = ShSlopec()
+            sc = ShSlopec()
 
         if intmat_tag:
             intmat = self._cm.read_data(intmat_tag)
             sc.intmat = intmat
 
         if recmat is None and recmat_tag:
-            recmat = self._cm.read_rec(recmat_tag, doNotPutOnGpu=doNotPutOnGpu)
+            recmat = self._cm.read_rec(recmat_tag)
             sc.recmat = recmat
 
         if filtmat_tag:
@@ -2687,17 +2601,6 @@ class Factory:
         CalibrationManager: The calibration manager
         """
         return self._cm
-
-    def gpu(self):
-        """
-        Returns the GPU acceleration flag.
-        If this flag is non-zero, GPU versions will be automatically returned
-        for objects of type `sh`, `modulated_pyramid` and `sh_slopec`.
-
-        Returns:
-        bool: GPU acceleration flag
-        """
-        return self._gpu
 
     def revision_track(self):
         """

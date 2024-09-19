@@ -1,6 +1,7 @@
 from astropy.io import fits
 
 from pyssata.base_time_obj import BaseTimeObj
+from pyssata import standard_dtype
 
 class BaseDataObj(BaseTimeObj):
     def __init__(self, precision=0):
@@ -12,6 +13,7 @@ class BaseDataObj(BaseTimeObj):
         """
         super().__init__(precision)
         self._tag = ''
+        self.dtype = standard_dtype
 
     @property
     def tag(self):

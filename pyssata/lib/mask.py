@@ -3,7 +3,7 @@ Copied from arte.types.mask
 Commenting out unused imports
 '''
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 #from arte.types.region_of_interest import RegionOfInterest
 #from arte.utils.image_moments import ImageMoments
@@ -35,7 +35,7 @@ class BaseMask():
         return self._mask
     
     def as_masked_array(self):
-        return xp.ma.array(xp.ones(self._shape),
+        return xp.ma.array(xp.ones(self._shape, dtype=self.dtype),
                            mask=self.mask())
         
     def shape(self):
@@ -121,7 +121,7 @@ class CircularMask(BaseMask):
             self._maskRadius = min(self._shape) / 2.
         if self._maskCenter is None:
             self._maskCenter = 0.5 * xp.array([self._shape[0],
-                                               self._shape[1]])
+                                               self._shape[1]], dtype=self.dtype)
 
         r = self._maskRadius
         cc = self._maskCenter
@@ -143,7 +143,7 @@ class CircularMask(BaseMask):
         return xp.logical_not(self._mask).astype(int)
     
     #def as_masked_array(self):
-    #    return xp.ma.array(xp.array(self.asTransmissionValue(), dtype=float),
+    #    return xp.ma.array(xp.array(self.asTransmissionValue(), dtype=self.dtype,
     #                       mask=self.mask())
 
     def radius(self):
@@ -221,7 +221,7 @@ class CircularMask(BaseMask):
                 else:
                     again *= 0.9
         elif method == CircularMask.FITTING_METHOD_RANSAC:
-            img = xp.asarray(maskedArray.mask.astype(float) * -1 + 1)
+            img = xp.asarray(maskedArray.mask.astype(float) * -1 + 1, dtype=self.dtype)
             img[img > 0] = 128
             edge = img.copy()
             edge = feature.canny(img, keywords.pop('sigmaCanny', 2))
@@ -248,7 +248,7 @@ class CircularMask(BaseMask):
             circularMask = CircularMask(img.shape, r, [cx,cy])
 
         elif method == CircularMask.FITTING_METHOD_CENTER_OF_GRAVITY:
-            img = xp.asarray(maskedArray.mask.astype(int) * -1 + 1)
+            img = xp.asarray(maskedArray.mask.astype(int) * -1 + 1, dtype=self.dtype)
             regions = measure.regionprops(img)
             bubble = regions[0]
             y0, x0 = bubble.centroid
@@ -259,7 +259,7 @@ class CircularMask(BaseMask):
             
         elif method == CircularMask.FITTING_METHOD_CORRELATION:
             
-            img = xp.asarray(maskedArray.mask.astype(int) * -1 + 1)
+            img = xp.asarray(maskedArray.mask.astype(int) * -1 + 1, dtype=self.dtype)
             regions = measure.regionprops(img)
             bubble = regions[0]
 
@@ -353,7 +353,7 @@ class AnnularMask(CircularMask):
             self._maskRadius = min(self._shape) / 2.
         if self._maskCenter is None:
             self._maskCenter = 0.5 * xp.array([self._shape[0],
-                                               self._shape[1]])
+                                               self._shape[1]], dtype=self.dtype)
 
         r = self._maskRadius
         cc = self._maskCenter

@@ -27,31 +27,31 @@
 from pyssata.data_objects.iirfilter import IIRFilter
 
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata import cpuArray
-
+from pyssata import standard_dtype
 
 def int2iirfilter(gain, ff=None):
     n = len(gain)
     
     if ff is None:
-        ff = xp.ones(n, dtype=xp.float64)
+        ff = xp.ones(n, dtype=standard_dtype)
     elif len(ff) != n:
-        ff = xp.full(n, ff, dtype=xp.float64)
+        ff = xp.full(n, ff, dtype=standard_dtype)
     
     # Filter initialization
-    num = xp.zeros((n, 2), dtype=xp.float64)
-    ord_num = xp.zeros(n, dtype=xp.float64)
-    den = xp.zeros((n, 2), dtype=xp.float64)
-    ord_den = xp.zeros(n, dtype=xp.float64)
-    ost = xp.zeros((n, 2), dtype=xp.float64)
-    ist = xp.zeros((n, 2), dtype=xp.float64)
+    num = xp.zeros((n, 2), dtype=standard_dtype)
+    ord_num = xp.zeros(n, dtype=standard_dtype)
+    den = xp.zeros((n, 2), dtype=standard_dtype)
+    ord_den = xp.zeros(n, dtype=standard_dtype)
+    ost = xp.zeros((n, 2), dtype=standard_dtype)
+    ist = xp.zeros((n, 2), dtype=standard_dtype)
     
     for i in range(n):
-        num[i, 0:2] = xp.array([0, cpuArray(gain)[i]])
+        num[i, 0:2] = xp.array([0, cpuArray(gain)[i]], dtype=standard_dtype)
         ord_num[i] = 2
-        den[i, 0:2] = xp.array([-cpuArray(ff)[i], 1])
+        den[i, 0:2] = xp.array([-cpuArray(ff)[i], 1], dtype=standard_dtype)
         ord_den[i] = 2
     
     iirfilter = IIRFilter()

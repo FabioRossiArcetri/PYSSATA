@@ -1,6 +1,8 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
+from pyssata import standard_dtype
+
 from scipy.ndimage import rotate
 import warnings
 from scipy.interpolate import RegularGridInterpolator
@@ -17,7 +19,7 @@ def single_layer2pupil_ef(layer_ef, polar_coordinate, height_source, update_ef=N
     diff_height = height_source - height_layer
 
     if (height_layer == 0 or (xp.isinf(height_source) and polar_coordinate[0] == 0)) and \
-       ((shiftXY is None) or (xp.all(shiftXY == xp.array([0, 0])))) and \
+       ((shiftXY is None) or (xp.all(shiftXY == xp.array([0, 0], dtype=standard_dtype)))) and \
        ((pupil_position is None) or (pupil_position == 0)) and \
        ((rotAnglePhInDeg is None) or (rotAnglePhInDeg == 0)) and \
        ((magnify is None) or (magnify == 1)):

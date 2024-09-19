@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue, OutputValue
@@ -78,7 +78,7 @@ class IIRControl(TimeControl, BaseProcessingObj):
         self._delay = value
 
     def set_modal_start_time(self, modal_start_time):
-        modal_start_time_ = xp.array(modal_start_time)
+        modal_start_time_ = xp.array(modal_start_time, dtype=self.dtype)
         for i in range(len(modal_start_time)):
             modal_start_time_[i] = self.seconds_to_t(modal_start_time[i])
         self._modal_start_time = modal_start_time_
@@ -131,13 +131,13 @@ class IIRControl(TimeControl, BaseProcessingObj):
                             print("no scale factor applied")
 
                 if self._do_gmt_init_mod_manager:
-                    time_idx = self._time_gmt_imm if self._time_gmt_imm is not None else xp.zeros(0)
-                    gain_idx = self._gain_gmt_imm if self._gain_gmt_imm is not None else xp.zeros(0)
+                    time_idx = self._time_gmt_imm if self._time_gmt_imm is not None else xp.zeros(0, dtype=self.dtype)
+                    gain_idx = self._gain_gmt_imm if self._gain_gmt_imm is not None else xp.zeros(0, dtype=self.dtype)
                     delta_comm *= gmt_init_mod_manager(self.t_to_seconds(t), len(delta_comm), time_idx=time_idx, gain_idx=gain_idx)
 
                 if len(delta_comm) < self._iirfilter.nfilter:
                     n_delta_comm = len(delta_comm)
-                    delta_comm = xp.zeros(self._iirfilter.nfilter)
+                    delta_comm = xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
                     delta_comm[:n_delta_comm] = self._delta_comm.value
 
                 if self._offset is not None:
@@ -168,12 +168,12 @@ class IIRControl(TimeControl, BaseProcessingObj):
                     LPF = True
                     if xp.all(self._extraPolMinMax == 0):
                         self._extraPolMinMax = [0, self._iirfilter.nfilter]
-                    deltaCommHist = self._deltaCommHistEx if self._deltaCommHistEx is not None else xp.zeros((0, 0))
-                    commHist = self._commHistEx if self._commHistEx is not None else xp.zeros((0, 0))
-                    deltaCommFutureHist = self._deltaCommFutureHistEx if self._deltaCommFutureHistEx is not None else xp.zeros((0, 0))
+                    deltaCommHist = self._deltaCommHistEx if self._deltaCommHistEx is not None else xp.zeros((0, 0), dtype=self.dtype)
+                    commHist = self._commHistEx if self._commHistEx is not None else xp.zeros((0, 0), dtype=self.dtype)
+                    deltaCommFutureHist = self._deltaCommFutureHistEx if self._deltaCommFutureHistEx is not None else xp.zeros((0, 0), dtype=self.dtype)
                     if LPF:
-                        ostMat = self._ostMatEx if self._ostMatEx is not None else xp.zeros((0, 0))
-                        istMat = self._istMatEx if self._istMatEx is not None else xp.zeros((0, 0))
+                        ostMat = self._ostMatEx if self._ostMatEx is not None else xp.zeros((0, 0), dtype=self.dtype)
+                        istMat = self._istMatEx if self._istMatEx is not None else xp.zeros((0, 0), dtype=self.dtype)
                     newcExtrapol = compute_extrapol_comm(newc, self._delay + 1, self._nPastStepsEx, thr_chisqr, 
                                                          deltaCommHist=deltaCommHist, commHist=commHist, 
                                                          deltaCommFutureHist=deltaCommFutureHist, gainFuture=None, 

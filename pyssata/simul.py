@@ -17,7 +17,7 @@ class Simul():
     '''
     Simulation organizer
     '''
-    def __init__(self, param_file):
+    def __init__(self, param_file):        
         self.param_file = param_file
         self.objs = {}
 

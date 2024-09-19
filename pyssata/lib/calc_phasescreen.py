@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata import cpuArray
 
@@ -56,7 +56,7 @@ def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=False, verbos
         im_gauss[idx_inf] = xp.mean(im_gauss[idx_fin])
 
     # Initialize the phasescreen
-    phasescreen = xp.zeros((dimension, dimension), dtype=dtype)
+    phasescreen = xp.zeros((dimension, dimension), dtype=self.dtype)
 
     if verbose:
         print("Compute noise matrix")

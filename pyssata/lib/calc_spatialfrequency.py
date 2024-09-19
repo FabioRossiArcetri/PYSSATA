@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 def calc_spatialfrequency(dimension, precision=False):
@@ -19,10 +19,10 @@ def calc_spatialfrequency(dimension, precision=False):
     dtype = xp.float64 if precision else xp.float32
     half_dim = dimension // 2
 
-    temp_matrix = xp.zeros((half_dim + 1, half_dim + 1), dtype=dtype)
-    matrix = xp.zeros((dimension, dimension), dtype=dtype)
+    temp_matrix = xp.zeros((half_dim + 1, half_dim + 1), dtype=self.dtype)
+    matrix = xp.zeros((dimension, dimension), dtype=self.dtype)
 
-    x = xp.arange(half_dim + 1, dtype=dtype)  # Make a row
+    x = xp.arange(half_dim + 1, dtype=self.dtype)  # Make a row
     for i in range(half_dim + 1):
         temp_matrix[:, i] = x**2 + i**2  # Generate 1/4 of matrix
 

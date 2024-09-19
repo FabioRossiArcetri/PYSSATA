@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata import cpuArray
 
@@ -94,7 +94,7 @@ class PyrSlopec(Slopec):
             self._flux_per_subaperture_vector.value = flux
             self._flux_per_subaperture_vector.generation_time = t
 
-            px = xp.array(cpuArray(pixels).flat[self._pupdata.ind_pup].ravel())
+            px = xp.array(cpuArray(pixels).flat[self._pupdata.ind_pup].ravel(), dtype=self.dtype)
             self._total_counts.value = xp.sum(px)
             self._subap_counts.value = xp.sum(px) / self._pupdata.n_subap
 

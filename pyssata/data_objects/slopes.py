@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from astropy.io import fits
@@ -13,7 +13,7 @@ class Slopes(BaseDataObj):
         if slopes is not None:
             self._slopes = slopes
         else:
-            self._slopes = xp.zeros(length, dtype=float)
+            self._slopes = xp.zeros(length, dtype=self.dtype)
         self._interleave = interleave
         self._pupdata_tag = ''
 
@@ -103,13 +103,13 @@ class Slopes(BaseDataObj):
             pupdata = cm.read_pupils(self._pupdata_tag)
         mask = pupdata.single_mask()
         idx = xp.where(mask)
-        fx = xp.zeros_like(mask, dtype=float)
-        fy = xp.zeros_like(mask, dtype=float)
+        fx = xp.zeros_like(mask, dtype=self.dtype)
+        fy = xp.zeros_like(mask, dtype=self.dtype)
         self.x_remap2d(fx, idx)
         self.y_remap2d(fy, idx)
         fx = fx[:fx.shape[0] // 2, fx.shape[1] // 2:]
         fy = fy[:fy.shape[0] // 2, fy.shape[1] // 2:]
-        return xp.array([fx, fy])
+        return xp.array([fx, fy], dtype=self.dtype)
 
     def rotate(self, angle, flipx=False, flipy=False):
         sx = self.xslopes

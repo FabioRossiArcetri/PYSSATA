@@ -2,6 +2,8 @@ from astropy.io import fits
 
 from pyssata.base_time_obj import BaseTimeObj
 from pyssata.base_parameter_obj import BaseParameterObj
+from pyssata import standard_dtype
+from pyssata import complex_dtype
 
 class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
     def __init__(self, precision=0):
@@ -20,6 +22,8 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         # Will be populated by derived class
         self.inputs = {}
         self.outputs = {}
+        self.dtype = standard_dtype
+        self.complex_dtype = complex_dtype
 
     @property
     def verbose(self):

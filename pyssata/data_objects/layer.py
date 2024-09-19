@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from astropy.io import fits
@@ -10,12 +10,11 @@ class Layer(ElectricField):
     '''Layer'''
 
     def __init__(self, dimx, dimy, pixel_pitch, height, precision=0, shiftXYinPixel=(0.0, 0.0), rotInDeg=0.0, magnification=1.0):
+        super().__init__(dimx, dimy, pixel_pitch, precision=precision)                
         self._height = height
-        self._shiftXYinPixel = xp.array(shiftXYinPixel)
+        self._shiftXYinPixel = xp.array(shiftXYinPixel, dtype=self.dtype)
         self._rotInDeg = rotInDeg
         self._magnification = magnification
-
-        super().__init__(dimx, dimy, pixel_pitch, precision=precision)
 
     @property
     def height(self):

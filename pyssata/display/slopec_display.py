@@ -4,7 +4,7 @@ from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.processing_objects.pyr_slopec import PyrSlopec
 from pyssata.display.pupil_display import pupil_display
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata import cpuArray
 from pyssata.connections import InputValue
@@ -91,7 +91,7 @@ class SlopecDisplay(BaseProcessingObj):
                     map_data = self._slopec.pupdata.ind_pup[:, 1]
                     slope_side = None  # Auto scaled
 #                TODO --- these SlopeC are not available yet
-#                elif isinstance(self._slopec, (IdealWfsSlopec, ShSlopec, ShSlopecGpu)):
+#                elif isinstance(self._slopec, (IdealWfsSlopec, ShSlopec, ShSlopec)):
 #                    nx = self._slopec.subapdata.nx
 #                    map_data = self._slopec.subapdata.map
 #                    map_data = (map_data // nx) * nx * 2 + (map_data % nx)

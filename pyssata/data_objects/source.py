@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from pyssata.base_parameter_obj import BaseParameterObj
@@ -28,7 +28,7 @@ class Source(BaseDataObj, BaseParameterObj):
             if verbose:
                     print(f'get_source: changing source height by airmass value ({airmass})')
 
-        polar_coordinate = xp.array(polar_coordinate) + xp.array(error_coord)
+        polar_coordinate = xp.array(polar_coordinate, dtype=self.dtype) + xp.array(error_coord, dtype=self.dtype)
         if any(error_coord):
             print(f'there is a desired error ({error_coord[0]},{error_coord[1]}) on source coordinates.')
             print(f'final coordinates are: {polar_coordinate[0]},{polar_coordinate[1]}')
@@ -47,7 +47,7 @@ class Source(BaseDataObj, BaseParameterObj):
 
     @polar_coordinate.setter
     def polar_coordinate(self, value):
-        self._polar_coordinate = xp.array(value)
+        self._polar_coordinate = xp.array(value, dtype=self.dtype)
 
     @property
     def height(self):
