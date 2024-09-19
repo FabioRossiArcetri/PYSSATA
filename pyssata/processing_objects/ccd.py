@@ -2,9 +2,14 @@ import math
 import numpy as np
 from pyssata import gpuEnabled
 from pyssata import xp
-from scipy.stats import poisson, gamma, norm
-from numpy.random import default_rng
+from scipy.stats import gamma
 from scipy.ndimage import convolve
+
+if gpuEnabled:
+    print('Importing default_rng from cupy')
+    from cupy.random import default_rng
+else:
+    from numpy.random import default_rng
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue, OutputValue
@@ -139,8 +144,8 @@ class CCD(BaseProcessingObj):
         self._normNotUniformQe = False
         self._poidev = None
         self._gaussian_noise = None
-        self._rng = default_rng(self._photon_seed)
-
+        self._photon_rng = default_rng(self._photon_seed)
+        self._readout_rng = default_rng(self._readout_seed)
         self.inputs['in_i'] = InputValue(object=self.in_i, type=Intensity)
         self.outputs['out_pixels'] = OutputValue(object=self.out_pixels, type=Pixels)
 
@@ -225,14 +230,15 @@ class CCD(BaseProcessingObj):
         if self._charge_diffusion:
             ccd_frame = convolve(ccd_frame, self._chDiffKernel, mode='constant', cval=0.0)
 
+        print(type(ccd_frame))
         if self._photon_noise:
-            ccd_frame = poisson.rvs(ccd_frame, random_state=self._rng)
+            ccd_frame = self._photon_rng.poisson(ccd_frame)
 
         if self._excess_noise:
             ccd_frame = 1.0 / self._excess_delta * gamma.rvs(self._excess_delta * ccd_frame, self._emccd_gain, random_state=self._excess_seed)
 
         if self._readout_noise:
-            ron_vector = norm.rvs(size=ccd_frame.size, random_state=self._readout_seed)
+            ron_vector = self._readout_rng.standard_normal(size=ccd_frame.size)
             ccd_frame += (ron_vector.reshape(ccd_frame.shape) * self._readout_level).astype(ccd_frame.dtype)
 
         if self._pixelGains is not None:
