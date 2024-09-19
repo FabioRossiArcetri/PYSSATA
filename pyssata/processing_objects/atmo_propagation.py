@@ -15,7 +15,7 @@ class AtmoPropagation(BaseProcessingObj):
                  source_dict,
                  pixel_pupil: int,
                  pixel_pitch: float,
-                 precision=0,
+                 precision=None,
                  doFresnel: bool=False,
                  wavelengthInNm: float=500.0,
                  pupil_position=(0., 0.)):
@@ -25,8 +25,7 @@ class AtmoPropagation(BaseProcessingObj):
             raise ValueError('get_atmo_propagation: wavelengthInNm is required when doFresnel key is set to correctly simulate physical propagation.')
 
         self._pixel_pupil = pixel_pupil
-        self._pixel_pitch = pixel_pitch
-        self._precision = precision
+        self._pixel_pitch = pixel_pitch        
         self._source_dict = source_dict
         self._pupil_dict = {}
         self._layer_list = []

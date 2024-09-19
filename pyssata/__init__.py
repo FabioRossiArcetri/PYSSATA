@@ -4,15 +4,25 @@ import os
 gpuEnabled = False
 cp = None
 xp = None
-standard_dtype = None
+global_precision = None
+float_dtype_list = None
+complex_dtype_list = None
+float_dtype = None
 complex_dtype = None
 
-def init(precision):
-    global standard_dtype
-    global complex_dtype
+# precision = 0 -> double precision
+# precision = 1 -> single precision
+
+def init(precision=0):
     global xp
     global cp
     global gpuEnabled
+    global global_precision
+    global float_dtype_list
+    global complex_dtype_list
+    global float_dtype
+    global complex_dtype
+    
     systemDisable = os.environ.get('PYSSATA_DISABLE_GPU', 'FALSE')
     if systemDisable=='FALSE':
         try:
@@ -29,12 +39,12 @@ def init(precision):
         cp = np
         xp = np
 
-    if precision==32:
-        standard_dtype = xp.float32
-        complex_dtype = xp.complex64
-    else:
-        standard_dtype = xp.float64
-        complex_dtype = xp.complex128
+    float_dtype_list = [xp.float64, xp.float32]
+    complex_dtype_list = [xp.complex128, xp.complex64]
+    global_precision = precision
+    float_dtype = float_dtype_list[global_precision]
+    complex_dtype = complex_dtype_list[global_precision]
+
 
 def cpuArray(v):
     if isinstance(v, (np.ndarray, np.float64, np.int64)):

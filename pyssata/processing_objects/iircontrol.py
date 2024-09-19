@@ -155,8 +155,7 @@ class IIRControl(TimeControl, BaseProcessingObj):
                                      (xp.ceil(self._delay) - self._delay) * self._deltaCommFutureHistEx[:, self._nPastStepsEx - xp.floor(self._delay)]
                     delta_comm += delta_temp
 
-                newc = compute_comm(self._iirfilter, delta_comm, ist=ist, ost=ost)
-                newc = newc.astype(xp.float64 if self._precision > 0 else xp.float32)
+                newc = compute_comm(self._iirfilter, delta_comm, ist=ist, ost=ost)                
 
                 if xp.all(newc == 0) and self._offset is not None:
                     newc[:len(self._offset)] += self._offset

@@ -1,8 +1,11 @@
 import numpy as np
 
 from pyssata import xp
+from pyssata import global_precision
+from pyssata import float_dtype_list
+from pyssata import complex_dtype_list
 
-def calc_spatialfrequency(dimension, precision=False):
+def calc_spatialfrequency(dimension, precision=None):
     """
     This function returns a square matrix of size [dimension X dimension]
     with the spatial frequencies calculated as row^2 + column^2.
@@ -16,13 +19,19 @@ def calc_spatialfrequency(dimension, precision=False):
     - matrix: A square matrix of size [dimension X dimension].
     """
 
-    dtype = xp.float64 if precision else xp.float32
+    if precision is None:
+        _precision = global_precision
+    else:
+        _precision = precision
+    dtype = float_dtype_list[_precision]
+    complex_dtype = complex_dtype_list[_precision]
+
     half_dim = dimension // 2
 
-    temp_matrix = xp.zeros((half_dim + 1, half_dim + 1), dtype=self.dtype)
-    matrix = xp.zeros((dimension, dimension), dtype=self.dtype)
+    temp_matrix = xp.zeros((half_dim + 1, half_dim + 1), dtype=dtype)
+    matrix = xp.zeros((dimension, dimension), dtype=dtype)
 
-    x = xp.arange(half_dim + 1, dtype=self.dtype)  # Make a row
+    x = xp.arange(half_dim + 1, dtype=dtype)  # Make a row
     for i in range(half_dim + 1):
         temp_matrix[:, i] = x**2 + i**2  # Generate 1/4 of matrix
 

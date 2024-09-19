@@ -8,14 +8,9 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class Intensity(BaseDataObj):
     '''Intensity field object'''
-    def __init__(self, dimx, dimy, precision=0, type_str=None):
-        super().__init__()
-        
-        if type_str is None:
-            self.type = xp.float32 if precision == 0 else xp.float64
-        else:
-            self.type = xp.dtype(type_str)
-        
+    def __init__(self, dimx, dimy, precision=None):
+        super().__init__(precision=precision)
+                
         self._i = xp.zeros((dimx, dimy), dtype=self.dtype)
 
     @property

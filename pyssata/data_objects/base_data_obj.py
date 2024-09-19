@@ -1,19 +1,18 @@
 from astropy.io import fits
 
 from pyssata.base_time_obj import BaseTimeObj
-from pyssata import standard_dtype
+from pyssata import float_dtype
 
 class BaseDataObj(BaseTimeObj):
-    def __init__(self, precision=0):
+    def __init__(self, precision=None):
         """
         Initialize the base data object.
 
         Parameters:
-        precision (int, optional): double 1 or single 0, defaults to single precision
+        precision (int, optional):if None will use the global_precision, otherwise pass 0 for double, 1 for single
         """
         super().__init__(precision)
-        self._tag = ''
-        self.dtype = standard_dtype
+        self._tag = ''        
 
     @property
     def tag(self):

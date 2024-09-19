@@ -2,7 +2,7 @@ import numpy as np
 
 from pyssata import xp
 from pyssata import cpuArray
-from pyssata import standard_dtype
+from pyssata import float_dtype
 
 def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm_fact=None, threshold=None):
     """
@@ -26,10 +26,10 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
         raise ValueError('INTENSITY_BASED and SHLIKE keywords cannot be set together.')
 
     # Extract intensity arrays for each sub-pupil
-    intensity = xp.array( [cpuArray(frame).flat[cpuArray(ind_pup)[:, i]].reshape(-1) for i in range(4)], dtype=standard_dtype )
+    intensity = xp.array( [cpuArray(frame).flat[cpuArray(ind_pup)[:, i]].reshape(-1) for i in range(4)], dtype=float_dtype )
 
     # Compute total intensity
-    flux = xp.sum(xp.array([xp.sum(arr) for arr in intensity], dtype=standard_dtype))
+    flux = xp.sum(xp.array([xp.sum(arr) for arr in intensity], dtype=float_dtype))
     
     if threshold is not None:
         # Apply thresholding
@@ -37,7 +37,7 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
     
     total_intensity = np.sum([np.sum(cpuArray(arr)) for arr in intensity])
 
-    total_intensity = xp.array(total_intensity, dtype=standard_dtype)
+    total_intensity = xp.array(total_intensity, dtype=float_dtype)
 
     n_subap = ind_pup.shape[0]
 

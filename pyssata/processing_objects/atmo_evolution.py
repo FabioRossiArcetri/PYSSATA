@@ -19,7 +19,7 @@ class AtmoEvolution(BaseProcessingObj):
                  verbose=None, user_defined_phasescreen: str='', force_mcao_fov=False, make_cycle=None,
                  fov_in_m=None, pupil_position=None):
         
-        super().__init__()
+        super().__init__(precision=precision)
         
         self._last_position = None
         self._last_t = 0
@@ -291,8 +291,7 @@ class AtmoEvolution(BaseProcessingObj):
         last_position = self._last_position if self._last_position is not None else xp.zeros_like(wind_speed)
         delta_time = self.t_to_seconds(t - self._last_t)
         if self._extra_delta_time and not self._last_position:
-            delta_time += self._extra_delta_time
-        delta_time = float(delta_time) if self._precision == 0 else delta_time
+            delta_time += self._extra_delta_time        
 
         r0 = 0.9759 * 0.5 / (seeing * 4.848) * self._airmass**(-3./5.) if seeing > 0 else 0.0
         r0wavelength = r0 * (self._wavelengthInNm / 500.0)**(6./5.)

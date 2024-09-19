@@ -19,9 +19,10 @@ class Pupilstop(Layer):
                  obs_diam: float=None,
                  shiftXYinPixel=(0.0, 0.0),
                  rotInDeg: float=0.0,
-                 magnification: float=1.0):
+                 magnification: float=1.0,
+                 precision: int=None):
 
-        super().__init__(pixel_pupil, pixel_pupil, pixel_pitch, height=0, precision=0,
+        super().__init__(pixel_pupil, pixel_pupil, pixel_pitch, height=0, precision=precision,
                          shiftXYinPixel=shiftXYinPixel, rotInDeg=rotInDeg, magnification=magnification)
 
         self._input_mask = input_mask

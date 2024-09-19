@@ -1,7 +1,7 @@
 import numpy as np
 
 from pyssata import xp
-from pyssata import standard_dtype
+from pyssata import float_dtype
 
 from astropy.io import fits
 
@@ -18,22 +18,22 @@ class IIRFilter:
         self.init()
 
     def init(self):
-        self._ordnum = xp.array([], dtype=standard_dtype)
-        self._ordden = xp.array([], dtype=standard_dtype)
-        self._num = xp.array([], dtype=standard_dtype)
-        self._den = xp.array([], dtype=standard_dtype)
-        self._zeros = xp.array([], dtype=standard_dtype)
-        self._poles = xp.array([], dtype=standard_dtype)
-        self._gain = xp.array([], dtype=standard_dtype)
+        self._ordnum = xp.array([], dtype=float_dtype)
+        self._ordden = xp.array([], dtype=float_dtype)
+        self._num = xp.array([], dtype=float_dtype)
+        self._den = xp.array([], dtype=float_dtype)
+        self._zeros = xp.array([], dtype=float_dtype)
+        self._poles = xp.array([], dtype=float_dtype)
+        self._gain = xp.array([], dtype=float_dtype)
         return True
 
     def set_property(self, nfilter=None, ordnum=None, ordden=None, num=None, den=None, zeros=None, poles=None, gain=None, **extra):
         if nfilter is not None:
             self._nfilter = nfilter
         if ordnum is not None:
-            self._ordnum = xp.array(ordnum, dtype=standard_dtype)
+            self._ordnum = xp.array(ordnum, dtype=float_dtype)
         if ordden is not None:
-            self._ordden = xp.array(ordden, dtype=standard_dtype)
+            self._ordden = xp.array(ordden, dtype=float_dtype)
         if num is not None:
             self.set_num(num)
         if den is not None:
@@ -58,9 +58,9 @@ class IIRFilter:
         }
 
     def set_num(self, num):
-        self._num = xp.array(num, dtype=standard_dtype)
-        zeros = xp.zeros((self._nfilter, self._num.shape[1] - 1), dtype=standard_dtype)
-        gain = xp.zeros(self._nfilter, dtype=standard_dtype)
+        self._num = xp.array(num, dtype=float_dtype)
+        zeros = xp.zeros((self._nfilter, self._num.shape[1] - 1), dtype=float_dtype)
+        gain = xp.zeros(self._nfilter, dtype=float_dtype)
         for i in range(self._nfilter):
             if self._ordnum[i] > 1:
                 zeros[i, :self._ordnum[i] - 1] = xp.roots(self._num[i, :self._ordnum[i]])
@@ -69,24 +69,24 @@ class IIRFilter:
         self._gain = gain
 
     def set_den(self, den):
-        self._den = xp.array(den, dtype=standard_dtype)
-        poles = xp.zeros((self._nfilter, self._den.shape[1] - 1), dtype=standard_dtype)
+        self._den = xp.array(den, dtype=float_dtype)
+        poles = xp.zeros((self._nfilter, self._den.shape[1] - 1), dtype=float_dtype)
         for i in range(self._nfilter):
             if self._ordden[i] > 1:
                 poles[i, :self._ordden[i] - 1] = xp.roots(self._den[i, :self._ordden[i]])
         self._poles = poles
 
     def set_zeros(self, zeros):
-        self._zeros = xp.array(zeros, dtype=standard_dtype)
-        num = xp.zeros((self._nfilter, self._zeros.shape[1] + 1), dtype=standard_dtype)
+        self._zeros = xp.array(zeros, dtype=float_dtype)
+        num = xp.zeros((self._nfilter, self._zeros.shape[1] + 1), dtype=float_dtype)
         for i in range(self._nfilter):
             if self._ordnum[i] > 1:
                 num[i, :self._ordnum[i]] = xp.poly(self._zeros[i, :self._ordnum[i] - 1])
         self._num = num
 
     def set_poles(self, poles):
-        self._poles = xp.array(poles, dtype=standard_dtype)
-        den = xp.zeros((self._nfilter, self._poles.shape[1] + 1), dtype=standard_dtype)
+        self._poles = xp.array(poles, dtype=float_dtype)
+        den = xp.zeros((self._nfilter, self._poles.shape[1] + 1), dtype=float_dtype)
         for i in range(self._nfilter):
             if self._ordden[i] > 1:
                 den[i, :self._ordden[i]] = xp.poly(self._poles[i, :self._ordden[i] - 1])
@@ -117,18 +117,18 @@ class IIRFilter:
                         self._num[i, self._ordden - 1] = gain[i] / self._gain[i]
                 else:
                     gain[i] = self._gain[i]
-        self._gain = xp.array(gain, dtype=standard_dtype)
+        self._gain = xp.array(gain, dtype=float_dtype)
         if verbose:
             print('new gain:', self._gain)
 
     def complexRTF(self, mode, fs, delay, freq=None, verbose=False):
         if delay > 1:
-            dm = xp.array([0.0, 1.0], dtype=standard_dtype)
-            nm = xp.array([1.0, 0.0], dtype=standard_dtype)
+            dm = xp.array([0.0, 1.0], dtype=float_dtype)
+            nm = xp.array([1.0, 0.0], dtype=float_dtype)
             wTf = self.discrete_delay_tf(delay - 1)
         else:
-            dm = xp.array([1.0], dtype=standard_dtype)
-            nm = xp.array([1.0], dtype=standard_dtype)
+            dm = xp.array([1.0], dtype=float_dtype)
+            nm = xp.array([1.0], dtype=float_dtype)
             wTf = self.discrete_delay_tf(delay)
         nw = wTf[:, 0]
         dw = wTf[:, 1]
@@ -162,10 +162,10 @@ class IIRFilter:
             plt.show()
 
     def is_stable(self, mode, nm=None, dm=None, nw=None, dw=None, gain=None, no_margin=False, verbose=False):
-        nm = nm if nm is not None else xp.array([1, 0], dtype=standard_dtype)
-        nw = nw if nw is not None else xp.array([1, 0], dtype=standard_dtype)
-        dm = dm if dm is not None else xp.array([0, 1], dtype=standard_dtype)
-        dw = dw if dw is not None else xp.array([0, 1], dtype=standard_dtype)
+        nm = nm if nm is not None else xp.array([1, 0], dtype=float_dtype)
+        nw = nw if nw is not None else xp.array([1, 0], dtype=float_dtype)
+        dm = dm if dm is not None else xp.array([0, 1], dtype=float_dtype)
+        dw = dw if dw is not None else xp.array([0, 1], dtype=float_dtype)
 
         temp1 = xp.polymul(dm, dw)
         while temp1[-1] == 0:

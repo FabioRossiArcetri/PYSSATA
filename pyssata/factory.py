@@ -1,7 +1,5 @@
 import numpy as np
 
-from pyssata import xp
-
 from pyssata.loop_control import LoopControl
 from pyssata.calib_manager import CalibManager
 from pyssata.base_processing_obj import BaseProcessingObj
@@ -13,9 +11,13 @@ from pyssata.processing_objects.processing_container import ProcessingContainer
 from pyssata.processing_objects.int_control import IntControl
 from pyssata.processing_objects.func_generator import FuncGenerator
 
+from pyssata import xp
+from pyssata import global_precision
+from pyssata import float_dtype_list
+from pyssata import complex_dtype_list
 
 class Factory:
-    def __init__(self, params, NOCM=False):
+    def __init__(self, params, NOCM=False, precision=None):
         """
         Initialize the factory object.
 
@@ -23,11 +25,15 @@ class Factory:
         params (dict): Dictionary or struct with main simulation parameters
         NOCM (bool, optional): If set, no calibration manager will be created inside the factory
         """        
-        self._main = self.ensure_dictionary(params)
-        
-        self._global_params = ['verbose', 'precision']
-        self._main['precision'] = self._main.get('precision', 0)
+        self._main = self.ensure_dictionary(params)        
+        self._global_params = ['verbose']        
 
+        if precision is None:
+            self._precision = global_precision
+        else:
+            self._precision = precision
+        self.dtype = float_dtype_list[self._precision]
+        self.complex_dtype = complex_dtype_list[self._precision]
         if not NOCM:
             self._cm = self.get_calib_manager()
 
@@ -82,7 +88,7 @@ class Factory:
 
     def apply_global_params(self, obj):
         """
-        Applies global parameters (verbose, precision, etc) to the specified object.
+        Applies global parameters (verbose, etc) to the specified object.
 
         Parameters:
         obj (object): Object reference.
@@ -337,11 +343,11 @@ class Factory:
         Returns:
         AtmoReadCube: AtmoReadCube processing object
         """
+        
 
         params = self.ensure_dictionary(params)
 
-        pixel_pitch = self._main['pixel_pitch']
-        precision = self._main['precision']
+        pixel_pitch = self._main['pixel_pitch']        
         filename = params.pop('filename')
         filename_ol = self.extract(params, 'filename_ol', default=None)
         wavelengthInNm = params.pop('wavelengthInNm')
@@ -397,7 +403,7 @@ class Factory:
                                     rad=rad, ifunc=ifunc, phase2modes=phase2modes,
                                     startZero=startZero, onlyLo=onlyLo, onlyHo=onlyHo,
                                     startingPosition=startingPosition,
-                                    precision=precision, cut_modes=cut_modes,
+                                    precision=self._precision, cut_modes=cut_modes,
                                     cut_coeff=cut_coeff, cut_from_OL=cut_from_OL,
                                     firstDimNiter=firstDimNiter, zenithAngleInDeg=zenithAngleInDeg)
 

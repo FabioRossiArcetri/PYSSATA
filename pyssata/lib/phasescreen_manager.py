@@ -7,11 +7,11 @@ from astropy.io import fits
 
 from pyssata.lib.calc_phasescreen import calc_phasescreen
 
-def phasescreens_manager(L0, dimension, pixel_pitch, directory, seed=None, precision=False, verbose=False):
+def phasescreens_manager(L0, dimension, pixel_pitch, directory, seed=None, precision=None, verbose=False):
     if seed is None:
         seed = [0]
     
-    precision_str = 'double' if precision else 'single'
+    precision_str = 'single' if precision==1 else 'double'
 
     # Ensure the directory exists
     if not os.path.exists(directory):

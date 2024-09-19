@@ -8,14 +8,12 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 class ElectricField(BaseDataObj):
     '''Electric field'''
 
-    def __init__(self, dimx, dimy, pixel_pitch, precision=0, dtype=None):
+    def __init__(self, dimx, dimy, pixel_pitch, precision=None):
         super().__init__(precision)
 
         dimx = int(dimx)
         dimy = int(dimy)
-        self.pixel_pitch = pixel_pitch
-        self.precision = precision
-        self.dtype = dtype if dtype else xp.float32 if precision == 0 else xp.float64
+        self.pixel_pitch = pixel_pitch        
         self._S0 = 0.0
 
         self._A = xp.ones((dimx, dimy), dtype=self.dtype)

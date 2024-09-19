@@ -110,7 +110,7 @@ control:
 
 dm:
   class:             'DM'
-  type:              'zernike'              # modes type
+  type_str:          'zernike'              # modes type
   nmodes:            54                     # number of modes
   npixels:           160                    # linear dimension of DM phase array
   obsratio:          0.1                    # obstruction dimension ratio w.r.t. diameter

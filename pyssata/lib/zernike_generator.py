@@ -2,7 +2,7 @@ import numpy as np
 
 from pyssata import xp
 from pyssata import cpuArray
-from pyssata import standard_dtype
+from pyssata import float_dtype
 
 from functools import cache
 from scipy.special import factorial
@@ -81,7 +81,7 @@ class ZernikeGenerator(object):
             self._radius = pupil / 2
             sz = xp.ceil(pupil)
             self._shape = (sz, sz)
-            self._center = xp.ones(2, dtype=standard_dtype) * (sz / 2)
+            self._center = xp.ones(2, dtype=float_dtype) * (sz / 2)
             cm = CircularMask(
                 self._shape, maskCenter=self._center, maskRadius=self._radius)
             self._boolean_mask = cm.mask()
@@ -158,7 +158,7 @@ class ZernikeGenerator(object):
         if(n == 0 and m == 0):
             return xp.ones(rho.shape)
         rho = xp.where(rho < 0, 0, rho)
-        Rnm = xp.zeros(rho.shape, dtype=standard_dtype)
+        Rnm = xp.zeros(rho.shape, dtype=float_dtype)
         S = (n - abs(m)) // 2
         S = int(cpuArray(S))        
         n = int(cpuArray(n))        
@@ -227,7 +227,7 @@ class ZernikeGenerator(object):
         '''
         nPxY = self._shape[0]
         nPxX = self._shape[1]
-        c = xp.array(self.center(), dtype=standard_dtype)
+        c = xp.array(self.center(), dtype=float_dtype)
         cc = xp.expand_dims(c, axis=(1, 2))
         Y, X = (xp.mgrid[0.5: nPxY + 0.5: 1,
                          0.5: nPxX + 0.5: 1] - cc) / self.radius()
@@ -258,7 +258,7 @@ class ZernikeGenerator(object):
             res = self._polar(index, self._rhoMap,
                               self._thetaMap)
             tmp = np.ma.masked_array(data=cpuArray(res), mask=cpuArray(self._boolean_mask))
-            self._dictCache[index] = xp.array(tmp, dtype=standard_dtype)
+            self._dictCache[index] = xp.array(tmp, dtype=float_dtype)
         return self._dictCache[index]
 
     @staticmethod
@@ -274,7 +274,7 @@ class ZernikeGenerator(object):
 
     def _computeDerivativeCoeffX(self, index):
         jmax = index
-        G_mat = xp.zeros((jmax, jmax), dtype=standard_dtype)
+        G_mat = xp.zeros((jmax, jmax), dtype=float_dtype)
         for i in range(1, jmax + 1):
             for j in range(1, jmax + 1):
                 ni, mi = ZernikeGenerator.degree(i)
@@ -311,7 +311,7 @@ class ZernikeGenerator(object):
 
     def _computeDerivativeCoeffY(self, index):
         jmax = index
-        G_mat = xp.zeros((jmax, jmax), dtype=standard_dtype)
+        G_mat = xp.zeros((jmax, jmax), dtype=float_dtype)
         for i in range(1, jmax + 1):
             for j in range(1, jmax + 1):
                 ni, mi = ZernikeGenerator.degree(i)

@@ -1,7 +1,7 @@
 import numpy as np
 
 from pyssata import xp
-from pyssata import standard_dtype
+from pyssata import float_dtype
 from pyssata import complex_dtype
 from numpy.fft import fft2, fftshift
 

@@ -15,7 +15,7 @@ class DM(BaseProcessingObj):
                  pixel_pitch: float,
                  height: float,
                  ifunc: IFunc=None,
-                 type: str=None,
+                 type_str: str=None,
                  nmodes: int=None,
                  nzern: int=None,
                  start_mode: int=None,
@@ -36,7 +36,7 @@ class DM(BaseProcessingObj):
                 npixels = mask.shape[0]
 
         if not ifunc:
-            ifunc = IFunc(type=type, mask=mask, npixels=npixels,
+            ifunc = IFunc(type_str=type_str, mask=mask, npixels=npixels,
                            obsratio=obsratio, diaratio=diaratio, nzern=nzern,
                            nmodes=nmodes, start_mode=start_mode, idx_modes=idx_modes)
         self._ifunc = ifunc

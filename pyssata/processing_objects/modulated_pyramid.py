@@ -2,7 +2,7 @@ import numpy as np
 
 from pyssata import xp
 from pyssata import cpuArray
-from pyssata import standard_dtype
+from pyssata import float_dtype
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
@@ -216,8 +216,8 @@ class ModulatedPyramid(BaseProcessingObj):
 
         padding = xp.around((DpupPixFov * fft_res - DpupPixFov) / 2) * 2
 
-        factors = xp.array([], dtype=standard_dtype)
-        exponents = xp.array([], dtype=standard_dtype)
+        factors = xp.array([], dtype=float_dtype)
+        exponents = xp.array([], dtype=float_dtype)
 
         if not NOTEST:
             # Placeholder for the test pyramid calculations
