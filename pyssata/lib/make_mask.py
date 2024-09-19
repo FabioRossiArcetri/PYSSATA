@@ -1,10 +1,12 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 from pyssata.lib.make_xy import make_xy
 
 
 def closest(value, array):
     """Find the closest value in the array and return its index."""
-    return (np.abs(array - value)).argmin()
+    return (xp.abs(array - value)).argmin()
 
 
 def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0, 
@@ -39,13 +41,13 @@ def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0,
     if centeronpixel:
         idx_x = closest(xc, x[:, 0])
         neighbours_x = [abs(x[idx_x-1, 0] - xc), abs(x[idx_x+1, 0] - xc)]
-        idxneigh_x = np.argmin(neighbours_x)
+        idxneigh_x = xp.argmin(neighbours_x)
         kx = -0.5 if idxneigh_x == 0 else 0.5
         xc = x[idx_x, 0] + kx * (x[1, 0] - x[0, 0])
 
         idx_y = closest(yc, y[0, :])
         neighbours_y = [abs(y[0, idx_y-1] - yc), abs(y[0, idx_y+1] - yc)]
-        idxneigh_y = np.argmin(neighbours_y)
+        idxneigh_y = xp.argmin(neighbours_y)
         ky = -0.5 if idxneigh_y == 0 else 0.5
         yc = y[0, idx_y] + ky * (y[0, 1] - y[0, 0])
 
@@ -53,18 +55,18 @@ def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0,
 
     # Generate mask based on the square or circular option
     if square:
-        idx = np.where(
-            (np.abs(x - xc) <= diaratio) & (np.abs(y - yc) <= diaratio) &
-            ((np.abs(x - xc) >= diaratio * ir) | (np.abs(y - yc) >= diaratio * ir))
+        idx = xp.where(
+            (xp.abs(x - xc) <= diaratio) & (xp.abs(y - yc) <= diaratio) &
+            ((xp.abs(x - xc) >= diaratio * ir) | (xp.abs(y - yc) >= diaratio * ir))
         )
     else:
-        idx = np.where(
+        idx = xp.where(
             ((x - xc) ** 2 + (y - yc) ** 2 < diaratio ** 2) &
             ((x - xc) ** 2 + (y - yc) ** 2 >= (diaratio * ir) ** 2)
         )
 
     # Create the mask
-    mask = np.zeros((np_size, np_size), dtype=np.uint8)
+    mask = xp.zeros((np_size, np_size), dtype=xp.uint8)
     mask[idx] = 1
 
     # Invert the mask if the inverse keyword is set

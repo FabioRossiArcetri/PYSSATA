@@ -20,9 +20,3 @@ else:
     print("env variable PYSSATA_DISABLE_GPU prevents using the GPU.")
     cp = np
     xp = np
-
-def cpuArray(v):
-    if isinstance(v, (np.ndarray, np.float64, np.int64)):
-        return v
-    else:
-        return v.get()

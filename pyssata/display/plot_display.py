@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 import matplotlib.pyplot as plt
 plt.ion()
 
@@ -134,9 +137,9 @@ class PlotDisplay(BaseProcessingObj):
             plt.pause(0.001)
 
             # if self._oplot:
-            #     plt.plot(np.arange(self._count), self._history[:self._count], marker='.', color=self._color)
+            #     plt.plot(xp.arange(self._count), self._history[:self._count], marker='.', color=self._color)
             # else:
-            #     plt.plot(np.arange(self._count), self._history[:self._count], marker='.')
+            #     plt.plot(xp.arange(self._count), self._history[:self._count], marker='.')
             #     plt.ylim(self._yrange)
             #     plt.title(self._title)
             # plt.draw()

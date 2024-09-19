@@ -2,7 +2,6 @@
 
 from pyssata.simul import Simul
 
-
 def main():
     dir = './'
     simul = Simul(dir + 'params_scao.py')

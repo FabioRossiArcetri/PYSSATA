@@ -1,4 +1,3 @@
-import numpy as np
 from astropy.io import fits
 
 from pyssata.base_time_obj import BaseTimeObj
@@ -15,8 +14,12 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         BaseTimeObj.__init__(self, precision)
         BaseParameterObj.__init__(self)
         self._verbose = 0
-        self._loop_dt = np.int64(0)
+        self._loop_dt = int(0)
         self._loop_niters = 0
+        
+        # Will be populated by derived class
+        self.inputs = {}
+        self.outputs = {}
 
     @property
     def verbose(self):
@@ -77,7 +80,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         with fits.open(filename) as hdul:
             hdr = hdul[0].header
             self._verbose = hdr.get('VERBOSE', 0)
-            self._loop_dt = hdr.get('LOOP_DT', np.int64(0))
+            self._loop_dt = hdr.get('LOOP_DT', int(0))
             self._loop_niters = hdr.get('LOOP_NITERS', 0)
 
     def cleanup(self):

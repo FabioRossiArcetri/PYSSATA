@@ -1,4 +1,7 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
+
 from astropy.io import fits
 
 from pyssata.data_objects.layer import Layer
@@ -11,7 +14,7 @@ class Pupilstop(Layer):
     def __init__(self,
                  pixel_pupil: int,
                  pixel_pitch: float,
-                 input_mask: np.ndarray=None,
+                 input_mask: xp.ndarray=None,
                  mask_diam: float=1.0,
                  obs_diam: float=None,
                  shiftXYinPixel=(0.0, 0.0),
@@ -30,7 +33,7 @@ class Pupilstop(Layer):
         else:
             mask_amp = make_mask(pixel_pupil, obs_diam, mask_diam)
 
-        self.A = np.float32(mask_amp)
+        self.A = mask_amp
 
     def save(self, filename, hdr=None):
         if hdr is None:

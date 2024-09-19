@@ -1,6 +1,10 @@
 import numpy as np
+from pyssata import gpuEnabled
+from pyssata import xp
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.connections import InputValue
+from pyssata.connections import OutputValue
 from pyssata.data_objects.intmat import Intmat
 from pyssata.data_objects.recmat import Recmat
 from pyssata.data_objects.slopes import Slopes
@@ -16,7 +20,7 @@ class Modalrec(BaseProcessingObj):
                  projmat: Recmat=None,
                  intmat: Intmat=None,
                  polc: bool=False,
-                 filtmat: np.ndarray=None,
+                 filtmat: xp.ndarray=None,
                  identity: bool=False,
                  ncutmodes: int=None,
                  nSlopesToBeDiscarded: int=None,
@@ -36,7 +40,7 @@ class Modalrec(BaseProcessingObj):
                     recmat = Recmat()
                     if nmodes is None:
                         raise ValueError('modalrec nmodes key must be set!')
-                    recmat.recmat = np.identity(nmodes)
+                    recmat.recmat = xp.identity(nmodes)
                 elif intmat:
                     if nmodes:
                         nmodes_intmat = intmat.size[0]
@@ -77,9 +81,15 @@ class Modalrec(BaseProcessingObj):
         self._control_list = []
         self._past_step_list = []
 
+        self._slopes = None
         self._modes = BaseValue('output modes from modal reconstructor')
         self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor')
         self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor')
+
+        self.inputs['in_slopes'] = InputValue(object=self._slopes, type=Slopes)
+        self.outputs['out_modes'] = OutputValue(object=self._modes, type=BaseValue)
+        self.outputs['out_pseudo_ol_modes'] = OutputValue(object=self._modes, type=BaseValue)
+        self.outputs['out_modes_first_step'] = OutputValue(object=self._modes, type=BaseValue)
 
     def set_layer_modes_list(self):
         if self._recmat.modes2recLayer is not None:
@@ -88,7 +98,7 @@ class Modalrec(BaseProcessingObj):
             n = self._recmat.modes2recLayer.shape[0]
             for i in range(n):
                 self._layer_modes_list.append(BaseValue(f'output modes for layer no {i + 1}'))
-                self._layer_idx_list.append(np.where(self._recmat.modes2recLayer[i, :] > 0)[0])
+                self._layer_idx_list.append(xp.where(self._recmat.modes2recLayer[i, :] > 0)[0])
 
     @property
     def recmat(self):
@@ -237,7 +247,7 @@ class Modalrec(BaseProcessingObj):
         if not self._intmat:
             raise Exception("POLC requires intmat, but it is not set")
 
-        comm_slopes = self.compute_modes(self._intmat, np.array(comm), intmat=True)
+        comm_slopes = self.compute_modes(self._intmat, xp.array(comm), intmat=True)
         self._pseudo_ol_slopes.slopes += comm_slopes
         self._pseudo_ol_slopes.generation_time = t
 
@@ -248,21 +258,22 @@ class Modalrec(BaseProcessingObj):
                 slope_ptr = self._slopes.ptr_slopes
                 print('Slopes')
                 if self._verbose:
-                    print(f"modalrec.compute_modes slope RMS: {np.sqrt(np.mean(slope_ptr**2))}")
+                    print(f"modalrec.compute_modes slope RMS: {xp.sqrt(xp.mean(slope_ptr**2))}")
             elif isinstance(self._slopes, BaseValue):
                 slope_ptr = self._slopes.ptr_value
                 if self._verbose:
-                    print(f"modalrec.compute_modes base_value RMS: {np.sqrt(np.mean(slope_ptr**2))}")
+                    print(f"modalrec.compute_modes base_value RMS: {xp.sqrt(xp.mean(slope_ptr**2))}")
             elif isinstance(self._slopes, Cheat):
                 slopes = self._slopes.value
                 slope_ptr = slopes
                 if self._verbose:
-                    print(f"modalrec.compute_modes value from cheat RMS: {np.sqrt(np.mean(slope_ptr**2))}")
+                    print(f"modalrec.compute_modes value from cheat RMS: {xp.sqrt(xp.mean(slope_ptr**2))}")
 
         if intmat:
             m = slope_ptr @ intmat
         else:
-            m = slope_ptr @ matrix.recmat.T
+            matrix.recmat = xp.array(matrix.recmat)
+            m = slope_ptr @ xp.transpose(matrix.recmat)
 
         return m
 
