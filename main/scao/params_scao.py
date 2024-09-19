@@ -9,7 +9,8 @@ main = {
  'time_step':         0.001,                  # [s] Simulation time step
  'store': {                                   # Dict of data products to store, 'name': 'output'
      'sr': 'psf.out_sr',
-     'res_ef': 'pyramid.in_ef'}
+     'res_ef': 'pyramid.in_ef',
+     'int_psf': 'psf.out_int_psf'}
 }
 
 seeing = {
