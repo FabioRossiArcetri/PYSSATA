@@ -138,13 +138,13 @@ sr_disp:
     value:       'psf.out_sr'
   window:           11
   title:            'SR'
-#ph_disp:
-#  class:            'PhaseDisplay'
-#  inputs:
-#    phase:       "prop.pupil_dict['on_axis_source']"
-#  window:           12
-#  title:            'PUPIL PHASE'
-#  disp_factor:      2
+ph_disp:
+  class:            'PhaseDisplay'
+  inputs:
+    phase:       "prop.on_axis_source"
+  window:           12
+  title:            'PUPIL PHASE'
+  disp_factor:      2
 dm_disp:
   class:            'PhaseDisplay'
   inputs:

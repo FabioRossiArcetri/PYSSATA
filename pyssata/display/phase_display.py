@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue
-from pyssata.data_objects.layer import Layer
+from pyssata.data_objects.ef import ElectricField
 
 
 class PhaseDisplay(BaseProcessingObj):
@@ -23,7 +23,7 @@ class PhaseDisplay(BaseProcessingObj):
         self._size_frame = (0, 0)
         self._first = True
         self._disp_factor = disp_factor
-        self.inputs['phase'] = InputValue(object=self._phase, type=Layer)
+        self.inputs['phase'] = InputValue(object=self._phase, type=ElectricField)
 
 
     @property
