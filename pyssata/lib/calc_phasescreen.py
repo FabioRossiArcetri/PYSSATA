@@ -8,7 +8,7 @@ from pyssata import complex_dtype_list
 
 from pyssata.lib.calc_spatialfrequency import calc_spatialfrequency
 
-def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=None, verbose=False):
+def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, target_device_idx=None, precision=None, verbose=False):
     if verbose:
         print("Phase-screen computation")
 

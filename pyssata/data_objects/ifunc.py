@@ -28,7 +28,7 @@ class IFunc:
                  start_mode: int=None,
                  nmodes: int=None,
                  idx_modes=None,
-                 precision=None
+                 target_device_idx=None, precision=None
                 ):
         self._doZeroPad = False
         if precision is None:
