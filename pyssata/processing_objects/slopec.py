@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from pyssata.base_processing_obj import BaseProcessingObj
@@ -49,7 +49,7 @@ class Slopec(BaseProcessingObj):
         self._filt_recmat = filt_recmat
         self._filt_intmat = filt_intmat
         self._accumulation_dt = accumulation_dt
-        self._accumulated_pixels = np.array(accumulated_pixels)
+        self._accumulated_pixels = xp.array(accumulated_pixels, dtype=self.dtype)
         self._accumulated_slopes = Slopes(2)
         self._accumulated_pixels_ptr = None   # TODO, see do_accumulation() method
 
@@ -335,11 +335,11 @@ class Slopec(BaseProcessingObj):
                 if len(comm.value) > 0:
                     commands.append(comm.value)
             if self._pixels.generation_time == t:
-                self._store_s = xp.array([self._gain_slope_high_speed * self._slopes.xslopes, self._gain_slope_high_speed * self._slopes.yslopes])
-                self._store_c = xp.array(commands)
+                self._store_s = xp.array([self._gain_slope_high_speed * self._slopes.xslopes, self._gain_slope_high_speed * self._slopes.yslopes], dtype=self.dtype)
+                self._store_c = xp.array(commands, dtype=self.dtype)
             else:
                 if len(commands) > 0 and self._store_s is not None and self._store_c is not None:
-                    temp = xp.dot(xp.array(commands) - self._store_c, self._intmat)
+                    temp = xp.dot(xp.array(commands, dtype=self.dtype) - self._store_c, self._intmat)
                     self._store_s *= self._ff_slope_high_speed
                     self._slopes.xslopes = self._store_s[0] - temp[:len(temp)//2]
                     self._slopes.yslopes = self._store_s[1] - temp[len(temp)//2:]

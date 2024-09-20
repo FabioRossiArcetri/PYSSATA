@@ -10,17 +10,14 @@ from pyssata.lib.flatten import flatten
 from pyssata.calib_manager import CalibManager
 from pyssata.processing_objects.datastore import Datastore
 
-
-from pyssata.display.slopec_display import SlopecDisplay
-from pyssata.display.plot_display import PlotDisplay
-from pyssata.display.phase_display import PhaseDisplay
-from pyssata.display.psf_display import PSFDisplay
+import yaml
+import io
 
 class Simul():
     '''
     Simulation organizer
     '''
-    def __init__(self, param_file):
+    def __init__(self, param_file):        
         self.param_file = param_file
         self.objs = {}
 
@@ -33,7 +30,10 @@ class Simul():
         try:
             mod = importlib.import_module(f'pyssata.processing_objects.{modulename}')
         except ModuleNotFoundError:
-            mod = importlib.import_module(f'pyssata.data_objects.{modulename}')
+            try:
+                mod = importlib.import_module(f'pyssata.data_objects.{modulename}')
+            except ModuleNotFoundError:
+                mod = importlib.import_module(f'pyssata.display.{modulename}')
         return getattr(mod, classname)
 
     def _get_type_hints(self, type):
@@ -74,7 +74,7 @@ class Simul():
 
         # Initialize processing objects (waiting for porting of the relevant constructors)
         pyr_params = params['pyramid'].copy()
-        ccd_params= params['detector'].copy()
+        ccd_params = params['detector'].copy()
         if 'inputs' in pyr_params:
             del pyr_params['inputs']
         if 'inputs' in ccd_params:
@@ -83,7 +83,7 @@ class Simul():
         detector = factory.get_ccd(ccd_params)
 
         for key, pars in params.items():
-            if key in 'pupilstop slopec psf on_axis_source prop atmo seeing wind_speed wind_direction control dm rec'.split():
+            if key in 'pupilstop slopec psf on_axis_source prop atmo seeing wind_speed wind_direction control dm rec sc_disp sr_disp ph_disp dm_disp psf_disp'.split():
                 print(key, pars)
                 try:
                     classname = pars['class']
@@ -139,12 +139,11 @@ class Simul():
             elif key == 'detector':
                 self.objs['detector'] = detector
 
+
     def connect_objects(self, params):
         for dest_object, pars in params.items():
-            print(pars)
             if 'inputs' not in pars:
                 continue
-
             for input_name, output_name in pars['inputs'].items():
                 if not input_name in self.objs[dest_object].inputs:
                     raise ValueError(f'Object {dest_object} does does not have an input called {input_name}')
@@ -152,7 +151,6 @@ class Simul():
                     raise ValueError(f'Object {dest_object}: invalid input definition type {type(output_name)}')
 
                 wanted_type = self.objs[dest_object].inputs[input_name].type
-
                 if isinstance(output_name, str):
                     output_ref = self.resolve_output(output_name)
                     if not isinstance(output_ref, wanted_type):
@@ -170,12 +168,9 @@ class Simul():
 
     def run(self):
         params = {}
-        exec(open(self.param_file).read(), params)
-        del params['__builtins__']
-        if 'np' in params:
-            del params['np']
-        if 'xp' in params:
-            del params['xp']
+        # Read YAML file
+        with open(self.param_file, 'r') as stream:
+            params = yaml.safe_load(stream)
 
         # Initialize housekeeping objects
         factory = Factory(params['main'])
@@ -189,13 +184,6 @@ class Simul():
         for name, obj in self.objs.items():
             globals()[name] = obj
                         
-        # Initialize display objects
-        sc_disp = SlopecDisplay(slopec, disp_factor=4)
-        sr_disp = PlotDisplay(psf.out_sr, window=11, title='SR')
-        ph_disp = PhaseDisplay(prop.pupil_dict['on_axis_source'], window=12, disp_factor=2)
-        dm_disp = PhaseDisplay(dm.out_layer, window=13, title='DM')
-        psf_disp = PSFDisplay(psf.out_psf, window=14,  title='PSF')
-
         self.connect_objects(params)
         self.connect_datastore(store, params)
 
@@ -206,11 +194,6 @@ class Simul():
                     loop.add(obj)
 
         loop.add(store)
-        loop.add(sc_disp)
-        loop.add(sr_disp)
-        loop.add(ph_disp)
-        loop.add(dm_disp)
-        loop.add(psf_disp)
 
         # Run simulation loop
         loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'])

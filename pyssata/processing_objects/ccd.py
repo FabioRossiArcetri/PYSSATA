@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from scipy.stats import poisson, gamma, norm
 from numpy.random import default_rng
@@ -31,7 +31,7 @@ class CCD(BaseProcessingObj):
         self._darkcurrent_level = darkcurrent_level
         self._background_level = background_level
         self._cic_level = cic_level
-        self._cte_mat = cte_mat if cte_mat is not None else xp.zeros((dim2d[0], dim2d[1], 2))
+        self._cte_mat = cte_mat if cte_mat is not None else xp.zeros((dim2d[0], dim2d[1], 2), dtype=self.dtype)
         self._qe = quantum_eff
 
         self._pixels = Pixels(dim2d[0] // binning, dim2d[1] // binning)
@@ -201,7 +201,7 @@ class CCD(BaseProcessingObj):
         out_dim = self._pixels.size
 
         if in_dim[0] != out_dim[0] * self._binning:
-            ccd_frame = xp.zeros(out_dim * self._binning)
+            ccd_frame = xp.zeros(out_dim * self._binning, dtype=self.dtype)
             ccd_frame[:in_dim[0], :in_dim[1]] = self._integrated_i.i
         else:
             ccd_frame = self._integrated_i.i.copy()
@@ -223,7 +223,7 @@ class CCD(BaseProcessingObj):
 
     def setQuadrantGains(self, quadrantsGains):
         dim2d = self._pixels.pixels.shape
-        pixelGains = xp.zeros(dim2d)
+        pixelGains = xp.zeros(dim2d, dtype=self.dtype)
         for i in range(2):
             for j in range(2):
                 pixelGains[(dim2d[0] // self._binning // 2) * i:(dim2d[0] // self._binning // 2) * (i + 1),

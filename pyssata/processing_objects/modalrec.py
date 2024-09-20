@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
@@ -247,7 +247,7 @@ class Modalrec(BaseProcessingObj):
         if not self._intmat:
             raise Exception("POLC requires intmat, but it is not set")
 
-        comm_slopes = self.compute_modes(self._intmat, xp.array(comm), intmat=True)
+        comm_slopes = self.compute_modes(self._intmat, xp.array(comm, dtype=self.dtype), intmat=True)
         self._pseudo_ol_slopes.slopes += comm_slopes
         self._pseudo_ol_slopes.generation_time = t
 
@@ -256,8 +256,8 @@ class Modalrec(BaseProcessingObj):
         if slope_ptr is None:
             if isinstance(self._slopes, Slopes):
                 slope_ptr = self._slopes.ptr_slopes
-                print('Slopes')
                 if self._verbose:
+                    print('Slopes')
                     print(f"modalrec.compute_modes slope RMS: {xp.sqrt(xp.mean(slope_ptr**2))}")
             elif isinstance(self._slopes, BaseValue):
                 slope_ptr = self._slopes.ptr_value
@@ -272,7 +272,7 @@ class Modalrec(BaseProcessingObj):
         if intmat:
             m = slope_ptr @ intmat
         else:
-            matrix.recmat = xp.array(matrix.recmat)
+            matrix.recmat = xp.array(matrix.recmat, dtype=self.dtype)
             m = slope_ptr @ xp.transpose(matrix.recmat)
 
         return m

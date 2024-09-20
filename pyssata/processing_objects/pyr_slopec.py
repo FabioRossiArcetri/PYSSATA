@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata import cpuArray
 
@@ -94,9 +94,7 @@ class PyrSlopec(Slopec):
             self._flux_per_subaperture_vector.value = flux
             self._flux_per_subaperture_vector.generation_time = t
 
-            print(self._pupdata.ind_pup, type(self._pupdata.ind_pup))
-
-            px = xp.array(cpuArray(pixels).flat[self._pupdata.ind_pup].ravel())
+            px = xp.array(cpuArray(pixels).flat[self._pupdata.ind_pup].ravel(), dtype=self.dtype)
             self._total_counts.value = xp.sum(px)
             self._subap_counts.value = xp.sum(px) / self._pupdata.n_subap
 
@@ -109,8 +107,8 @@ class PyrSlopec(Slopec):
             self._total_counts.generation_time = t
             self._subap_counts.generation_time = t
 
-        if 1:#if self._verbose:
-            print(f'Slopes min, max and rms: {xp.min(xp.array([sx, sy]))}, {xp.max(xp.array([sx, sy]))}  //  {xp.sqrt(xp.mean(xp.array([sx**2, sy**2])))}')
+#        if 1:#if self._verbose:  # Verbose?
+#            print(f'Slopes min, max and rms: {xp.min(xp.array([sx, sy]))}, {xp.max(xp.array([sx, sy]))}  //  {xp.sqrt(xp.mean(xp.array([sx**2, sy**2])))}')
 
     def _compute_flux_per_subaperture(self):
         return self._flux_per_subaperture_vector

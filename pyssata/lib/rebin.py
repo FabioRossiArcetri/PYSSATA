@@ -10,7 +10,7 @@
 #########################################################
 
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 def rebin2d(a, shape, sample=False):

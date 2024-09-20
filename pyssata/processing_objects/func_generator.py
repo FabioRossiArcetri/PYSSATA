@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from pyssata.base_processing_obj import BaseProcessingObj
@@ -94,7 +94,7 @@ class FuncGenerator(BaseProcessingObj):
             if not self._active:
                 s = 0.0
             else:
-                s = xp.array( self._amp ) * xp.sin(self._freq * 2 * xp.pi * seconds + self._offset) + xp.array(self._constant)
+                s = xp.array(self._amp, dtype=self.dtype)*xp.sin(self._freq*2*xp.pi*seconds + self._offset)+xp.array(self._constant, dtype=self.dtype)
 
         elif self._type == 'LINEAR':
             if not self._active:

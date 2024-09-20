@@ -9,7 +9,7 @@
 ###############################################################################
 
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 

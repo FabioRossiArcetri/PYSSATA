@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from pyssata.base_processing_obj import BaseProcessingObj
@@ -40,8 +40,8 @@ class PSF(BaseProcessingObj):
     def in_ef(self, in_ef):
         self._in_ef = in_ef
         s = [dim * self._nd for dim in in_ef.size]
-        self._psf.value = xp.zeros(s)
-        self._int_psf.value = xp.zeros(s)
+        self._psf.value = xp.zeros(s, dtype=self.dtype)
+        self._int_psf.value = xp.zeros(s, dtype=self.dtype)
         self._ref = None
 
     @property

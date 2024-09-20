@@ -108,7 +108,7 @@ class LoopControl:
 
         for element in self._list:
             element.trigger(self._t)
-            print('Trigger', element)
+            # print('Trigger', element) # Verbose?
 
         if self._stop_on_data and self._stop_on_data.generation_time == self._t:
             return
@@ -129,8 +129,8 @@ class LoopControl:
             if nframes_good:
                 msg = f"{1.0 / (np.sum(self._elapsed) / nframes_elapsed):.2f} Hz"
 
-        if not self._quiet:
-            print(f't={self._t / self._time_resolution:.6f} {msg}')
+#        if not self._quiet: # Verbose?
+#            print(f't={self._t / self._time_resolution:.6f} {msg}')
         self._t += self._dt
 
     def finish(self):
