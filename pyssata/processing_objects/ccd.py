@@ -14,7 +14,7 @@ else:
     from numpy.random import default_rng
 
 from pyssata.base_processing_obj import BaseProcessingObj
-from pyssata.connections import InputValue, OutputValue
+from pyssata.connections import InputValue
 from pyssata.data_objects.pixels import Pixels
 from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.calc_detector_noise import calc_detector_noise
@@ -121,6 +121,8 @@ class CCD(BaseProcessingObj):
         self._qe = quantum_eff
 
         self._pixels = Pixels(size[0] // binning, size[1] // binning)
+        s = self._pixels.size * self._binning
+        self._integrated_i = Intensity(s[0], s[1])
         self._photon_seed = photon_seed
         self._readout_seed = readout_seed
         self._excess_seed = excess_seed
@@ -128,7 +130,6 @@ class CCD(BaseProcessingObj):
 
         self._excess_delta = excess_delta
 
-        self._in_i = None
         self._charge_diffusion = charge_diffusion
         self._charge_diffusion_fwhm = charge_diffusion_fwhm
         self._keep_ADU_bias = False
@@ -148,18 +149,10 @@ class CCD(BaseProcessingObj):
         self._gaussian_noise = None
         self._photon_rng = default_rng(self._photon_seed)
         self._readout_rng = default_rng(self._readout_seed)
-        self.inputs['in_i'] = InputValue(object=self.in_i, type=Intensity)
-        self.outputs['out_pixels'] = OutputValue(object=self.out_pixels, type=Pixels)
 
-    @property
-    def in_i(self):
-        return self._in_i
-
-    @in_i.setter
-    def in_i(self, value):
-        self._in_i = value
-        s = self._pixels.size * self._binning
-        self._integrated_i = Intensity(s[0], s[1])
+        self.inputs['in_i'] = InputValue(type=Intensity)
+        self.outputs['out_pixels'] = self._pixels
+        self.outputs['integrated_i'] = self._integrated_i
 
     @property
     def dt(self):
@@ -172,10 +165,6 @@ class CCD(BaseProcessingObj):
     @property
     def size(self):
         return self._pixels.size
-
-    @property
-    def out_pixels(self):
-        return self._pixels
 
     @property
     def bandw(self):
@@ -199,13 +188,14 @@ class CCD(BaseProcessingObj):
 
     def trigger(self, t):
         if self._start_time <= 0 or t >= self._start_time:
-            if self._in_i.generation_time == t:
+            in_i = self.inputs['in_i'].get()
+            if in_i.generation_time == t:
                 if self._loop_dt == 0:
                     raise ValueError('ccd object loop_dt property must be set.')
                 if self._doNotChangeI:
-                    self._integrated_i.sum(self._in_i, factor=self._loop_dt / self._dt)
+                    self._integrated_i.sum(in_i, factor=self._loop_dt / self._dt)
                 else:
-                    self._integrated_i.sum(self._in_i, factor=self.t_to_seconds(self._loop_dt) * self._bandw)
+                    self._integrated_i.sum(in_i, factor=self.t_to_seconds(self._loop_dt) * self._bandw)
 
             if (t + self._loop_dt - self._dt - self._start_time) % self._dt == 0:
                 if self._doNotChangeI:
@@ -302,9 +292,10 @@ class CCD(BaseProcessingObj):
         self._pixelGains = pixelGains
 
     def run_check(self, time_step, errmsg=''):
+        in_i = self.inputs['in_i'].get()
         if self._loop_dt == 0:
             self._loop_dt = time_step
-        if self._in_i is None:
+        if in_i is None:
             errmsg = 'Input intensity object has not been set'
         if self._pixels is None:
             errmsg = 'Pixel object has not been set'
@@ -315,7 +306,8 @@ class CCD(BaseProcessingObj):
         if self._cte_noise and self._cte_mat is None:
             errmsg = 'CTE matrix must be set!'
 
-        is_check_ok = (self._in_i is not None and self._pixels is not None and
+
+        is_check_ok = (in_i is not None and self._pixels is not None and
                        (self._dt > 0) and (self._dt % time_step == 0) and
                        (not self._cte_noise or self._cte_mat is not None))
         print(errmsg)

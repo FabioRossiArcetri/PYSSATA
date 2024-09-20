@@ -86,6 +86,7 @@ class FuncGenerator(BaseProcessingObj):
         self._nmodes = nmodes
         self._output = BaseValue()
         self._active = True
+        self.outputs['output'] = self._output
 
     def trigger(self, t):
         seconds = self.t_to_seconds(t)

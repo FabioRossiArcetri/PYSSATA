@@ -75,7 +75,7 @@ class PyrSlopec(Slopec):
         if not self._pupdata:
             return
 
-        pixels = self._accumulated_pixels.pixels if accumulated else self._pixels.pixels
+        pixels = self._accumulated_pixels.pixels if accumulated else self.inputs['in_pixels'].get().pixels
 
         if self._verbose:
             print('Average pixel counts:', xp.sum(pixels) / len(self._pupdata.ind_pup))

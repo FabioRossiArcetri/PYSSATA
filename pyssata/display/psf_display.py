@@ -6,8 +6,8 @@ from pyssata import cpuArray
 import matplotlib.pyplot as plt
 
 from pyssata.base_processing_obj import BaseProcessingObj
-from pyssata.connections import InputValue
 from pyssata.base_value import BaseValue
+from pyssata.connections import InputValue
 
 
 class PsfDisplay(BaseProcessingObj):
@@ -22,7 +22,7 @@ class PsfDisplay(BaseProcessingObj):
         self._opened = False
         self._first = True
         self._disp_factor = disp_factor
-        self.inputs['psf'] = InputValue(object=self._psf, type=BaseValue)
+        self.inputs['psf'] = InputValue(type=BaseValue)
 
     @property
     def psf(self):
@@ -79,7 +79,7 @@ class PsfDisplay(BaseProcessingObj):
         self.ax = self.fig.add_subplot(111)
 
     def trigger(self, t):
-        psf = self._psf
+        psf = self.inputs['psf'].get()
         if psf.generation_time == t:
 
             image = cpuArray(psf.value)
@@ -104,7 +104,8 @@ class PsfDisplay(BaseProcessingObj):
             plt.pause(0.001)
 
     def run_check(self, time_step):
-        return self._psf is not None
+        psf = self.inputs['psf'].get()
+        return psf is not None
 
     def cleanup(self):
         plt.close(self._window)

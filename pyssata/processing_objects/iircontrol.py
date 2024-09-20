@@ -2,7 +2,7 @@ import numpy as np
 
 from pyssata import xp
 from pyssata.base_processing_obj import BaseProcessingObj
-from pyssata.connections import InputValue, OutputValue
+from pyssata.connections import InputValue
 from pyssata.processing_objects.timecontrol import TimeControl
 from pyssata.base_value import BaseValue
 from pyssata.lib.compute_comm import compute_comm
@@ -25,8 +25,8 @@ class IIRControl(TimeControl, BaseProcessingObj):
         self._out_comm = BaseValue()
         self._delta_comm = None
 
-        self.inputs['in_delta_comm'] = InputValue(object=self._delta_comm, type=np.ndarray)
-        self.outputs['out_comm'] = OutputValue(object=self._out_comm, type=BaseValue)
+        self.inputs['in_delta_comm'] = self.in_delta_comm
+     #   self.outputs['out_comm'] = OutputValue(object=self._out_comm, type=BaseValue)
 
         self._opticalgain = None
         self._og_shaper = None

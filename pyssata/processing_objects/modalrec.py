@@ -4,7 +4,6 @@ from pyssata import xp
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
-from pyssata.connections import OutputValue
 from pyssata.data_objects.intmat import Intmat
 from pyssata.data_objects.recmat import Recmat
 from pyssata.data_objects.slopes import Slopes
@@ -81,15 +80,14 @@ class Modalrec(BaseProcessingObj):
         self._control_list = []
         self._past_step_list = []
 
-        self._slopes = None
         self._modes = BaseValue('output modes from modal reconstructor')
         self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor')
         self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor')
 
-        self.inputs['in_slopes'] = InputValue(object=self._slopes, type=Slopes)
-        self.outputs['out_modes'] = OutputValue(object=self._modes, type=BaseValue)
-        self.outputs['out_pseudo_ol_modes'] = OutputValue(object=self._modes, type=BaseValue)
-        self.outputs['out_modes_first_step'] = OutputValue(object=self._modes, type=BaseValue)
+        self.inputs['in_slopes'] = InputValue(type=Slopes)
+        self.outputs['out_modes'] = self.out_modes
+        self.outputs['out_pseudo_ol_modes'] = self.pseudo_ol_modes
+        self.outputs['out_modes_first_step'] = self.modes_first_step
 
     def set_layer_modes_list(self):
         if self._recmat.modes2recLayer is not None:
@@ -108,22 +106,19 @@ class Modalrec(BaseProcessingObj):
     def recmat(self, value):
         self._recmat = value
 
-    @property
-    def in_slopes(self):
-        return self._slopes
-
-    @in_slopes.setter
-    def in_slopes(self, value):
-        self._slopes = value
-        if isinstance(value, Slopes):
-            size = value.size
-        elif isinstance(value, (BaseValue, Cheat)):
-            size = len(value.value)
-        if self._polc:
-            self._pseudo_ol_slopes = Slopes(size)
+# TODO
+    # @in_slopes.setter
+    # def in_slopes(self, value: Slopes):
+    #     self._slopes = value
+    #     if isinstance(value, Slopes):
+    #         size = value.size
+    #     elif isinstance(value, (BaseValue, Cheat)):
+    #         size = len(value.value)
+    #     if self._polc:
+    #         self._pseudo_ol_slopes = Slopes(size)
 
     @property
-    def out_modes(self):
+    def out_modes(self) -> BaseValue:
         return self._modes
 
     @property
@@ -143,7 +138,7 @@ class Modalrec(BaseProcessingObj):
         return self._layer_modes_list
 
     @property
-    def modes_first_step(self):
+    def modes_first_step(self) -> BaseValue:
         return self._modes_first_step
 
     @modes_first_step.setter
@@ -155,7 +150,7 @@ class Modalrec(BaseProcessingObj):
         return self._pseudo_ol_slopes
 
     @property
-    def pseudo_ol_modes(self):
+    def pseudo_ol_modes(self) -> BaseValue:
         return self._pseudo_ol_modes
 
     @property
@@ -184,7 +179,9 @@ class Modalrec(BaseProcessingObj):
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
 
-        if self._slopes.generation_time == t:
+        slopes = self.inputs['in_slopes'].get()
+        
+        if slopes.generation_time == t:
             comm_new = []
             if len(self._control_list) > 0:
                 for control in self._control_list:
@@ -202,7 +199,7 @@ class Modalrec(BaseProcessingObj):
                     else:
                         self._modes_first_step.value = m
                 else:
-                    m = self.compute_modes(self._recmat, slope_ptr)
+                    m = self.compute_modes(self._recmat, slopes.slopes)
                     self._modes_first_step.value = m
 
                 self._modes_first_step.generation_time = t
@@ -229,11 +226,11 @@ class Modalrec(BaseProcessingObj):
                 self._modes.value -= self._control_list[self._dm_idx].get_past_state(0)
         else:
             if self._verbose:
-                print(f"slope generation time: {self._slopes.generation_time} is not equal to {t}")
+                print(f"slope generation time: {slopes.generation_time} is not equal to {t}")
 
     def compute_pseudo_ol_slopes(self, t, slopes=None):
         if slopes is None:
-            slopes = self._slopes
+            slopes = self.inputs['in_slopes'].get()
 
         if isinstance(slopes, Slopes):
             self._pseudo_ol_slopes.slopes = slopes.slopes
@@ -279,11 +276,12 @@ class Modalrec(BaseProcessingObj):
 
     def run_check(self, time_step):
         errmsg = []
-        if not self._slopes:
+        slopes = self.inputs['in_slopes'].get()
+        if not slopes:
             errmsg.append("Slopes object not valid")
         if not self._recmat:
             errmsg.append("Recmat object not valid")
-        out = bool(self._slopes) and bool(self._recmat)
+        out = bool(slopes) and bool(self._recmat)
         if self._polc:
             if not self._intmat:
                 errmsg.append("Intmat object not valid")

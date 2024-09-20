@@ -4,7 +4,7 @@ from pyssata import xp
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
-from pyssata.connections import InputValue, OutputValue
+from pyssata.connections import InputValue
 from pyssata.data_objects.pixels import Pixels
 from pyssata.data_objects.slopes import Slopes
 
@@ -36,7 +36,7 @@ default_filt_intmat = None
 default_accumulation_dt = 0
 
 class Slopec(BaseProcessingObj):
-    def __init__(self, pixels=None, sn: Slopes=None, cm=None, total_counts=None, subap_counts=None, 
+    def __init__(self, sn: Slopes=None, cm=None, total_counts=None, subap_counts=None, 
                  use_sn=False, accumulate=False, weight_from_accumulated=False, 
                  weight_from_acc_with_window=False, remove_mean=False, return0=False, 
                  update_slope_high_speed=False, do_rec=False, do_filter_modes=False, 
@@ -48,7 +48,6 @@ class Slopec(BaseProcessingObj):
         super().__init__()
         self.default_accumulated_pixels = xp.zeros((0, 0), dtype=self.dtype)
         self.default_accumulated_pixels_ptr = None
-        self._pixels = pixels if pixels is not None else default_pixels
         self._slopes = Slopes(2)
         self._slopes_ave = BaseValue()
         self._sn = sn if sn is not None else default_sn
@@ -85,16 +84,8 @@ class Slopec(BaseProcessingObj):
         if sn_tag:
             self.load_sn(sn_tag)
 
-        self.inputs['in_pixels'] = InputValue(object=self.in_pixels, type=Pixels)
-        self.outputs['out_slopes'] = OutputValue(object=self.out_slopes, type=Slopes)
-
-    @property
-    def in_pixels(self):
-        return self._pixels
-
-    @in_pixels.setter
-    def in_pixels(self, value):
-        self._pixels = value
+        self.inputs['in_pixels'] = InputValue(type=Pixels)
+        self.outputs['out_slopes'] = self.out_slopes
 
     @property
     def in_sn(self):
@@ -284,7 +275,8 @@ class Slopec(BaseProcessingObj):
             errmsg += 'weightFromAccumulated and accumulate must not be set together'
         if errmsg != '':
             print(errmsg)
-        return not (self._weight_from_accumulated and self._accumulate) and self._pixels and self._slopes and ((not self._use_sn) or (self._use_sn and self._sn))
+        pixels = self.inputs['in_pixels'].get()
+        return not (self._weight_from_accumulated and self._accumulate) and pixels and self._slopes and ((not self._use_sn) or (self._use_sn and self._sn))
 
     def calc_slopes(self, t, accumulated=False):
         raise NotImplementedError(f'{self.repr()} Please implement calc_slopes in your derived class!')
@@ -302,14 +294,17 @@ class Slopec(BaseProcessingObj):
         return '$Rev$'
 
     def do_accumulation(self, t):
+        pixels = self.inputs['in_pixels'].get()
         factor = float(self._loop_dt) / float(self._accumulation_dt)
+
+        # TODO not sure what is going on here
         if not self._accumulated_pixels:
-            self._accumulated_pixels = Pixels(self._pixels.size[0], self._pixels.size[1])
+            self._accumulated_pixels = Pixels(pixels.size[0], pixels.size[1])
         if (t % self._accumulation_dt) == 0:
-            self._accumulated_pixels.pixels = self._pixels.pixels * factor
+            self._accumulated_pixels.pixels = pixels.pixels * factor
         else:
-            self._accumulated_pixels.pixels += self._pixels.pixels * factor
-        self._accumulated_pixels_ptr = self._accumulated_pixels.pixels * (1 - factor) + self._pixels.pixels * factor
+            self._accumulated_pixels.pixels += pixels.pixels * factor
+        self._accumulated_pixels_ptr = self._accumulated_pixels.pixels * (1 - factor) + pixels.pixels * factor
         if self._verbose:
             print(f'accumulation factor is: {factor}')
         self._accumulated_pixels.generation_time = t
@@ -338,6 +333,7 @@ class Slopec(BaseProcessingObj):
         self._accumulated_slopes.cleanup()
 
     def trigger(self, t):
+        pixels = self.inputs['in_pixels'].get()
         if self._accumulate:
             self.do_accumulation(t)
             if (t + self._loop_dt) % self._accumulation_dt == 0:
@@ -346,7 +342,7 @@ class Slopec(BaseProcessingObj):
         if self._weight_from_accumulated:
             self.do_accumulation(t)
 
-        if self._pixels.generation_time == t:
+        if pixels.generation_time == t:
             self.calc_slopes(t)
             if not xp.isfinite(self._slopes.slopes).all():
                 raise ValueError('slopes have non-finite elements')
@@ -392,7 +388,7 @@ class Slopec(BaseProcessingObj):
             for comm in self._command_list:
                 if len(comm.value) > 0:
                     commands.append(comm.value)
-            if self._pixels.generation_time == t:
+            if pixels.generation_time == t:
                 self._store_s = xp.array([self._gain_slope_high_speed * self._slopes.xslopes, self._gain_slope_high_speed * self._slopes.yslopes], dtype=self.dtype)
                 self._store_c = xp.array(commands, dtype=self.dtype)
             else:

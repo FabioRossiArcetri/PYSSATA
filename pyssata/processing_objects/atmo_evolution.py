@@ -99,10 +99,10 @@ class AtmoEvolution(BaseProcessingObj):
         if seed is not None:
             self.seed = seed
 
-        self.inputs['seeing'] = InputValue(object=self._seeing, type=BaseValue)
-        self.inputs['wind_speed'] = InputValue(object=self._wind_speed, type=BaseValue)
-        self.inputs['wind_direction'] = InputValue(object=self._wind_direction, type=BaseValue)
-
+        self.inputs['seeing'] = InputValue(type=BaseValue)
+        self.inputs['wind_speed'] = InputValue(type=BaseValue)
+        self.inputs['wind_direction'] = InputValue(type=BaseValue)
+        self.outputs['layer_list'] = self.layer_list
 
     @property
     def seed(self):
@@ -112,31 +112,6 @@ class AtmoEvolution(BaseProcessingObj):
     def seed(self, value):
         self._seed = value
         self.compute()
-
-    @property
-    def seeing(self):
-        return self._seeing
-
-    @seeing.setter
-    def seeing(self, value):
-        self._seeing = value
-
-    @property
-    def wind_speed(self):
-        return self._wind_speed
-
-    @wind_speed.setter
-    def wind_speed(self, value):
-        self._wind_speed = value
-
-    @property
-    def wind_direction(self):
-        return self._wind_direction
-
-    @wind_direction.setter
-    def wind_direction(self, value):
-        # print('wind_direction', value) # Verbose?
-        self._wind_direction = value
 
     @property
     def layer_list(self):
@@ -281,9 +256,9 @@ class AtmoEvolution(BaseProcessingObj):
                     self._phasescreens.append(temp_screen)
 
     def shift_screens(self, t):
-        seeing = self._seeing.value
-        wind_speed = self._wind_speed.value
-        wind_direction = self._wind_direction.value
+        seeing = self.inputs['seeing'].get().value
+        wind_speed = self.inputs['wind_speed'].get().value
+        wind_direction = self.inputs['wind_direction'].get().value
 
         if len(self._phasescreens) != len(wind_speed) or len(self._phasescreens) != len(wind_direction):
             raise ValueError('Error: number of elements of wind speed and/or direction does not match the number of phasescreens')
@@ -340,7 +315,14 @@ class AtmoEvolution(BaseProcessingObj):
         if not xp.isclose(xp.sum(self._Cn2), 1.0, atol=1e-6):
             errmsg += f' Cn2 total must be 1. Instead is: {xp.sum(self._Cn2)}.'
 
-        return self._seed > 0 and isinstance(self._seeing, BaseValue) and isinstance(self._wind_direction, BaseValue) and isinstance(self._wind_speed, BaseValue)
+        seeing = self.inputs['seeing'].get()
+        wind_speed = self.inputs['wind_speed'].get()
+        wind_direction = self.inputs['wind_direction'].get()
+
+        check = self._seed > 0 and isinstance(seeing, BaseValue) and isinstance(wind_direction, BaseValue) and isinstance(wind_speed, BaseValue)
+        if not check:
+            raise ValueError(errmsg)
+        return check
 
     def trigger(self, t):
         self.shift_screens(t)
@@ -351,3 +333,4 @@ class AtmoEvolution(BaseProcessingObj):
         del self._L0, self._heights, self._Cn2, self._pixel_layer, self._layer_list
         if self._verbose:
             print('Atmo_Propagation has been cleaned up.')
+

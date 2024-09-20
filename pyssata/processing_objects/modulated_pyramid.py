@@ -6,7 +6,7 @@ from pyssata import float_dtype
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
-from pyssata.connections import InputValue, OutputValue
+from pyssata.connections import InputValue
 from pyssata.data_objects.ef import ElectricField
 from pyssata.lib.make_xy import make_xy
 from pyssata.data_objects.intensity import Intensity
@@ -78,7 +78,6 @@ class ModulatedPyramid(BaseProcessingObj):
         self._pyr_tip_maya_ld = pyr_tip_maya_ld
         self._rotAnglePhInDeg = 0
         self._pup_shifts = pup_shifts
-        self._in_ef = None
 
         if not all([fft_res, fov_res, tilt_scale, fft_sampling, fft_totsize, toccd_side, final_ccd_side]):
             raise Exception('Not all geometry settings have been calculated')
@@ -102,11 +101,11 @@ class ModulatedPyramid(BaseProcessingObj):
         self._psf_bfm = BaseValue(xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype))
         self._out_transmission = BaseValue(0)
 
-        self.inputs['in_ef'] = InputValue(object=self.in_ef, type=ElectricField)
-        self.outputs['out_i'] = OutputValue(object=self.out_i, type=Intensity)
-        self.outputs['out_psf_tot'] = OutputValue(object=self._psf_tot, type=BaseValue)
-        self.outputs['out_psf_bfm'] = OutputValue(object=self._psf_bfm, type=BaseValue)
-        self.outputs['out_transmission'] = OutputValue(object=self._out_transmission, type=BaseValue)
+        self.inputs['in_ef'] = InputValue(type=ElectricField)
+        self.outputs['out_i'] = self.out_i
+        self.outputs['out_psf_tot'] = self._psf_tot
+        self.outputs['out_psf_bfm'] = self._psf_bfm
+        self.outputs['out_transmission'] = self._out_transmission
 
         self._pyr_tlt = self.get_pyr_tlt(fft_sampling, fft_padding)
         self._tlt_f = self.get_tlt_f(fft_sampling, fft_padding)
@@ -145,14 +144,6 @@ class ModulatedPyramid(BaseProcessingObj):
         if value != self._mod_steps:
             self._mod_steps = value
             self.cache_ttexp()
-
-    @property
-    def in_ef(self):
-        return self._in_ef
-
-    @in_ef.setter
-    def in_ef(self, value):
-        self._in_ef = value
 
     @property
     def fp_masking(self):
@@ -413,7 +404,8 @@ class ModulatedPyramid(BaseProcessingObj):
             self._flux_factor_vector = xp.ones(self._mod_steps, dtype=self.dtype)
 
     def trigger(self, t):
-        if self._in_ef.generation_time != t:
+        in_ef = self.inputs['in_ef'].get()
+        if in_ef.generation_time != t:
             return
 
         if self._extended_source_in_on and self._extSourcePsf is not None:
@@ -422,19 +414,19 @@ class ModulatedPyramid(BaseProcessingObj):
                     self._extSource.updatePsf(self._extSourcePsf.value)
                     self._flux_factor_vector = self._extSource.coeff_flux
 
-        s = self._in_ef.size
+        s = in_ef.size
 
         if self._rotAnglePhInDeg != 0:
-            A = (self.ROT_AND_SHIFT_IMAGE(self._in_ef.A, self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(xp.uint8)
-            phi_at_lambda = self.ROT_AND_SHIFT_IMAGE(self._in_ef.phi_at_lambda(self._wavelength_in_nm), self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True)
+            A = (self.ROT_AND_SHIFT_IMAGE(in_ef.A, self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(xp.uint8)
+            phi_at_lambda = self.ROT_AND_SHIFT_IMAGE(in_ef.phi_at_lambda(self._wavelength_in_nm), self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True)
             ef = xp.complex64(xp.rebin(A, (s[0] * self._fov_res, s[1] * self._fov_res)) + 
                               xp.rebin(phi_at_lambda, (s[0] * self._fov_res, s[1] * self._fov_res)) * 1j)
         else:
             if self._fov_res != 1:
-                ef = xp.complex64(xp.rebin(self._in_ef.A, (s[0] * self._fov_res, s[1] * self._fov_res)) + 
-                                  xp.rebin(self._in_ef.phi_at_lambda(self._wavelength_in_nm), (s[0] * self._fov_res, s[1] * self._fov_res)) * 1j)
+                ef = xp.complex64(xp.rebin(in_ef.A, (s[0] * self._fov_res, s[1] * self._fov_res)) + 
+                                  xp.rebin(in_ef.phi_at_lambda(self._wavelength_in_nm), (s[0] * self._fov_res, s[1] * self._fov_res)) * 1j)
             else:
-                ef = self._in_ef.ef_at_lambda(self._wavelength_in_nm)
+                ef = in_ef.ef_at_lambda(self._wavelength_in_nm)
 
         u_tlt_const = ef * self._tlt_f
 
@@ -483,7 +475,7 @@ class ModulatedPyramid(BaseProcessingObj):
         sum_bfm = xp.sum(psf_bfm)
         sum_pup = xp.sum(pup_pyr_tot)
         transmission = sum_psf / sum_bfm
-        phot = self._in_ef.S0 * self._in_ef.masked_area()
+        phot = in_ef.S0 * in_ef.masked_area()
         pup_pyr_tot *= (phot / sum_pup) * transmission
 
         if phot == 0:

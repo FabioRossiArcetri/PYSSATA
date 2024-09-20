@@ -43,18 +43,14 @@ class Simul():
             hints.update(typing.get_type_hints(getattr(x, '__init__')))
         return hints
     
-    def _handle_lists(self, parname, f, lst):
-        if parname.endswith('_list'):
-            return parname[:-5], [f(y) for y in lst]
-    
-    def _resolve(self, x):
-        return self.resolve_output(x)
-
     def resolve_output(self, output_name):
         if '.' in output_name:
             obj_name, attr_name = output_name.split('.')
-            # TODO will be replaced by input/output get/set methods
-            output_ref = getattr(self.objs[obj_name], attr_name)
+            if not obj_name in self.objs:
+                raise ValueError(f'Object {obj_name} does not exist')
+            if not attr_name in self.objs[obj_name].outputs:
+                raise ValueError(f'Object {obj_name} does not define an output with name {attr_name}')
+            output_ref = self.objs[obj_name].outputs[attr_name]
         else:
             output_ref = self.objs[output_name]
         return output_ref
@@ -124,7 +120,6 @@ class Simul():
             my_params.update(pars2)
             self.objs[key] = klass(**my_params)
 
-
     def connect_objects(self, params):
         for dest_object, pars in params.items():
             if 'inputs' not in pars:
@@ -134,8 +129,9 @@ class Simul():
                     raise ValueError(f'Object {dest_object} does does not have an input called {input_name}')
                 if not isinstance(output_name, (str, list)):
                     raise ValueError(f'Object {dest_object}: invalid input definition type {type(output_name)}')
-
-                wanted_type = self.objs[dest_object].inputs[input_name].type
+                
+                wanted_type = self.objs[dest_object].inputs[input_name].type()
+                
                 if isinstance(output_name, str):
                     output_ref = self.resolve_output(output_name)
                     if not isinstance(output_ref, wanted_type):
@@ -148,8 +144,7 @@ class Simul():
                         if not isinstance(output, wanted_type):
                             raise ValueError(f'Input {input_name}: output {output} is not of type {wanted_type}')
 
-                # TODO will be replaced by input/output get/set methods
-                setattr(self.objs[dest_object], input_name, output_ref)
+                self.objs[dest_object].inputs[input_name].set(output_ref)
 
     def run(self):
         params = {}

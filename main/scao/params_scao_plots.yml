@@ -9,7 +9,7 @@ main:
   time_step:         0.001                  # [s] Simulation time step
   store:                                   # Dict of data products to store, 'name': 'output'
     sr: 'psf.out_sr'
-    res_ef: 'pyramid.in_ef'
+    res_ef: 'prop.on_axis_source'
 
 
 seeing:
@@ -127,7 +127,7 @@ psf:
   nd:                8                    # padding coefficient for PSF computation
   start_time:        0.05                # PSF integration start time
   inputs:
-      in_ef:  'pyramid.in_ef'
+      in_ef:  'prop.on_axis_source'
 
 sc_disp:
   class:            'SlopecDisplay'
