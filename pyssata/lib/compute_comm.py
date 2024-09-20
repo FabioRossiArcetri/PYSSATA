@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from pyssata.lib.online_filter import online_filter
@@ -19,7 +19,7 @@ def compute_comm(filter_obj, input_data, ist=None, ost=None):
     onu = ordden[idx_onu]
     odu = ordden[idx_odu]
 
-    output = xp.zeros_like(input_data)
+    output = xp.zeros_like(input_data, dtype=self.dtype)
 
     if len(onu) == 1 and len(odu) == 1:
         idx_finite = xp.where(xp.isfinite(input_data))[0]

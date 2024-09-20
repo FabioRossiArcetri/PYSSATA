@@ -1,6 +1,9 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
+from pyssata import global_precision
+from pyssata import float_dtype_list
+from pyssata import complex_dtype_list
 
 from astropy.io import fits
 
@@ -16,7 +19,7 @@ def compute_mixed_ifunc(*args, **kwargs):
 class IFunc:
     def __init__(self,
                  ifunc: xp.array=None,
-                 type: str=None,
+                 type_str: str=None,
                  mask: xp.array=None,
                  npixels: int=None,
                  nzern: int=None,
@@ -25,19 +28,25 @@ class IFunc:
                  start_mode: int=None,
                  nmodes: int=None,
                  idx_modes=None,
+                 precision=None
                 ):
         self._doZeroPad = False
-        self._precision = xp.float32
-        
+        if precision is None:
+            self._precision = global_precision
+        else:
+            self._precision = precision
+        self.dtype = float_dtype_list[self._precision]
+        self.complex_dtype = complex_dtype_list[self._precision]
+
         if ifunc is None:
-            if type is None:
+            if type_str is None:
                 raise ValueError('At least one of ifunc and type must be set')
             if mask is not None:
-                mask = (xp.array(mask) > 0).astype(float)
+                mask = (xp.array(mask, dtype=self.dtype) > 0).astype(self.dtype)
             if npixels is None:
                 raise ValueError("If ifunc is not set, then npixels must be set!")
             
-            type_lower = type.lower()
+            type_lower = type_str.lower()
             if type_lower == 'kl':
                 ifunc, mask = compute_kl_ifunc(npixels, nmodes=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask)
             elif type_lower in ['zern', 'zernike']:
@@ -45,7 +54,7 @@ class IFunc:
             elif type_lower == 'mixed':
                 ifunc, mask = compute_mixed_ifunc(npixels, nzern=nzern, nmodes=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask)
             else:
-                raise ValueError(f'Invalid ifunc type {type}')
+                raise ValueError(f'Invalid ifunc type {type_str}')
         
         self._influence_function = ifunc
         self._mask_inf_func = mask
@@ -63,26 +72,17 @@ class IFunc:
             if self._mask_inf_func is None:
                 raise ValueError("if doZeroPad is set, mask_inf_func must be set before setting ifunc.")
             sIfunc = ifunc.shape
-            tIfunc = ifunc.dtype
-
-            if tIfunc == xp.float32:
-                if sIfunc[0] < sIfunc[1]:
-                    ifuncPad = xp.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=xp.float32)
-                else:
-                    ifuncPad = xp.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=xp.float32)
-            elif tIfunc == xp.float64:
-                if sIfunc[0] < sIfunc[1]:
-                    ifuncPad = xp.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=xp.float64)
-                else:
-                    ifuncPad = xp.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=xp.float64)
 
             if sIfunc[0] < sIfunc[1]:
+                ifuncPad = xp.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=ifunc.dtype)
                 ifuncPad[:, self._idx_inf_func] = ifunc
             else:
+                ifuncPad = xp.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=ifunc.dtype)
                 ifuncPad[self._idx_inf_func, :] = ifunc
+
             ifunc = ifuncPad
 
-        self._influence_function = xp.array(ifunc)
+        self._influence_function = xp.array(ifunc, dtype=self.dtype)
 
     @property
     def mask_inf_func(self):
@@ -90,7 +90,7 @@ class IFunc:
 
     @mask_inf_func.setter
     def mask_inf_func(self, mask_inf_func):
-        self._mask_inf_func = xp.array(mask_inf_func)
+        self._mask_inf_func = xp.array(mask_inf_func, dtype=self.dtype)
         self._idx_inf_func = xp.where(mask_inf_func)
 
     @property
@@ -126,16 +126,13 @@ class IFunc:
 
     @precision.setter
     def precision(self, precision):
-        if self._influence_function.dtype == precision:
+        if self._influence_function.dtype == float_dtype_list[precision]:
             return
-
         self._precision = precision
-        old_if = self._influence_function
-        if precision == xp.float32:
-            self.influence_function = old_if.astype(xp.float32)
-        elif precision == xp.float64:
-            self.influence_function = old_if.astype(xp.float64)
-
+        self.dtype = float_dtype_list[self._precision]
+        self.complex_dtype = complex_dtype_list[self._precision]
+        self.influence_function = self._influence_function.astype(self.dtype)
+        
     def cleanup(self):
         self.free()
 

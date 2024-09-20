@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
 
 from pyssata.base_processing_obj import BaseProcessingObj
-
+from pyssata.connections import InputValue
+from pyssata.base_value import BaseValue
 
 class ModesDisplay(BaseProcessingObj):
-    def __init__(self, modes=None, wsize=(600, 300), window=22, yrange=(-100, 100), oplot=False, color=1, psym=-4, title=''):
+    def __init__(self, disp_factor=1, wsize=(600, 300), window=22, yrange=(-100, 100), oplot=False, color=1, psym=-4, title=''):
         super().__init__()
 
-        self._modes = modes if modes is not None else None
+        self._modes = None
         self._wsize = wsize
         self._window = window
         self._yrange = yrange
@@ -16,6 +17,8 @@ class ModesDisplay(BaseProcessingObj):
         self._psym = psym
         self._title = title
         self._opened = False
+        self._disp_factor = disp_factor
+        self.inputs['modes'] = InputValue(object=self._modes, type=BaseValue)
 
     @property
     def modes(self):

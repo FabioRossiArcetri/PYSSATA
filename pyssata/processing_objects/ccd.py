@@ -1,7 +1,9 @@
 import math
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
+from pyssata import gpuEnabled
+
 from scipy.stats import gamma
 from scipy.ndimage import convolve
 
@@ -115,7 +117,7 @@ class CCD(BaseProcessingObj):
         self._darkcurrent_level = darkcurrent_level
         self._background_level = background_level
         self._cic_level = cic_level
-        self._cte_mat = cte_mat if cte_mat is not None else xp.zeros((size[0], size[1], 2))
+        self._cte_mat = cte_mat if cte_mat is not None else xp.zeros((size[0], size[1], 2), dtype=self.dtype)
         self._qe = quantum_eff
 
         self._pixels = Pixels(size[0] // binning, size[1] // binning)
@@ -230,7 +232,6 @@ class CCD(BaseProcessingObj):
         if self._charge_diffusion:
             ccd_frame = convolve(ccd_frame, self._chDiffKernel, mode='constant', cval=0.0)
 
-        print(type(ccd_frame))
         if self._photon_noise:
             ccd_frame = self._photon_rng.poisson(ccd_frame)
 
@@ -271,7 +272,7 @@ class CCD(BaseProcessingObj):
         out_dim = self._pixels.size
 
         if in_dim[0] != out_dim[0] * self._binning:
-            ccd_frame = xp.zeros(out_dim * self._binning)
+            ccd_frame = xp.zeros(out_dim * self._binning, dtype=self.dtype)
             ccd_frame[:in_dim[0], :in_dim[1]] = self._integrated_i.i
         else:
             ccd_frame = self._integrated_i.i.copy()
@@ -293,7 +294,7 @@ class CCD(BaseProcessingObj):
 
     def setQuadrantGains(self, quadrantsGains):
         dim2d = self._pixels.pixels.shape
-        pixelGains = xp.zeros(dim2d)
+        pixelGains = xp.zeros(dim2d, dtype=self.dtype)
         for i in range(2):
             for j in range(2):
                 pixelGains[(dim2d[0] // self._binning // 2) * i:(dim2d[0] // self._binning // 2) * (i + 1),

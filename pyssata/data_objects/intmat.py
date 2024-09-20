@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from astropy.io import fits
@@ -81,10 +81,10 @@ class Intmat:
         times = list(slopes.keys())
         nslopes = len(slopes[times[0]])
         nmodes = len(disturbance[times[0]])
-        intmat = xp.zeros((nmodes, nslopes))
-        iter_per_mode = xp.zeros(nmodes)
-        slope_mm = xp.zeros((nmodes, 2))
-        slope_rms = xp.zeros(nmodes)
+        intmat = xp.zeros((nmodes, nslopes), dtype=self.dtype)
+        iter_per_mode = xp.zeros(nmodes, dtype=self.dtype)
+        slope_mm = xp.zeros((nmodes, 2), dtype=self.dtype)
+        slope_rms = xp.zeros(nmodes, dtype=self.dtype)
 
         for t in times:
             amp = disturbance[t]

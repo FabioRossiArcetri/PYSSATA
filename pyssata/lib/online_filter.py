@@ -1,13 +1,13 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 def online_filter(num, den, input_data, ost=None, ist=None):
     # Initialize state vectors if not provided
     if ost is None:
-        ost = xp.zeros(len(den))
+        ost = xp.zeros(len(den), dtype=self.dtype)
     if ist is None:
-        ist = xp.zeros(len(num))
+        ist = xp.zeros(len(num), dtype=self.dtype)
     
     sden = xp.shape(den)
     snum = xp.shape(num)
@@ -18,8 +18,8 @@ def online_filter(num, den, input_data, ost=None, ist=None):
 
         if ni != snum[0]:
             if len(ist) != ni:
-                ist = xp.concatenate((ist, xp.zeros(ni - snum[0])))
-            num_temp = xp.concatenate((num, xp.zeros(ni - snum[0])))
+                ist = xp.concatenate((ist, xp.zeros(ni - snum[0], dtype=self.dtype)))
+            num_temp = xp.concatenate((num, xp.zeros(ni - snum[0], dtype=self.dtype)))
         else:
             num_temp = num
 
@@ -40,15 +40,15 @@ def online_filter(num, den, input_data, ost=None, ist=None):
 
         if ni != snum[1]:
             if len(ist) != ni:
-                ist = xp.concatenate((ist, xp.zeros((snum[0], ni - snum[1]))), axis=1)
-            num_temp = xp.concatenate((num, xp.zeros((snum[0], ni - snum[1]))), axis=1)
+                ist = xp.concatenate((ist, xp.zeros((snum[0], ni - snum[1]), dtype=self.dtype)), axis=1)
+            num_temp = xp.concatenate((num, xp.zeros((snum[0], ni - snum[1]), dtype=self.dtype)), axis=1)
         else:
             num_temp = num
 
         # Delay the vectors
         print(ost[:,1:].shape, xp.zeros((sden[0], 1)).shape)
-        ost = xp.concatenate((ost[:, 1:], xp.zeros((sden[0], 1))), axis=1)
-        ist = xp.concatenate((ist[:, 1:], xp.zeros((sden[0], 1))), axis=1)
+        ost = xp.concatenate((ost[:, 1:], xp.zeros((sden[0], 1), dtype=self.dtype)), axis=1)
+        ist = xp.concatenate((ist[:, 1:], xp.zeros((sden[0], 1), dtype=self.dtype)), axis=1)
 
         # New input
         ist[:len(input_data), ni - 1] = input_data

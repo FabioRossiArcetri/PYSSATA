@@ -1,7 +1,8 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata import cpuArray
+from pyssata import float_dtype
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
@@ -35,8 +36,9 @@ class ModulatedPyramid(BaseProcessingObj):
                  pyr_tip_def_ld: float = 0.0,
                  pyr_tip_maya_ld: float = 0.0,
                  min_pup_dist: float = None,
+                 precision: int = None,
                  ):
-        super().__init__()
+        super().__init__(precision=precision)
         
         DpupPix = pixel_pupil
         FoV = fov
@@ -94,9 +96,10 @@ class ModulatedPyramid(BaseProcessingObj):
                     mod_step = min_mod_step
 
         fft_totsize = int(fft_totsize)
-        self._out_i = Intensity(final_ccd_side, final_ccd_side)
-        self._psf_tot = BaseValue(xp.zeros((fft_totsize, fft_totsize)))
-        self._psf_bfm = BaseValue(xp.zeros((fft_totsize, fft_totsize)))
+        
+        self._out_i = Intensity(final_ccd_side, final_ccd_side, precision=precision)
+        self._psf_tot = BaseValue(xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype))
+        self._psf_bfm = BaseValue(xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype))
         self._out_transmission = BaseValue(0)
 
         self.inputs['in_ef'] = InputValue(object=self.in_ef, type=ElectricField)
@@ -314,7 +317,7 @@ class ModulatedPyramid(BaseProcessingObj):
 
     def get_pyr_tlt(self, p, c):
         A = int((p + c) // 2)
-        pyr_tlt = xp.zeros((2 * A, 2 * A))
+        pyr_tlt = xp.zeros((2 * A, 2 * A), dtype=self.dtype)
         #tlt_basis = xp.tile(xp.arange(A), (A, 1))
         y, x = xp.mgrid[0:A,0:A]
 
@@ -407,7 +410,7 @@ class ModulatedPyramid(BaseProcessingObj):
 
                 self._ttexp[tt] = xp.exp(-iu * pup_tt)
 
-            self._flux_factor_vector = xp.ones(self._mod_steps)
+            self._flux_factor_vector = xp.ones(self._mod_steps, dtype=self.dtype)
 
     def trigger(self, t):
         if self._in_ef.generation_time != t:
@@ -435,14 +438,17 @@ class ModulatedPyramid(BaseProcessingObj):
 
         u_tlt_const = ef * self._tlt_f
 
-        pup_pyr_tot = xp.zeros((self._fft_totsize, self._fft_totsize))
-        psf_bfm = xp.zeros((self._fft_totsize, self._fft_totsize))
-        psf_tot = xp.zeros((self._fft_totsize, self._fft_totsize))
+        pup_pyr_tot = xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
+        psf_bfm = xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
+        psf_tot = xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
 
-        u_tlt = xp.zeros((self._fft_totsize, self._fft_totsize), dtype=xp.complex64)
+        u_tlt = xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.complex_dtype)
+        
+        mean_value = cpuArray(xp.median(self._flux_factor_vector) * 1e-3)
+        cpu_flux_factor_vector = cpuArray(self._flux_factor_vector)
 
         for tt in range(self._mod_steps):
-            if self._flux_factor_vector[tt] <= xp.median(self._flux_factor_vector) * 1e-3:
+            if cpu_flux_factor_vector[tt] <= mean_value:
                 continue
 
             tmp = u_tlt_const * self._ttexp[tt]
@@ -466,7 +472,7 @@ class ModulatedPyramid(BaseProcessingObj):
 
         self._fft_padding = int(self._fft_padding)
 
-        pup_pyr_tot = xp.roll(pup_pyr_tot, xp.array( [self._fft_padding//2, self._fft_padding//2]), [0,1] )
+        pup_pyr_tot = xp.roll(pup_pyr_tot, xp.array( [self._fft_padding//2, self._fft_padding//2], dtype=xp.int64), [0,1] )
 
         factor = 1.0 / xp.sum(self._flux_factor_vector)
         pup_pyr_tot *= factor
@@ -501,7 +507,7 @@ class ModulatedPyramid(BaseProcessingObj):
 
         if self._final_ccd_side > self._toccd_side:
             delta = (self._final_ccd_side - self._toccd_side) // 2
-            ccd = xp.zeros((self._final_ccd_side, self._final_ccd_side))
+            ccd = xp.zeros((self._final_ccd_side, self._final_ccd_side), dtype=self.dtype)
             ccd[delta:delta + ccd_internal.shape[0], delta:delta + ccd_internal.shape[1]] = ccd_internal
         elif self._final_ccd_side < self._toccd_side:
             delta = (self._toccd_side - self._final_ccd_side) // 2

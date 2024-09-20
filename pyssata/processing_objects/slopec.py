@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from pyssata.base_processing_obj import BaseProcessingObj
@@ -34,8 +34,6 @@ default_recmat = None
 default_filt_recmat = None
 default_filt_intmat = None
 default_accumulation_dt = 0
-default_accumulated_pixels = xp.zeros((0, 0))
-default_accumulated_pixels_ptr = None
 
 class Slopec(BaseProcessingObj):
     def __init__(self, pixels=None, sn: Slopes=None, cm=None, total_counts=None, subap_counts=None, 
@@ -48,6 +46,8 @@ class Slopec(BaseProcessingObj):
                  accumulated_pixels=None, accumulated_pixels_ptr=None, sn_tag=None):
  
         super().__init__()
+        self.default_accumulated_pixels = xp.zeros((0, 0), dtype=self.dtype)
+        self.default_accumulated_pixels_ptr = None
         self._pixels = pixels if pixels is not None else default_pixels
         self._slopes = Slopes(2)
         self._slopes_ave = BaseValue()
@@ -77,8 +77,8 @@ class Slopec(BaseProcessingObj):
         self._filt_recmat = filt_recmat if filt_recmat is not None else default_filt_recmat
         self._filt_intmat = filt_intmat if filt_intmat is not None else default_filt_intmat
         self._accumulation_dt = accumulation_dt if accumulation_dt is not None else default_accumulation_dt
-        self._accumulated_pixels = accumulated_pixels if accumulated_pixels is not None else default_accumulated_pixels
-        self._accumulated_pixels_ptr = accumulated_pixels_ptr if accumulated_pixels_ptr is not None else default_accumulated_pixels_ptr
+        self._accumulated_pixels = accumulated_pixels if accumulated_pixels is not None else self.default_accumulated_pixels
+        self._accumulated_pixels_ptr = accumulated_pixels_ptr if accumulated_pixels_ptr is not None else self.default_accumulated_pixels_ptr
         self._accumulated_slopes = Slopes(2)
         if cm:
             self._cm = cm
@@ -393,11 +393,11 @@ class Slopec(BaseProcessingObj):
                 if len(comm.value) > 0:
                     commands.append(comm.value)
             if self._pixels.generation_time == t:
-                self._store_s = xp.array([self._gain_slope_high_speed * self._slopes.xslopes, self._gain_slope_high_speed * self._slopes.yslopes])
-                self._store_c = xp.array(commands)
+                self._store_s = xp.array([self._gain_slope_high_speed * self._slopes.xslopes, self._gain_slope_high_speed * self._slopes.yslopes], dtype=self.dtype)
+                self._store_c = xp.array(commands, dtype=self.dtype)
             else:
                 if len(commands) > 0 and self._store_s is not None and self._store_c is not None:
-                    temp = xp.dot(xp.array(commands) - self._store_c, self._intmat)
+                    temp = xp.dot(xp.array(commands, dtype=self.dtype) - self._store_c, self._intmat)
                     self._store_s *= self._ff_slope_high_speed
                     self._slopes.xslopes = self._store_s[0] - temp[:len(temp)//2]
                     self._slopes.yslopes = self._store_s[1] - temp[len(temp)//2:]

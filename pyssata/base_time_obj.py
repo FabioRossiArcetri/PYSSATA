@@ -1,16 +1,26 @@
 from astropy.io import fits
+from pyssata import global_precision
+from pyssata import float_dtype_list
+from pyssata import complex_dtype_list
 
 class BaseTimeObj:
-    def __init__(self, precision=0):
+    def __init__(self, precision=None):
         """
         Creates a new base_time object.
 
         Parameters:
-        precision (int, optional): double 1 or single 0, defaults to single precision
+        precision (int, optional): if None will use the global_precision, otherwise pass 0 for double, 1 for single
+
         """
         self._time_resolution = int(1e9)
         self._generation_time = -1
-        self._precision = precision
+
+        if precision is None:
+            self._precision = global_precision
+        else:
+            self._precision = precision
+        self.dtype = float_dtype_list[self._precision]
+        self.complex_dtype = complex_dtype_list[self._precision]
 
     @property
     def generation_time(self):
@@ -35,6 +45,9 @@ class BaseTimeObj:
     @precision.setter
     def precision(self, value):
         self._precision = value
+        self.dtype = float_dtype_list[self._precision]
+        self.complex_dtype = complex_dtype_list[self._precision]
+
 
     def t_to_seconds(self, t):
         return float(t) / float(self._time_resolution)

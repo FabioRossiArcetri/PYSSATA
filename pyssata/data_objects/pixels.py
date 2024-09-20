@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from astropy.io import fits
@@ -11,10 +11,11 @@ class Pixels(BaseDataObj):
     '''Pixels'''
 
     def __init__(self, dimx, dimy, bits=16, signed=0):
+        super().__init__()
         self._validate_bits(bits)
         self._signed = signed
         self._type = self._get_type(bits, signed)
-        self._pixels = xp.zeros((dimx, dimy), dtype=self._type)
+        self._pixels = xp.zeros((dimx, dimy), dtype=self.dtype)
         self._bpp = bits
         self._bytespp = (bits + 7) // 8  # bits xp.arounded to the next multiple of 8
 
@@ -69,7 +70,7 @@ class Pixels(BaseDataObj):
         self._pixels *= factor
 
     def set_size(self, size):
-        self._pixels = xp.zeros(size, dtype=self._type)
+        self._pixels = xp.zeros(size, dtype=self.dtype)
 
     def save(self, filename, hdr=None):
         if hdr is None:
