@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from collections import OrderedDict
 import pickle
@@ -38,7 +38,7 @@ class Datastore(BaseProcessingObj):
         self._storage[name] = data
 
     def save(self, filename, compress=False):
-        times = {k: xp.array(list(v.keys())) for k, v in self._storage.items() if isinstance(v, OrderedDict)}
+        times = {k: xp.array(list(v.keys()), dtype=self.dtype) for k, v in self._storage.items() if isinstance(v, OrderedDict)}
         data = self._storage
         with open(filename, 'wb') as handle:
             data_to_save = {'data': data, 'times': times}
@@ -68,8 +68,8 @@ class Datastore(BaseProcessingObj):
             for k, v in self._storage.items():
                 if isinstance(v, OrderedDict) and len(v) > 0:
                     filename = os.path.join(prefix, f'{k}.fits')
-                    times = xp.array(list(v.keys())) / float(self._time_resolution)
-                    data = xp.array(list(v.values()))
+                    times = xp.array(list(v.keys()), dtype=self.dtype) / float(self._time_resolution)
+                    data = xp.array(list(v.values()), dtype=self.dtype)
                     if saveFloat and data.dtype == xp.float64:
                         data = data.astype(xp.float32)
                     savemat(filename, {'data': data, 'times': times}, do_compression=compress)
@@ -139,7 +139,7 @@ class Datastore(BaseProcessingObj):
         if times is None:
             h = self._storage[name]
             times = list(h.keys())
-        return times if as_list else self.t_to_seconds(xp.array(times))
+        return times if as_list else self.t_to_seconds(xp.array(times, dtype=self.dtype))
 
     def values(self, name, as_list=False, init=0):
         init = int(init)
@@ -151,7 +151,7 @@ class Datastore(BaseProcessingObj):
             values = list(h.values())[init:]
         else:
             values = h[init:]
-        return values if as_list else xp.array(values)
+        return values if as_list else xp.array(values, dtype=self.dtype)
 
     def size(self, name, dimensions=False):
         if not self.has_key(name):

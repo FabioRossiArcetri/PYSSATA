@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from pyssata.lib.calc_loop_delay import calc_loop_delay
@@ -85,8 +85,8 @@ class TimeControl:
     def set_state_buffer_length(self, total_length):
         self._total_length = total_length
         if self._n is not None and self._type is not None:
-            self._state = xp.zeros((self._n, self._total_length), dtype=self._type)
-            self._comm = xp.zeros((self._n, 1), dtype=self._type)
+            self._state = xp.zeros((self._n, self._total_length), dtype=self.dtype)
+            self._comm = xp.zeros((self._n, 1), dtype=self.dtype)
 
     def auto_params_management(self, main_params, control_params, detector_params, dm_params, slopec_params):
         result = control_params.copy()

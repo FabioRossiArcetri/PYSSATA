@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from astropy.io import fits
 
@@ -16,10 +16,10 @@ from pyssata.connections import InputValue
 class AtmoEvolution(BaseProcessingObj):
     def __init__(self, L0, pixel_pitch, heights, Cn2, pixel_pupil, data_dir, source_list, wavelengthInNm: float=500.0,
                  zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed: int=1, precision=None,
-                 verbose=None, GPU=False, user_defined_phasescreen: str='', force_mcao_fov=False, make_cycle=None,
+                 verbose=None, user_defined_phasescreen: str='', force_mcao_fov=False, make_cycle=None,
                  fov_in_m=None, pupil_position=None):
         
-        super().__init__()
+        super().__init__(precision=precision)
         
         self._last_position = None
         self._last_t = 0
@@ -35,7 +35,7 @@ class AtmoEvolution(BaseProcessingObj):
             print(f'Atmo_Evolution: airmass is: {self._airmass}')
         else:
             self._airmass = 1.0
-        heights = heights * self._airmass
+        heights = xp.array(heights, dtype=self.dtype) * self._airmass
 
         # Conversion coefficient from arcseconds to radians
         sec2rad = 4.848e-6
@@ -55,7 +55,7 @@ class AtmoEvolution(BaseProcessingObj):
         rad_alpha_fov = alpha_fov * sec2rad
 
         # Compute layers dimension in pixels
-        pixel_layer = xp.ceil((pixel_pupil + 2 * xp.sqrt(xp.sum(xp.array(pupil_position) * 2)) / pixel_pitch + 
+        pixel_layer = xp.ceil((pixel_pupil + 2 * xp.sqrt(xp.sum(xp.array(pupil_position, dtype=self.dtype) * 2)) / pixel_pitch + 
                                2.0 * abs(heights) / pixel_pitch * rad_alpha_fov) / 2.0) * 2.0
         if fov_in_m is not None:
             pixel_layer = xp.full_like(heights, long(fov_in_m / pixel_pitch / 2.0) * 2)
@@ -65,7 +65,7 @@ class AtmoEvolution(BaseProcessingObj):
         self._pixel_pitch = pixel_pitch
         self._n_phasescreens = len(heights)
         self._heights = heights
-        self._Cn2 = Cn2
+        self._Cn2 = xp.array(Cn2, dtype=self.dtype)
         self._pixel_pupil = pixel_pupil
         self._pixel_layer = pixel_layer
         self._data_dir = data_dir
@@ -135,7 +135,7 @@ class AtmoEvolution(BaseProcessingObj):
 
     @wind_direction.setter
     def wind_direction(self, value):
-        print('wind_direction', value)
+        # print('wind_direction', value) # Verbose?
         self._wind_direction = value
 
     @property
@@ -240,16 +240,16 @@ class AtmoEvolution(BaseProcessingObj):
                         ps_index = 0
 
                     temp_screen = xp.array(square_phasescreens[square_ps_index][int(self._pixel_phasescreens) * ps_index:
-                                                                       int(self._pixel_phasescreens) * (ps_index + 1), :])
-                    print('self._Cn2[i]', self._Cn2[i], type(self._Cn2[i]), type(self._Cn2))
-                    print('temp_screen', temp_screen, type(temp_screen))
+                                                                       int(self._pixel_phasescreens) * (ps_index + 1), :], dtype=self.dtype)
+                    # print('self._Cn2[i]', self._Cn2[i], type(self._Cn2[i]), type(self._Cn2))  # Verbose?
+                    # print('temp_screen', temp_screen, type(temp_screen))  # Verbose?
 
                     temp_screen *= xp.sqrt(self._Cn2[i])
                     temp_screen -= xp.mean(temp_screen)
                     # Convert to nm
                     temp_screen *= self._wavelengthInNm / (2 * np.pi)
 
-                    temp_screen = xp.array(temp_screen)
+                    temp_screen = xp.array(temp_screen, dtype=self.dtype)
 
                     # Flip x-axis for each odd phase-screen
                     if i % 2 != 0:
@@ -291,8 +291,7 @@ class AtmoEvolution(BaseProcessingObj):
         last_position = self._last_position if self._last_position is not None else xp.zeros_like(wind_speed)
         delta_time = self.t_to_seconds(t - self._last_t)
         if self._extra_delta_time and not self._last_position:
-            delta_time += self._extra_delta_time
-        delta_time = float(delta_time) if self._precision == 0 else delta_time
+            delta_time += self._extra_delta_time        
 
         r0 = 0.9759 * 0.5 / (seeing * 4.848) * self._airmass**(-3./5.) if seeing > 0 else 0.0
         r0wavelength = r0 * (self._wavelengthInNm / 500.0)**(6./5.)

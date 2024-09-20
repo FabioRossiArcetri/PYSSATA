@@ -1,12 +1,14 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata import cpuArray
+from pyssata import global_precision
+from pyssata import float_dtype_list
+from pyssata import complex_dtype_list
 
 from pyssata.lib.calc_spatialfrequency import calc_spatialfrequency
 
-
-def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=False, verbose=False):
+def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=None, verbose=False):
     if verbose:
         print("Phase-screen computation")
 
@@ -19,7 +21,12 @@ def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=False, verbos
             print(f"Dimension is not a multiple of 2, it has been set to {dimension}")
 
     # Data type based on precision
-    dtype = xp.complex128 if precision else xp.complex64
+    if precision is None:
+        _precision = global_precision
+    else:
+        _precision = precision
+    dtype = float_dtype_list[_precision]
+    complex_dtype = complex_dtype_list[_precision]
 
     # Dimension in meters
     m_dimension = dimension * pixel_pitch
@@ -71,7 +78,7 @@ def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, precision=False, verbos
         print("Compute spatial frequency matrix")
 
     # Compute spatial frequency matrix
-    spatial_frequency = calc_spatialfrequency(dimension, precision=precision)
+    spatial_frequency = calc_spatialfrequency(dimension, precision=_precision)
     spatial_frequency = spatial_frequency / m_dimension**2
 
     # Check for non-finite elements and handle them

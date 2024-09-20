@@ -4,12 +4,12 @@ from pyssata.base_time_obj import BaseTimeObj
 from pyssata.base_parameter_obj import BaseParameterObj
 
 class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
-    def __init__(self, precision=0):
+    def __init__(self, precision=None):
         """
         Initialize the base processing object.
 
         Parameters:
-        precision (int, optional): double 1 or single 0, defaults to single precision
+        precision (int, optional): if None will use the global_precision, otherwise pass 0 for double, 1 for single
         """
         BaseTimeObj.__init__(self, precision)
         BaseParameterObj.__init__(self)
@@ -19,7 +19,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         
         # Will be populated by derived class
         self.inputs = {}
-        self.outputs = {}
+        self.outputs = {}        
 
     @property
     def verbose(self):

@@ -1,7 +1,7 @@
 import numpy as np
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
-from pyssata import gpuEnabled
+
 from pyssata import xp
 
 from pyssata.data_objects.ifunc import IFunc
@@ -15,7 +15,7 @@ class DM(BaseProcessingObj):
                  pixel_pitch: float,
                  height: float,
                  ifunc: IFunc=None,
-                 type: str=None,
+                 type_str: str=None,
                  nmodes: int=None,
                  nzern: int=None,
                  start_mode: int=None,
@@ -36,7 +36,7 @@ class DM(BaseProcessingObj):
                 npixels = mask.shape[0]
 
         if not ifunc:
-            ifunc = IFunc(type=type, mask=mask, npixels=npixels,
+            ifunc = IFunc(type_str=type_str, mask=mask, npixels=npixels,
                            obsratio=obsratio, diaratio=diaratio, nzern=nzern,
                            nmodes=nmodes, start_mode=start_mode, idx_modes=idx_modes)
         self._ifunc = ifunc
@@ -44,7 +44,7 @@ class DM(BaseProcessingObj):
         s = self._ifunc.mask_inf_func.shape
         nmodes_if = self._ifunc.size[0]
         
-        self._if_commands = xp.zeros(nmodes_if, dtype=self._ifunc.type)
+        self._if_commands = xp.zeros(nmodes_if, dtype=self._ifunc.dtype)
         self._layer = Layer(s[0], s[1], pixel_pitch, height)
         self._layer.A = self._ifunc.mask_inf_func
         
@@ -69,7 +69,7 @@ class DM(BaseProcessingObj):
         commands = self._integrated_commands * self._gain
 
 
-        temp_matrix = xp.zeros(self._layer.size, dtype=xp.float64 if self._precision else xp.float32)
+        temp_matrix = xp.zeros(self._layer.size, dtype=self.dtype)
         
         # Compute phase only if commands vector is not zero
         if xp.sum(xp.abs(commands)) != 0:

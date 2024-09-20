@@ -1,18 +1,20 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
 from pyssata import cpuArray
 
 import matplotlib.pyplot as plt
 
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.connections import InputValue
+from pyssata.data_objects.layer import Layer
 
 
 class PhaseDisplay(BaseProcessingObj):
-    def __init__(self, phase=None, doImage=False, window=23, disp_factor=1, title='phase'):
+    def __init__(self, disp_factor=1, doImage=False, window=23, title='phase'):
         super().__init__()
 
-        self._phase = phase if phase is not None else None
+        self._phase = None
         self._doImage = doImage
         self._window = window
         self._disp_factor = disp_factor
@@ -20,6 +22,9 @@ class PhaseDisplay(BaseProcessingObj):
         self._opened = False
         self._size_frame = (0, 0)
         self._first = True
+        self._disp_factor = disp_factor
+        self.inputs['phase'] = InputValue(object=self._phase, type=Layer)
+
 
     @property
     def phase(self):

@@ -1,9 +1,11 @@
 import numpy as np
-from pyssata import gpuEnabled
+
 from pyssata import xp
+from pyssata import float_dtype
+from pyssata import complex_dtype
 from numpy.fft import fft2, fftshift
 
-def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False, GPU=True):
+def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False):
     """
     Calculates a PSF from an electrical field phase and amplitude.
 
@@ -18,8 +20,6 @@ def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False, GPU=True
         If set, the PSF is normalized to total(psf).
     nocenter : bool, optional
         If set, avoids centering the PSF and leaves the maximum pixel at [0,0].
-    GPU : bool, optional
-        If set, uses GPU routines to compute FFT. Default is True (1B in IDL).
 
     Returns:
     psf : ndarray
@@ -27,33 +27,20 @@ def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False, GPU=True
     """
 
     # Set up the complex array based on input dimensions and data type
-    if imwidth is not None:
-        if phase.dtype == xp.float64:
-            u_ef = xp.zeros((imwidth, imwidth), dtype=xp.complex128)
-            result = amp * xp.exp(1j * phase)
-            s = result.shape
-            u_ef[:s[0], :s[1]] = result
-        else:
-            u_ef = xp.zeros((imwidth, imwidth), dtype=xp.complex64)
-            result = amp * xp.exp(1j * phase)
-            s = result.shape
-            u_ef[:s[0], :s[1]] = result
+    if imwidth is not None:        
+        u_ef = xp.zeros((imwidth, imwidth), dtype=complex_dtype)
+        result = amp * xp.exp(1j * phase)
+        s = result.shape
+        u_ef[:s[0], :s[1]] = result
     else:
-        if phase.dtype == xp.float64:
-            u_ef = amp * xp.exp(1j * phase)
-        else:
-            u_ef = amp * xp.exp(1j * phase)
-
+        u_ef = amp * xp.exp(1j * phase)
     # Compute FFT (forward)
     u_fp = fft2(u_ef)
-
     # Center the PSF if required
     if not nocenter:
         u_fp = fftshift(u_fp)
-
     # Compute the PSF as the square modulus of the Fourier transform
     psf = xp.abs(u_fp)**2
-
     # Normalize if required
     if normalize:
         psf /= xp.sum(psf)
