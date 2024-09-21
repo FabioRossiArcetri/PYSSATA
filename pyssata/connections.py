@@ -1,11 +1,9 @@
 
-from collections import namedtuple
-
 
 class InputValue():
     def __init__(self, type):
         """
-        Input value wrapper
+        Wrapper for simple input values
         """
         self.wrapped_type = type
         self.wrapped_value = None
@@ -25,7 +23,7 @@ class InputValue():
 class InputList():
     def __init__(self, type):
         """
-        Input value wrapper
+        Wrapper for input lists
         """
         self.wrapped_type = type
         self.wrapped_list = None
