@@ -114,7 +114,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self._fp_mask = self.get_fp_mask(fft_totsize, fp_masking, obsratio=fp_obsratio)
         self._extended_source_in_on = False
         iu = 1j  # complex unit
-        self._myexp = xp.exp(-2 * xp.pi * iu * self._pyr_tlt)
+        self._myexp = xp.exp(-2 * xp.pi * iu * self._pyr_tlt, dtype=self.complex_dtype)
 
         # Pre-computation of ttexp will be done when mod_steps will be set or re-set
         if int(mod_step) != mod_step:
