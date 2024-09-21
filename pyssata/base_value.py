@@ -27,10 +27,6 @@ class BaseValue(BaseTimeObj):
     def ptr_value(self):
         return self._value
 
-    def cleanup(self):
-        self._value = None
-        super().cleanup()
-
     def save(self, filename):
         hdr = fits.Header()
         if self._value is not None:

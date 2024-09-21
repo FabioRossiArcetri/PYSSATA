@@ -146,5 +146,3 @@ class PlotDisplay(BaseProcessingObj):
         value = self.inputs['value'].get()
         return value is not None and self._history is not None
 
-    def cleanup(self):
-        pass

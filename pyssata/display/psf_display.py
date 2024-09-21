@@ -107,9 +107,6 @@ class PsfDisplay(BaseProcessingObj):
         psf = self.inputs['psf'].get()
         return psf is not None
 
-    def cleanup(self):
-        plt.close(self._window)
-
     @classmethod
     def from_dict(cls, params):
         return cls(**params)

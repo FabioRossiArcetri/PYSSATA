@@ -523,24 +523,6 @@ class ModulatedPyramid(BaseProcessingObj):
             raise Exception(f'Number of modulation steps is too small ({self._mod_steps}), it must be at least 2*pi times the modulation amplitude ({xp.around(2 * xp.pi * self._mod_amp)})!')
         return 1
 
-    def free(self):
-        self._pyr_tlt_coeff = None
-        self._pyr_tlt = None
-        self._tlt_f = None
-        self._tilt_x = None
-        self._tilt_y = None
-        self._fp_mask = None
-        self._myexp = None
-        self._flux_factor_vector = None
-
-        self._out_i = None
-        self._psf_tot = None
-        self._psf_bfm = None
-        self._ttexp = None
-
-    def cleanup(self):
-        self.free()
-
     def hdr(self, hdr):
         hdr['MODAMP'] = self._mod_amp
         hdr['MODSTEPS'] = self._mod_steps

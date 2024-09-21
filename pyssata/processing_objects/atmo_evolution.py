@@ -327,10 +327,3 @@ class AtmoEvolution(BaseProcessingObj):
     def trigger(self, t):
         self.shift_screens(t)
 
-    def cleanup(self):
-        super().cleanup()
-        self._phasescreens.clear()
-        del self._L0, self._heights, self._Cn2, self._pixel_layer, self._layer_list
-        if self._verbose:
-            print('Atmo_Propagation has been cleaned up.')
-

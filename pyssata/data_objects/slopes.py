@@ -156,10 +156,3 @@ class Slopes(BaseDataObj):
             s.pupdata_tag = str(hdr['PUPD_TAG']).strip()
         s.read(filename, hdr)
         return s
-
-    def revision_track(self):
-        return '$Rev$'
-
-    def cleanup(self):
-        self._slopes = None
-        super().cleanup()

@@ -85,5 +85,3 @@ class BaseTimeObj:
     def get_properties_list(self):
         return vars(self)
 
-    def cleanup(self):
-        pass

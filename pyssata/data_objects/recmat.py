@@ -57,9 +57,7 @@ class Recmat(BaseDataObj):
         self._norm_factor = value
 
     def set_recmat(self, recmat):
-        self.free()
-        if recmat is not None:
-            self._recmat = recmat
+        self._recmat = recmat
 
     def set_modes2recLayer(self, modes2recLayer):
         self._modes2recLayer = modes2recLayer
@@ -123,14 +121,4 @@ class Recmat(BaseDataObj):
 
         return rec
 
-    def revision_track(self):
-        return '$Rev$'
-
-    def free(self):
-        self._recmat = None
-
-
-    def cleanup(self):
-        self.free()
-        super().cleanup()
 

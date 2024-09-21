@@ -144,18 +144,6 @@ class AtmoPropagation(BaseProcessingObj):
                 self._pixel_pupil > 0 and
                 self._pixel_pitch > 0), errmsg
 
-    def cleanup(self):
-        self._source_dict.clear()
-        self._pupil_list.clear()
-        self._layer_list.clear()
-        self._shiftXY_list.clear()
-        self._rotAnglePhInDeg_list.clear()
-        self._magnification_list.clear()
-
-        super().cleanup()
-        if self._verbose:
-            print('Atmo_Propagation has been cleaned up.')
-
     def save(self, filename):
         hdr = fits.Header()
         hdr['VERSION'] = 1

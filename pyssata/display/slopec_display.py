@@ -102,9 +102,6 @@ class SlopecDisplay(BaseProcessingObj):
         slopec = self.inputs['slopec'].get()
         return slopec is not None
 
-    def cleanup(self):
-        plt.close(self._windows)
-
     @classmethod
     def from_dict(cls, params):
         return cls(**params)

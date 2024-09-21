@@ -112,14 +112,3 @@ class PupData(BaseDataObj):
 
         p.read(filename, hdr)
         return p
-
-    def revision_track(self):
-        return '$Rev$'
-
-    def cleanup(self):
-        self._radius = None
-        self._cx = None
-        self._cy = None
-        self._ind_pup = None
-        self._framesize = None
-        super().cleanup()

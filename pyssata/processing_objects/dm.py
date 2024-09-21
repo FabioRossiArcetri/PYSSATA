@@ -148,23 +148,10 @@ class DM(BaseProcessingObj):
     def magnification(self, value):
         self._layer.magnification = value
 
-    def cleanup(self):
-        if self._if_commands is not None:
-            del self._if_commands
-        self._ifunc.cleanup()
-        self._layer.cleanup()
-        self._command.cleanup()
-        super().cleanup()
-        if self._verbose:
-            print("DM has been cleaned up.")
-
     def run_check(self, time_step, errmsg=""):
         commands_input = self.inputs['in_command'].get()
         if commands_input is None:
             errmsg += f"{self.repr()} No input command defined"
         
         return commands_input is not None and self._layer is not None and self._ifunc is not None
-    
-    @staticmethod
-    def revision_track():
-        return "$Rev$"
+

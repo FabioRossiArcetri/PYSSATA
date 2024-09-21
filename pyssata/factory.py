@@ -2480,11 +2480,3 @@ class Factory:
         """
         return self._cm
 
-    def revision_track(self):
-        """
-        Returns the revision of the SVN
-
-        Returns:
-        str: SVN revision
-        """
-        return '$Rev$'

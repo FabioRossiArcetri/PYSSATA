@@ -124,5 +124,3 @@ class BaseOperation(BaseProcessingObj):
             self._sum = hdr.get('SUM', False)
             self._sub = hdr.get('SUB', False)
 
-    def cleanup(self):
-        pass

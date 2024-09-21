@@ -112,9 +112,6 @@ class PhaseDisplay(BaseProcessingObj):
         phase = self.inputs['phase'].get()
         return phase is not None
 
-    def cleanup(self):
-        plt.close(self._window)
-
     @classmethod
     def from_dict(cls, params):
         return cls(**params)
