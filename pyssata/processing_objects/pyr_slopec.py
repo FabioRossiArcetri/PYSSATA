@@ -65,11 +65,12 @@ class PyrSlopec(Slopec):
     def pupdata(self, p):
         if p is not None:
             self._pupdata = p
+            # TODO replace this resize with an earlier initialization
             if self._slopes_from_intensity:
-                self._slopes = Slopes(len(self._pupdata.ind_pup) * 4)
+                self._slopes.resize(len(self._pupdata.ind_pup) * 4)
             else:
-                self._slopes = Slopes(len(self._pupdata.ind_pup) * 2)
-            self._accumulated_slopes = Slopes(len(self._pupdata.ind_pup) * 2)
+                self._slopes.resize(len(self._pupdata.ind_pup) * 2)
+            self._accumulated_slopes.resize(len(self._pupdata.ind_pup) * 2)
 
     def calc_slopes(self, t, accumulated=False):
         if not self._pupdata:

@@ -48,7 +48,7 @@ class Slopec(BaseProcessingObj):
         super().__init__()
         self.default_accumulated_pixels = xp.zeros((0, 0), dtype=self.dtype)
         self.default_accumulated_pixels_ptr = None
-        self._slopes = Slopes(2)
+        self._slopes = Slopes(2)  # TODO resized in derived class.
         self._slopes_ave = BaseValue()
         self._sn = sn if sn is not None else default_sn
         self._cm = cm if cm is not None else default_cm
@@ -78,14 +78,14 @@ class Slopec(BaseProcessingObj):
         self._accumulation_dt = accumulation_dt if accumulation_dt is not None else default_accumulation_dt
         self._accumulated_pixels = accumulated_pixels if accumulated_pixels is not None else self.default_accumulated_pixels
         self._accumulated_pixels_ptr = accumulated_pixels_ptr if accumulated_pixels_ptr is not None else self.default_accumulated_pixels_ptr
-        self._accumulated_slopes = Slopes(2)
+        self._accumulated_slopes = Slopes(2)  # TODO resized in derived class.
         if cm:
             self._cm = cm
         if sn_tag:
             self.load_sn(sn_tag)
 
         self.inputs['in_pixels'] = InputValue(type=Pixels)
-        self.outputs['out_slopes'] = self.out_slopes
+        self.outputs['out_slopes'] = self._slopes
 
     @property
     def in_sn(self):
@@ -334,6 +334,7 @@ class Slopec(BaseProcessingObj):
 
     def trigger(self, t):
         pixels = self.inputs['in_pixels'].get()
+        
         if self._accumulate:
             self.do_accumulation(t)
             if (t + self._loop_dt) % self._accumulation_dt == 0:

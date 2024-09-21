@@ -56,7 +56,7 @@ class DM(BaseProcessingObj):
         self._gain = 0.5
     
     def compute_shape(self):
-        commands_input = self.self.inputs['in_command'].get()
+        commands_input = self.inputs['in_command'].get()
         commands = commands_input.value
 
         if self._history is None:
@@ -94,7 +94,7 @@ class DM(BaseProcessingObj):
         if command.generation_time == t:
             if self._verbose:
                 print("---> command applied to DM")
-            self._layer.set(self.compute_shape(), tt)
+            self.compute_shape()
             self._layer.generation_time = t
         elif self._verbose:
             print(f"command not applied to DM, command generation time: {command.generation_time} is not equal to {t}")
