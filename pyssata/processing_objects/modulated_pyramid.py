@@ -460,7 +460,7 @@ class ModulatedPyramid(BaseProcessingObj):
 
             u_fp_pyr = u_fp * self._myexp
 
-            pup_pyr_tot += xp.abs(xp.fft.ifft2(u_fp_pyr)) ** 2 * self._flux_factor_vector[tt]        
+            pup_pyr_tot += xp.abs(xp.fft.ifft2(u_fp_pyr)) ** 2 * self._flux_factor_vector[tt]
 
         self._fft_padding = int(self._fft_padding)
 

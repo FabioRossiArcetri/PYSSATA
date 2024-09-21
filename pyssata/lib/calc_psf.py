@@ -3,7 +3,6 @@ import numpy as np
 from pyssata import xp
 from pyssata import float_dtype
 from pyssata import complex_dtype
-from numpy.fft import fft2, fftshift
 
 def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False):
     """
@@ -35,10 +34,10 @@ def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False):
     else:
         u_ef = amp * xp.exp(1j * phase)
     # Compute FFT (forward)
-    u_fp = fft2(u_ef)
+    u_fp = xp.fft.fft2(u_ef)
     # Center the PSF if required
     if not nocenter:
-        u_fp = fftshift(u_fp)
+        u_fp = xp.fft.fftshift(u_fp)
     # Compute the PSF as the square modulus of the Fourier transform
     psf = xp.abs(u_fp)**2
     # Normalize if required
