@@ -1,17 +1,9 @@
 import math
-import numpy as np
 
 from pyssata import xp
-from pyssata import gpuEnabled
 
 from scipy.stats import gamma
 from scipy.ndimage import convolve
-
-if gpuEnabled:
-    print('Importing default_rng from cupy')
-    from cupy.random import default_rng
-else:
-    from numpy.random import default_rng
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue
@@ -147,8 +139,8 @@ class CCD(BaseProcessingObj):
         self._normNotUniformQe = False
         self._poidev = None
         self._gaussian_noise = None
-        self._photon_rng = default_rng(self._photon_seed)
-        self._readout_rng = default_rng(self._readout_seed)
+        self._photon_rng = xp.random.default_rng(self._photon_seed)
+        self._readout_rng = xp.random.default_rng(self._readout_seed)
 
         self.inputs['in_i'] = InputValue(type=Intensity)
         self.outputs['out_pixels'] = self._pixels
