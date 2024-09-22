@@ -7,6 +7,10 @@ from astropy.io import fits
 from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class PupData(BaseDataObj):
+    '''
+    TODO change to have the pupil index in the second index
+    (for compatibility with existing PASSATA data)
+    '''
     def __init__(self):
         super().__init__()
         self._radius = xp.zeros(4, dtype=self.dtype)
@@ -53,7 +57,9 @@ class PupData(BaseDataObj):
 
     @ind_pup.setter
     def ind_pup(self, value):
-        self._ind_pup = self.zcorrection(value)
+        self._ind_pup = value
+        # TODO really needed?
+        #self._ind_pup = self.zcorrection(value)
 
     @property
     def n_subap(self):
@@ -92,10 +98,10 @@ class PupData(BaseDataObj):
     def read(self, filename, hdr=None, exten=0):
         hdr, exten = super().read(filename)
 
-        self._ind_pup = fits.getdata(filename, ext=exten)
-        self._radius = fits.getdata(filename, ext=exten + 1)
-        self._cx = fits.getdata(filename, ext=exten + 2)
-        self._cy = fits.getdata(filename, ext=exten + 3)
+        self._ind_pup = xp.array(fits.getdata(filename, ext=exten))
+        self._radius = xp.array(fits.getdata(filename, ext=exten + 1))
+        self._cx = xp.array(fits.getdata(filename, ext=exten + 2))
+        self._cy = xp.array(fits.getdata(filename, ext=exten + 3))
         exten += 4
 
     @staticmethod
