@@ -63,7 +63,7 @@ def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, target_device_idx=None,
         im_gauss[idx_inf] = xp.mean(im_gauss[idx_fin])
 
     # Initialize the phasescreen
-    phasescreen = xp.zeros((dimension, dimension), dtype=dtype)
+    phasescreen = xp.zeros((dimension, dimension), dtype=complex_dtype)
 
     if verbose:
         print("Compute noise matrix")
