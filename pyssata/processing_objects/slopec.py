@@ -4,97 +4,56 @@ from pyssata import xp
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
-from pyssata.connections import InputValue, OutputValue
+from pyssata.connections import InputValue
 from pyssata.data_objects.pixels import Pixels
 from pyssata.data_objects.slopes import Slopes
 
-# Default values
-default_pixels = None
-default_sn = None
-default_cm = None
-default_total_counts = None
-default_subap_counts = None
-default_use_sn = False
-default_accumulate = False
-default_weight_from_accumulated = False
-default_weight_from_acc_with_window = False
-default_remove_mean = False
-default_return0 = False
-default_update_slope_high_speed = False
-default_do_rec = False
-default_do_filter_modes = False
-default_gain_slope_high_speed = 0.0
-default_ff_slope_high_speed = 0.0
-default_store_s = None
-default_store_c = None
-default_sn_scale_fact = None
-default_command_list = None
-default_intmat = None
-default_recmat = None
-default_filt_recmat = None
-default_filt_intmat = None
-default_accumulation_dt = 0
 
 class Slopec(BaseProcessingObj):
-    def __init__(self, pixels=None, sn: Slopes=None, cm=None, total_counts=None, subap_counts=None, 
+    def __init__(self, sn: Slopes=None, cm=None, total_counts=None, subap_counts=None, 
                  use_sn=False, accumulate=False, weight_from_accumulated=False, 
                  weight_from_acc_with_window=False, remove_mean=False, return0=False, 
                  update_slope_high_speed=False, do_rec=False, do_filter_modes=False, 
                  gain_slope_high_speed=0.0, ff_slope_high_speed=0.0, store_s=None, 
                  store_c=None, sn_scale_fact=None, command_list=None, intmat=None, 
                  recmat=None, filt_recmat=None, filt_intmat=None, accumulation_dt=0, 
-                 accumulated_pixels=None, accumulated_pixels_ptr=None, sn_tag=None):
+                 accumulated_pixels=(0,0)):
  
         super().__init__()
-        self.default_accumulated_pixels = xp.zeros((0, 0), dtype=self.dtype)
-        self.default_accumulated_pixels_ptr = None
-        self._pixels = pixels if pixels is not None else default_pixels
-        self._slopes = Slopes(2)
+        self._slopes = Slopes(2)  # TODO resized in derived class
         self._slopes_ave = BaseValue()
-        self._sn = sn if sn is not None else default_sn
-        self._cm = cm if cm is not None else default_cm
-        self._total_counts = total_counts if total_counts is not None else default_total_counts
-        self._subap_counts = subap_counts if subap_counts is not None else default_subap_counts
+        self._sn = sn
+        self._cm = cm
+        self._total_counts = total_counts
+        self._subap_counts = subap_counts
         self._flux_per_subaperture_vector = BaseValue()
         self._max_flux_per_subaperture_vector = BaseValue()
-        self._use_sn = use_sn if use_sn is not None else default_use_sn
-        self._accumulate = accumulate if accumulate is not None else default_accumulate
-        self._weight_from_accumulated = weight_from_accumulated if weight_from_accumulated is not None else default_weight_from_accumulated
-        self._weight_from_acc_with_window = weight_from_acc_with_window if weight_from_acc_with_window is not None else default_weight_from_acc_with_window
-        self._remove_mean = remove_mean if remove_mean is not None else default_remove_mean
-        self._return0 = return0 if return0 is not None else default_return0
-        self._update_slope_high_speed = update_slope_high_speed if update_slope_high_speed is not None else default_update_slope_high_speed
-        self._do_rec = do_rec if do_rec is not None else default_do_rec
-        self._do_filter_modes = do_filter_modes if do_filter_modes is not None else default_do_filter_modes
-        self._gain_slope_high_speed = gain_slope_high_speed if gain_slope_high_speed is not None else default_gain_slope_high_speed
-        self._ff_slope_high_speed = ff_slope_high_speed if ff_slope_high_speed is not None else default_ff_slope_high_speed
-        self._store_s = store_s if store_s is not None else default_store_s
-        self._store_c = store_c if store_c is not None else default_store_c
-        self._sn_scale_fact = sn_scale_fact if sn_scale_fact is not None else default_sn_scale_fact
-        self._command_list = command_list if command_list is not None else default_command_list
-        self._intmat = intmat if intmat is not None else default_intmat
-        self._recmat = recmat if recmat is not None else default_recmat
-        self._filt_recmat = filt_recmat if filt_recmat is not None else default_filt_recmat
-        self._filt_intmat = filt_intmat if filt_intmat is not None else default_filt_intmat
-        self._accumulation_dt = accumulation_dt if accumulation_dt is not None else default_accumulation_dt
-        self._accumulated_pixels = accumulated_pixels if accumulated_pixels is not None else self.default_accumulated_pixels
-        self._accumulated_pixels_ptr = accumulated_pixels_ptr if accumulated_pixels_ptr is not None else self.default_accumulated_pixels_ptr
-        self._accumulated_slopes = Slopes(2)
-        if cm:
-            self._cm = cm
-        if sn_tag:
-            self.load_sn(sn_tag)
+        self._use_sn = use_sn
+        self._accumulate = accumulate
+        self._weight_from_accumulated = weight_from_accumulated
+        self._weight_from_acc_with_window = weight_from_acc_with_window
+        self._remove_mean = remove_mean
+        self._return0 = return0
+        self._update_slope_high_speed = update_slope_high_speed
+        self._do_rec = do_rec
+        self._do_filter_modes = do_filter_modes
+        self._gain_slope_high_speed = gain_slope_high_speed
+        self._ff_slope_high_speed = ff_slope_high_speed
+        self._store_s = store_s
+        self._store_c = store_c
+        self._sn_scale_fact = sn_scale_fact
+        self._command_list = command_list
+        self._intmat = intmat
+        self._recmat = recmat
+        self._filt_recmat = filt_recmat
+        self._filt_intmat = filt_intmat
+        self._accumulation_dt = accumulation_dt
+        self._accumulated_pixels = xp.array(accumulated_pixels, dtype=self.dtype)
+        self._accumulated_slopes = Slopes(2)   # TODO resized in derived class.
+        self._accumulated_pixels_ptr = None   # TODO, see do_accumulation() method
 
-        self.inputs['in_pixels'] = InputValue(object=self.in_pixels, type=Pixels)
-        self.outputs['out_slopes'] = OutputValue(object=self.out_slopes, type=Slopes)
-
-    @property
-    def in_pixels(self):
-        return self._pixels
-
-    @in_pixels.setter
-    def in_pixels(self, value):
-        self._pixels = value
+        self.inputs['in_pixels'] = InputValue(type=Pixels)
+        self.outputs['out_slopes'] = self._slopes
 
     @property
     def in_sn(self):
@@ -284,60 +243,40 @@ class Slopec(BaseProcessingObj):
             errmsg += 'weightFromAccumulated and accumulate must not be set together'
         if errmsg != '':
             print(errmsg)
-        return not (self._weight_from_accumulated and self._accumulate) and self._pixels and self._slopes and ((not self._use_sn) or (self._use_sn and self._sn))
+        pixels = self.inputs['in_pixels'].get()
+        return not (self._weight_from_accumulated and self._accumulate) and pixels and self._slopes and ((not self._use_sn) or (self._use_sn and self._sn))
 
     def calc_slopes(self, t, accumulated=False):
         raise NotImplementedError(f'{self.repr()} Please implement calc_slopes in your derived class!')
 
-    def load_sn(self, sn_tag):
-        if self._verbose:
-            print(f'reading {sn_tag}')
-        sn = self._cm.read_slopenull(sn_tag)
-        if sn is None:
-            print(f'\nWARNING: slope null {sn_tag} is not present on disk!\n')
-        else:
-            self._sn = sn
-
-    def revision_track(self):
-        return '$Rev$'
-
     def do_accumulation(self, t):
+        pixels = self.inputs['in_pixels'].get()
         factor = float(self._loop_dt) / float(self._accumulation_dt)
+
+        # TODO not sure what is going on here
         if not self._accumulated_pixels:
-            self._accumulated_pixels = Pixels(self._pixels.size[0], self._pixels.size[1])
+            self._accumulated_pixels = Pixels(pixels.size[0], pixels.size[1])
         if (t % self._accumulation_dt) == 0:
-            self._accumulated_pixels.pixels = self._pixels.pixels * factor
+            self._accumulated_pixels.pixels = pixels.pixels * factor
         else:
             self._accumulated_pixels.pixels += self._pixels.pixels * factor
-        self._accumulated_pixels_ptr = self._accumulated_pixels.pixels * (1 - factor) + self._pixels.pixels * factor
-        if self._verbose:
-            print(f'accumulation factor is: {factor}')
         self._accumulated_pixels.generation_time = t
 
-    def cleanup(self):
-        if self._store_s:
-            del self._store_s
-        if self._store_c:
-            del self._store_c
-        if self._intmat:
-            del self._intmat
-        if self._filt_recmat:
-            del self._filt_recmat
-        if self._filt_intmat:
-            del self._filt_intmat
-        if self._accumulated_pixels_ptr:
-            del self._accumulated_pixels_ptr
-        if self._total_counts:
-            del self._total_counts
-        if self._subap_counts:
-            del self._subap_counts
-        self._flux_per_subaperture_vector.cleanup()
-        self._max_flux_per_subaperture_vector.cleanup()
-        self._slopes.cleanup()
-        self._accumulated_pixels.cleanup()
-        self._accumulated_slopes.cleanup()
+        # TODO what is "accumulated_pixels_ptr" used for exactly?            
+        if self._accumulated_pixels_ptr is None:
+            acc_pixels = 0
+        else:
+            acc_pixels = self._accumulated_pixels_ptr
+        if t >= self._accumulation_dt:
+            self._accumulated_pixels_ptr = acc_pixels * (1 - factor) + self._pixels.pixels * factor
+        else:
+            self._accumulated_pixels_ptr = acc_pixels + self._pixels.pixels * factor
+        if self._verbose:
+            print(f'accumulation factor is: {factor}')
 
     def trigger(self, t):
+        pixels = self.inputs['in_pixels'].get()
+        
         if self._accumulate:
             self.do_accumulation(t)
             if (t + self._loop_dt) % self._accumulation_dt == 0:
@@ -346,7 +285,7 @@ class Slopec(BaseProcessingObj):
         if self._weight_from_accumulated:
             self.do_accumulation(t)
 
-        if self._pixels.generation_time == t:
+        if pixels.generation_time == t:
             self.calc_slopes(t)
             if not xp.isfinite(self._slopes.slopes).all():
                 raise ValueError('slopes have non-finite elements')
@@ -392,7 +331,7 @@ class Slopec(BaseProcessingObj):
             for comm in self._command_list:
                 if len(comm.value) > 0:
                     commands.append(comm.value)
-            if self._pixels.generation_time == t:
+            if pixels.generation_time == t:
                 self._store_s = xp.array([self._gain_slope_high_speed * self._slopes.xslopes, self._gain_slope_high_speed * self._slopes.yslopes], dtype=self.dtype)
                 self._store_c = xp.array(commands, dtype=self.dtype)
             else:

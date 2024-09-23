@@ -65,17 +65,18 @@ class PyrSlopec(Slopec):
     def pupdata(self, p):
         if p is not None:
             self._pupdata = p
+            # TODO replace this resize with an earlier initialization
             if self._slopes_from_intensity:
-                self._slopes = Slopes(len(self._pupdata.ind_pup) * 4)
+                self._slopes.resize(len(self._pupdata.ind_pup) * 4)
             else:
-                self._slopes = Slopes(len(self._pupdata.ind_pup) * 2)
-            self._accumulated_slopes = Slopes(len(self._pupdata.ind_pup) * 2)
+                self._slopes.resize(len(self._pupdata.ind_pup) * 2)
+            self._accumulated_slopes.resize(len(self._pupdata.ind_pup) * 2)
 
     def calc_slopes(self, t, accumulated=False):
         if not self._pupdata:
             return
 
-        pixels = self._accumulated_pixels.pixels if accumulated else self._pixels.pixels
+        pixels = self._accumulated_pixels.pixels if accumulated else self.inputs['in_pixels'].get().pixels
 
         if self._verbose:
             print('Average pixel counts:', xp.sum(pixels) / len(self._pupdata.ind_pup))
@@ -113,9 +114,6 @@ class PyrSlopec(Slopec):
     def _compute_flux_per_subaperture(self):
         return self._flux_per_subaperture_vector
 
-    def revision_track(self):
-        return '$Rev$'
-
     def run_check(self, time_step, errmsg=''):
         if self._shlike and self._slopes_from_intensity:
             errmsg += 'Both SHLIKE and SLOPES_FROM_INTENSITY parameters are set. Only one of these should be used.'
@@ -131,8 +129,4 @@ class PyrSlopec(Slopec):
 
         return super().run_check(time_step, errmsg=errmsg)
 
-    def cleanup(self):
-        if self._pupdata:
-            del self._pupdata
-        super().cleanup()
 

@@ -23,16 +23,7 @@ class PhaseDisplay(BaseProcessingObj):
         self._size_frame = (0, 0)
         self._first = True
         self._disp_factor = disp_factor
-        self.inputs['phase'] = InputValue(object=self._phase, type=ElectricField)
-
-
-    @property
-    def phase(self):
-        return self._phase
-
-    @phase.setter
-    def phase(self, phase):
-        self._phase = phase
+        self.inputs['phase'] = InputValue(type=ElectricField)
 
     @property
     def doImage(self):
@@ -81,7 +72,8 @@ class PhaseDisplay(BaseProcessingObj):
 #        plt.title(self._title)
 
     def trigger(self, t):
-        phase = self._phase
+        phase = self.inputs['phase'].get()
+
         if phase.generation_time == t:
             frame = cpuArray(phase.phaseInNm * (phase.A > 0).astype(float))
             idx = np.where(cpuArray(phase.A) > 0)[0]
@@ -117,10 +109,8 @@ class PhaseDisplay(BaseProcessingObj):
             # plt.pause(0.01)
 
     def run_check(self, time_step):
-        return self._phase is not None
-
-    def cleanup(self):
-        plt.close(self._window)
+        phase = self.inputs['phase'].get()
+        return phase is not None
 
     @classmethod
     def from_dict(cls, params):

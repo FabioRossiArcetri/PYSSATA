@@ -133,14 +133,6 @@ class IFunc:
         self.complex_dtype = complex_dtype_list[self._precision]
         self.influence_function = self._influence_function.astype(self.dtype)
         
-    def cleanup(self):
-        self.free()
-
-    def free(self):
-        del self._influence_function
-        del self._mask_inf_func
-        del self._idx_inf_func
-
     def save(self, filename, hdr=None):
         hdr = hdr if hdr is not None else fits.Header()
         hdr['VERSION'] = 1
@@ -189,6 +181,4 @@ class IFunc:
         p.read(filename)
         return p
 
-    def revision_track(self):
-        return '$Rev$'
 

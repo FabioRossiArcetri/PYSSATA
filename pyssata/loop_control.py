@@ -128,6 +128,7 @@ class LoopControl:
             self._nframes_cnt %= nframes_elapsed
             if nframes_good:
                 msg = f"{1.0 / (np.sum(self._elapsed) / nframes_elapsed):.2f} Hz"
+                print(f't={self._t / self._time_resolution:.6f} {msg}')
 
 #        if not self._quiet: # Verbose?
 #            print(f't={self._t / self._time_resolution:.6f} {msg}')
@@ -149,10 +150,3 @@ class LoopControl:
         # Placeholder for profiling end and report
         pass
 
-    def cleanup(self):
-        self._elapsed = None
-        self._list = None
-        self._stop_on_data = None
-
-    def revision_track(self):
-        return '$Rev$'

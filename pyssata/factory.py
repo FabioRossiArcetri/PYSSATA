@@ -5,7 +5,6 @@ from pyssata.calib_manager import CalibManager
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.ifunc import IFunc
 
-from pyssata.processing_objects.ccd import CCD
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 from pyssata.processing_objects.processing_container import ProcessingContainer
 from pyssata.processing_objects.int_control import IntControl
@@ -15,6 +14,7 @@ from pyssata import xp
 from pyssata import global_precision
 from pyssata import float_dtype_list
 from pyssata import complex_dtype_list
+
 
 class Factory:
     def __init__(self, params, NOCM=False, precision=None):
@@ -432,44 +432,6 @@ class Factory:
             cm.apply_properties(params)
 
         return cm
-
-    def get_ccd(self, ccd_params, wfs_params=None):
-        """
-        Create a CCD processing object.
-
-        Parameters:
-        ccd_params (dict): Dictionary of parameters
-        wfs_params (dict, optional): Dictionary of pyramid/SH parameters. Required for certain 'auto' keywords
-
-        Returns:
-        CCD: CCD processing object
-        """
-        params = self.ensure_dictionary(ccd_params)
-
-        if wfs_params:
-            params = CCD.auto_params_management(self._main, wfs_params, ccd_params)
-
-        name = self.extract(params, 'name', default=None, optional=True)
-        sky_bg_norm = self.extract(params, 'sky_bg_norm', default=None, optional=True)
-        pixelGains_tag = self.extract(params, 'pixelGains_tag', default=None, optional=True)
-        charge_diffusion = self.extract(params, 'charge_diffusion', default=None, optional=True)
-        charge_diffusion_fwhm = self.extract(params, 'charge_diffusion_fwhm', default=None, optional=True)
-
-        sz = params.pop('size')
-
-        ccd = CCD(sz)
-        if charge_diffusion is not None:
-            ccd.charge_diffusion = charge_diffusion
-        if charge_diffusion_fwhm is not None:
-            ccd.charge_diff_fwhm = charge_diffusion_fwhm
-
-        if pixelGains_tag is not None:
-            pixelGains = self._cm.read_data(pixelGains_tag)
-            ccd.pixelGains = pixelGains
-
-        self.apply_global_params(ccd)
-        ccd.apply_properties(params)
-        return ccd
 
     def get_ch2ndcontrol(self, params_pyr1, params_pyr2):
         """
@@ -2330,97 +2292,7 @@ class Factory:
         sh_tilt = ShTilt(params, params_tilt, self._main, tiltWavelengthInNm, xyTilt, qe_factor)
         return sh_tilt
 
-    def get_modulated_pyramid(self, params):
-        """
-        Builds a `modulated_pyramid` processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters        
-
-        Returns:
-        ModulatedPyramid : A new `modulated_pyramid` processing object
-        """
-        if 'xyTilt' in params:
-            pyr = self.get_pyr_tilt(params)
-            return pyr
-        
-        params = self.ensure_dictionary(params)
-
-        DpupPix = self._main['pixel_pupil']
-        pixel_pitch = self._main['pixel_pitch']
-        wavelengthInNm = params.pop('wavelengthInNm')
-
-        FoV = params.pop('fov')
-        pup_diam = params.pop('pup_diam')
-        ccd_side = params.pop('output_resolution')
-        fov_errinf = self.extract(params, 'fov_errinf', default=0.5, optional=True)
-        fov_errsup = self.extract(params, 'fov_errsup', default=2, optional=True)
-        pup_dist = self.extract(params, 'pup_dist', default=None)
-        pup_margin = self.extract(params, 'pup_margin', default=2, optional=True)
-        fft_res = self.extract(params, 'fft_res', default=3.0, optional=True)
-        fp_obs = self.extract(params, 'fp_obs', default=None, optional=True)
-        pyr_tlt_coeff = self.extract(params, 'pyr_tlt_coeff', default=None, optional=True)
-        pyr_edge_def_ld = self.extract(params, 'pyrEdgeDefLd', default=0.0, optional=True)
-        pyr_tip_def_ld = self.extract(params, 'pyrTipDefLd', default=0.0, optional=True)
-        pyr_tip_maya_ld = self.extract(params, 'pyrTipMayaLd', default=0.0, optional=True)
-        min_pup_dist = self.extract(params, 'min_pup_dist', default=None, optional=True)
-
-        result = ModulatedPyramid.calc_geometry(DpupPix, pixel_pitch, wavelengthInNm, FoV, pup_diam, ccd_side,
-                                                fov_errinf=fov_errinf, fov_errsup=fov_errsup, pup_dist=pup_dist, pup_margin=pup_margin,
-                                                fft_res=fft_res, min_pup_dist=min_pup_dist, NOTEST=True)
-
-        wavelengthInNm = result['wavelengthInNm']
-        fov_res = result['fov_res']
-        fp_masking = result['fp_masking']
-        fft_res = result['fft_res']
-        tilt_scale = result['tilt_scale']
-        fft_sampling = result['fft_sampling']
-        fft_padding = result['fft_padding']
-        fft_totsize = result['fft_totsize']
-        toccd_side = result['toccd_side']
-        final_ccd_side = result['final_ccd_side']
-
-        pyr = ModulatedPyramid(wavelengthInNm, fov_res, fp_masking, fft_res, tilt_scale,
-                            fft_sampling, fft_padding, fft_totsize, toccd_side, final_ccd_side,
-                            fp_obs=fp_obs, pyr_tlt_coeff=pyr_tlt_coeff,
-                            pyr_edge_def_ld=pyr_edge_def_ld, pyr_tip_def_ld=pyr_tip_def_ld,
-                            pyr_tip_maya_ld=pyr_tip_maya_ld)
-
-        pup_shifts_std = self.extract(params, 'pup_shifts_std', default=[0, 0], optional=True)
-        pup_shifts_seed = self.extract(params, 'pup_shifts_seed', default=None, optional=True)
-        pup_shifts_cons = self.extract(params, 'pup_shifts_cons', default=None, optional=True)
-        pup_shifts = self.extract(params, 'pup_shifts', default=[0, 0], optional=True)
-
-        if pup_shifts_std and any(pup_shifts_std):
-            pyr.pup_shifts = FuncGenerator('RANDOM', amp=pup_shifts_std, constant=pup_shifts_cons, seed=pup_shifts_seed)
-        elif pup_shifts and any(pup_shifts):
-            pyr.pup_shifts = FuncGenerator('RANDOM', amp=[0., 0.], constant=pup_shifts)
-
-        mod_amp = self.extract(params, 'mod_amp', default=3, optional=True)
-        mod_step_original = self.extract(params, 'mod_step', default=None, optional=True)
-        if mod_step_original:
-            mod_step = mod_step_original
-        else:
-            mod_step = xp.around(max([1., mod_amp / 2. * 8.])) * 2.
-
-        if mod_step_original and mod_step_original < mod_step:
-            print(f' Attention mod_step={mod_step_original} is too low!')
-            print(f' Would you like to change it to {mod_step}? [y,n]')
-            ans = input()
-            if ans.lower() == 'y':
-                print(' mod_step changed.')
-            else:
-                mod_step = mod_step_original
-
-        pyr.mod_amp = mod_amp
-        pyr.mod_step = mod_step
-
-        self.apply_global_params(pyr)
-        pyr.apply_properties(params)
-
-        return pyr
-
-    def get_pyr_tilt(self, params):
+    def get_pyr_tilt(self, params, GPU=None):
         """
         Builds a `pyr_tilt` processing object.
 
@@ -2608,11 +2480,3 @@ class Factory:
         """
         return self._cm
 
-    def revision_track(self):
-        """
-        Returns the revision of the SVN
-
-        Returns:
-        str: SVN revision
-        """
-        return '$Rev$'

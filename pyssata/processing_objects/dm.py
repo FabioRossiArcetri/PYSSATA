@@ -9,7 +9,6 @@ from pyssata.data_objects.layer import Layer
 from pyssata.data_objects.pupilstop import Pupilstop
 from pyssata.base_processing_obj import BaseProcessingObj
 
-
 class DM(BaseProcessingObj):
     def __init__(self,
                  pixel_pitch: float,
@@ -26,8 +25,6 @@ class DM(BaseProcessingObj):
                  pupilstop: Pupilstop=None,
                  ):
         super().__init__()
-        self._command = None
-        self.inputs['in_command'] = InputValue(object=self._command, type=BaseValue)
 
         mask = None
         if pupilstop:
@@ -50,6 +47,8 @@ class DM(BaseProcessingObj):
         
         # sign is -1 to take into account the reflection in the propagation
         self._sign = -1
+        self.inputs['in_command'] = InputValue(type=BaseValue)
+        self.outputs['out_layer'] = self._layer
 
         # Integrator control workaround
         self._history = None
@@ -57,7 +56,8 @@ class DM(BaseProcessingObj):
         self._gain = 0.5
     
     def compute_shape(self):
-        commands = self._command.value
+        commands_input = self.inputs['in_command'].get()
+        commands = commands_input.value
 
         if self._history is None:
             self._history = [commands*0] * (self._delay+1)
@@ -67,7 +67,6 @@ class DM(BaseProcessingObj):
         self._integrated_commands += self._history[-(self._delay+1)]
 
         commands = self._integrated_commands * self._gain
-
 
         temp_matrix = xp.zeros(self._layer.size, dtype=self.dtype)
         
@@ -83,21 +82,22 @@ class DM(BaseProcessingObj):
         self._layer.phaseInNm = temp_matrix
 
     def trigger(self, t):
+        command = self.inputs['in_command'].get()
         if self._verbose:
             print(f"time: {self.t_to_seconds(t)}")
-            print(f"command generation time: {self.t_to_seconds(self._command.generation_time)}")
-            commands = self._command.value
+            print(f"command generation time: {self.t_to_seconds(command.generation_time)}")
+            commands = command.value
             
             if commands.size > 0:
                 print(f"first {min(6, commands.size)} command values: {commands[:min(5, commands.size)]}")
         
-        if self._command.generation_time == t:
+        if command.generation_time == t:
             if self._verbose:
                 print("---> command applied to DM")
             self.compute_shape()
             self._layer.generation_time = t
         elif self._verbose:
-            print(f"command not applied to DM, command generation time: {self._command.generation_time} is not equal to {t}")
+            print(f"command not applied to DM, command generation time: {command.generation_time} is not equal to {t}")
     
     # Getters and Setters for the attributes
     @property
@@ -119,14 +119,6 @@ class DM(BaseProcessingObj):
     @property
     def out_layer(self):
         return self._layer
-
-    @property
-    def in_command(self):
-        return self._command
-
-    @in_command.setter
-    def in_command(self, value):
-        self._command = value
 
     @property
     def size(self):
@@ -156,22 +148,10 @@ class DM(BaseProcessingObj):
     def magnification(self, value):
         self._layer.magnification = value
 
-    def cleanup(self):
-        if self._if_commands is not None:
-            del self._if_commands
-        self._ifunc.cleanup()
-        self._layer.cleanup()
-        self._command.cleanup()
-        super().cleanup()
-        if self._verbose:
-            print("DM has been cleaned up.")
-
     def run_check(self, time_step, errmsg=""):
-        if self._command is None:
+        commands_input = self.inputs['in_command'].get()
+        if commands_input is None:
             errmsg += f"{self.repr()} No input command defined"
         
-        return self._command is not None and self._layer is not None and self._ifunc is not None
-    
-    @staticmethod
-    def revision_track():
-        return "$Rev$"
+        return commands_input is not None and self._layer is not None and self._ifunc is not None
+

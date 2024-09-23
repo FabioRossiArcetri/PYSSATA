@@ -63,14 +63,8 @@ class Cheat(BaseProcessingObj):
             props['generation_time'] = self.generation_time
         return props
 
-    def revision_track(self):
-        return '$Rev$'
-
     def run_check(self, time_step):
         return True
-
-    def cleanup(self):
-        super().cleanup()
 
     def save(self, filename, hdr):
         hdr['VERSION'] = 1

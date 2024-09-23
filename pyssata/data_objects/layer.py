@@ -48,9 +48,6 @@ class Layer(ElectricField):
     def magnification(self, value):
         self._magnification = value
 
-    def cleanup(self):
-        super().cleanup()
-
     def save(self, filename, hdr=None):
         if hdr is None:
             hdr = fits.Header()
@@ -77,5 +74,3 @@ class Layer(ElectricField):
         layer.read(filename, hdr)
         return layer
 
-    def revision_track(self):
-        return '$Rev$'

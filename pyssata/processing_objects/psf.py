@@ -29,20 +29,10 @@ class PSF(BaseProcessingObj):
         self._intsr = 0.0
         self._count = 0
 
+        self.inputs['in_ef'] = InputValue(type=ElectricField)
+        self.outputs['out_sr'] = self._sr
+        self.outputs['out_psf'] = self._psf
         self.reset_integration()
-        self.inputs['in_ef'] = InputValue(object=self._in_ef, type=ElectricField)
-
-    @property
-    def in_ef(self):
-        return self._in_ef
-
-    @in_ef.setter
-    def in_ef(self, in_ef):
-        self._in_ef = in_ef
-        s = [dim * self._nd for dim in in_ef.size]
-        self._psf.value = xp.zeros(s, dtype=self.dtype)
-        self._int_psf.value = xp.zeros(s, dtype=self.dtype)
-        self._ref = None
 
     @property
     def wavelengthInNm(self):
@@ -86,7 +76,8 @@ class PSF(BaseProcessingObj):
 
     @property
     def size(self):
-        return self._in_ef.size if self._in_ef else None
+        in_ef = self.inputs['in_ef'].get()
+        return in_ef.size if in_ef else None
 
     @property
     def out_ref(self):
@@ -97,30 +88,41 @@ class PSF(BaseProcessingObj):
         return self._count
 
     def run_check(self, time_step, errmsg=''):
-        if not self._in_ef:
+        in_ef = self.inputs['in_ef'].get()
+        if not in_ef:
             errmsg += ' Input intensity object has not been set'
         if self._wavelengthInNm == 0:
             errmsg += ' PSF wavelength is zero'
-        return bool(self._in_ef) and (self._wavelengthInNm > 0)
+        return bool(in_ef) and (self._wavelengthInNm > 0)
 
     def reset_integration(self):
         self._count = 0
-        if self._in_ef:
+        in_ef = self.inputs['in_ef'].get()
+        if in_ef:
             self._int_psf.value *= 0
         self._intsr = 0
 
     def trigger(self, t):
-        if self._in_ef and self._in_ef.generation_time == t:
+        in_ef = self.inputs['in_ef'].get()
+        
+        if in_ef and in_ef.generation_time == t:
+
+            if self._psf.value is None:
+                s = [dim * self._nd for dim in in_ef.size]
+                self._psf.value = xp.zeros(s, dtype=self.dtype)
+                self._int_psf.value = xp.zeros(s, dtype=self.dtype)
+                self._ref = None
+        
             if self.t_to_seconds(t) >= self._start_time:
                 self._count += 1
 
-            s = [np.around(dim * self._nd) for dim in self._in_ef.size]
+            s = [np.around(dim * self._nd) for dim in in_ef.size]
 
             if not self._ref:
                 self._ref = Intensity(s[0], s[1])
-                self._ref.i = calc_psf(self._in_ef.A * 0.0, self._in_ef.A, imwidth=s[0], normalize=True)
+                self._ref.i = calc_psf(in_ef.A * 0.0, in_ef.A, imwidth=s[0], normalize=True)
 
-            self._psf.value = calc_psf(self._in_ef.phi_at_lambda(self._wavelengthInNm), self._in_ef.A, imwidth=s[0], normalize=True)
+            self._psf.value = calc_psf(in_ef.phi_at_lambda(self._wavelengthInNm), in_ef.A, imwidth=s[0], normalize=True)
             if self.t_to_seconds(t) >= self._start_time:
                 self._int_psf.value += self._psf.value
 
@@ -136,9 +138,3 @@ class PSF(BaseProcessingObj):
             if self.t_to_seconds(t) >= self._start_time:
                 self._int_sr.generation_time = t
 
-    @staticmethod
-    def revision_track():
-        return '$Rev$'
-
-    def cleanup(self):
-        pass

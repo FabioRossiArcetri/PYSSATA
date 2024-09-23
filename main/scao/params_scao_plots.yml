@@ -9,7 +9,7 @@ main:
   time_step:         0.001                  # [s] Simulation time step
   store:                                   # Dict of data products to store, 'name': 'output'
     sr: 'psf.out_sr'
-    res_ef: 'pyramid.in_ef'
+    res_ef: 'prop.on_axis_source'
 
 
 seeing:
@@ -60,6 +60,7 @@ prop:
                   'dm.out_layer']
   
 pyramid:
+  class:             'ModulatedPyramid'
   pup_diam:          30.                     # Pupil diameter in subaps.
   pup_dist:          36.                     # Separation between pupil centers in subaps.
   fov:               2.0                     # Requested field-of-view [arcsec]
@@ -71,6 +72,7 @@ pyramid:
 
 
 detector:
+  class:             'CCD'
   size:              [80,80]                 # Detector size in pixels
   dt:                0.001                   # [s] Detector integration time
   bandw:             300                     # [nm] Sensor bandwidth
@@ -125,7 +127,7 @@ psf:
   nd:                8                    # padding coefficient for PSF computation
   start_time:        0.05                # PSF integration start time
   inputs:
-      in_ef:  'pyramid.in_ef'
+      in_ef:  'prop.on_axis_source'
 
 sc_disp:
   class:            'SlopecDisplay'

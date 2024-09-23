@@ -6,7 +6,7 @@ from astropy.io import fits
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.ef import ElectricField
 from pyssata.lib.layers2pupil_ef import layers2pupil_ef
-from pyssata.connections import InputList, OutputValue
+from pyssata.connections import InputList
 from pyssata.data_objects.layer import Layer
 
 class AtmoPropagation(BaseProcessingObj):
@@ -39,10 +39,9 @@ class AtmoPropagation(BaseProcessingObj):
 
         for name, source in source_dict.items():
             self.add_source(name, source)
-            self.outputs[name] = OutputValue(object=self._pupil_dict[name], type=ElectricField)
-            setattr(self, name, self._pupil_dict[name])   # TODO it will be removed when output get/set methods will be used
+            self.outputs[name] = self._pupil_dict[name]
             
-        self.inputs['layer_list'] = InputList(object=self.layer_list, type=Layer)
+        self.inputs['layer_list'] = InputList(type=Layer)
 
     def add_source(self, name, source):
         ef = ElectricField(self._pixel_pupil, self._pixel_pupil, self._pixel_pitch)
@@ -52,15 +51,6 @@ class AtmoPropagation(BaseProcessingObj):
     @property
     def pupil_dict(self):
         return self._pupil_dict
-
-    @property
-    def layer_list(self):
-        return self._layer_list
-
-    @layer_list.setter
-    def layer_list(self, layer_list):
-        self._layer_list = layer_list
-        self._propagators = None
 
     @property
     def wavelengthInNm(self):
@@ -83,19 +73,21 @@ class AtmoPropagation(BaseProcessingObj):
    
         if not self._propagators:
             
-            nlayers = len(self._layer_list)
+            layer_list = self.inputs['layer_list'].get()
+            
+            nlayers = len(layer_list)
             self._propagators = []
 
-            height_layers = xp.array([layer.height for layer in self._layer_list], dtype=self.dtype)
+            height_layers = xp.array([layer.height for layer in layer_list], dtype=self.dtype)
             sorted_heights = xp.sort(height_layers)
             if not (xp.allclose(height_layers, sorted_heights) or xp.allclose(height_layers, sorted_heights[::-1])):
                 raise ValueError('Layers must be sorted from highest to lowest or from lowest to highest')
 
             for j in range(nlayers):
                 if j < nlayers - 1:
-                    diff_height_layer = self._layer_list[j].height - self._layer_list[j + 1].height
+                    diff_height_layer = layer_list[j].height - layer_list[j + 1].height
                 else:
-                    diff_height_layer = self._layer_list[j].height
+                    diff_height_layer = layer_list[j].height
                 
                 side = self._pixel_pupil
                 diameter = self._pixel_pupil * self._pixel_pitch
@@ -112,13 +104,15 @@ class AtmoPropagation(BaseProcessingObj):
         magnification_list = self._magnification_list if self._magnification_list else None
         pupil_position = xp.array(self._pupil_position, dtype=self.dtype) if xp.any(xp.array(self._pupil_position, dtype=self.dtype)) else None
 
+        layer_list = self.inputs['layer_list'].get()
+
         for name, source in self._source_dict.items():
             height_star = source.height
             polar_coordinate_star = source.polar_coordinate
             pupil = self._pupil_dict[name]
 
             pupil.reset()
-            layers2pupil_ef(self._layer_list, height_star, polar_coordinate_star,
+            layers2pupil_ef(layer_list, height_star, polar_coordinate_star,
                             update_ef=pupil, shiftXY_list=shiftXY_list,
                             rotAnglePhInDeg_list=rotAnglePhInDeg_list, magnify_list=magnification_list,
                             pupil_position=pupil_position, doFresnel=self._doFresnel,
@@ -129,21 +123,12 @@ class AtmoPropagation(BaseProcessingObj):
     def trigger(self, t):
         self.propagate(t)
 
-    def add_layer_to_layer_list(self, layer):
-        self._layer_list.append(layer)
-        self._shiftXY_list.append(layer.shiftXYinPixel if hasattr(layer, 'shiftXYinPixel') else [0, 0])
-        self._rotAnglePhInDeg_list.append(layer.rotInDeg if hasattr(layer, 'rotInDeg') else 0)
-        self._magnification_list.append(max(layer.magnification, 1.0) if hasattr(layer, 'magnification') else 1.0)
-        self._propagators = None
-
-    def add_layer(self, layer):
-        self.add_layer_to_layer_list(layer)
-
     def run_check(self, time_step):
         # TODO here for no better place, we need something like a "setup()" method called before the loop starts
-        self._shiftXY_list = [layer.shiftXYinPixel if hasattr(layer, 'shiftXYinPixel') else [0, 0] for layer in self.layer_list]
-        self._rotAnglePhInDeg_list = [layer.rotInDeg if hasattr(layer, 'rotInDeg') else 0 for layer in self.layer_list]
-        self._magnification_list = [max(layer.magnification, 1.0) if hasattr(layer, 'magnification') else 1.0 for layer in self.layer_list]
+        layer_list = self.inputs['layer_list'].get()
+        self._shiftXY_list = [layer.shiftXYinPixel if hasattr(layer, 'shiftXYinPixel') else [0, 0] for layer in layer_list]
+        self._rotAnglePhInDeg_list = [layer.rotInDeg if hasattr(layer, 'rotInDeg') else 0 for layer in layer_list]
+        self._magnification_list = [max(layer.magnification, 1.0) if hasattr(layer, 'magnification') else 1.0 for layer in layer_list]
 
         errmsg = ''
         if not (len(self._source_dict) > 0):
@@ -155,21 +140,9 @@ class AtmoPropagation(BaseProcessingObj):
         if not (self._pixel_pitch > 0):
             errmsg += 'pixel pitch <= 0'
         return (len(self._source_dict) > 0 and
-                len(self._layer_list) > 0 and
+                len(layer_list) > 0 and
                 self._pixel_pupil > 0 and
                 self._pixel_pitch > 0), errmsg
-
-    def cleanup(self):
-        self._source_dict.clear()
-        self._pupil_list.clear()
-        self._layer_list.clear()
-        self._shiftXY_list.clear()
-        self._rotAnglePhInDeg_list.clear()
-        self._magnification_list.clear()
-
-        super().cleanup()
-        if self._verbose:
-            print('Atmo_Propagation has been cleaned up.')
 
     def save(self, filename):
         hdr = fits.Header()

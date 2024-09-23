@@ -68,7 +68,3 @@ class ProcessingContainer(BaseProcessingObj):
                 ok = False
         return ok
 
-    def cleanup(self):
-        for obj in self._objs.values():
-            obj.cleanup()
-        super().cleanup()

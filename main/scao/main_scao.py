@@ -1,5 +1,5 @@
 import pyssata
-pyssata.init(0)
+pyssata.init(1)
 from pyssata.simul import Simul
 
 import cProfile
@@ -14,4 +14,4 @@ def main():
 if __name__ == '__main__':
     cProfile.run('main()', 'PYSSATA_stats') # , 
     p = pstats.Stats('PYSSATA_stats')
-    p.strip_dirs().sort_stats(-1).print_stats(10)
+    p.strip_dirs().sort_stats('cumtime').print_stats(50)

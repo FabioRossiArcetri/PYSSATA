@@ -216,13 +216,3 @@ class Datastore(BaseProcessingObj):
     def run_check(self, time_step, errmsg=''):
         return True
 
-    def cleanup(self, destroy_items=False):
-        if destroy_items:
-            for item in self._items.values():
-                if item:
-                    item.cleanup()
-        self._storage.clear()
-        self._items.clear()
-        super().cleanup()
-        if self._verbose:
-            print('Datastore has been cleaned up.')
