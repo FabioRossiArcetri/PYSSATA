@@ -78,7 +78,7 @@ class BaseTimeObj:
 
         ss = f"{float(seconds):.9f}".rstrip('0').rstrip('.')
         if '.' not in ss:
-            ss += '.'
+            ss += '.0'
 
         dotpos = ss.find('.')
         intpart = ss[:dotpos]
@@ -105,5 +105,3 @@ class BaseTimeObj:
     def get_properties_list(self):
         return vars(self)
 
-    def cleanup(self):
-        pass

@@ -16,20 +16,11 @@ class SlopecDisplay(BaseProcessingObj):
 
         self._disp_factor = disp_factor
         self._windows = 21
-        self._slopec = None
         self._title = ''
         self._do_image_show = False
         self._circle_disp = 0
         self.fig = self.ax = None
-        self.inputs['slopec'] = InputValue(object=self._slopec, type=Slopec)
-
-    @property
-    def slopec(self):
-        return self._slopec
-
-    @slopec.setter
-    def slopec(self, slopec):
-        self._slopec = slopec
+        self.inputs['slopec'] = InputValue(type=Slopec)
 
     @property
     def disp_factor(self):
@@ -72,7 +63,8 @@ class SlopecDisplay(BaseProcessingObj):
         self._circle_disp = circle_disp
 
     def trigger(self, t):
-        s = self._slopec.out_slopes
+        slopec = self.inputs['slopec'].get()
+        s = slopec.out_slopes
         if s.generation_time == t:
             # TODO - ModalAnalysisSlopec not available yet
             # if isinstance(self._slopec, ModalAnalysisSlopec):
@@ -87,8 +79,8 @@ class SlopecDisplay(BaseProcessingObj):
             #else:
                 sx = s.xslopes
                 sy = s.yslopes
-                if isinstance(self._slopec, PyrSlopec):
-                    map_data = self._slopec.pupdata.ind_pup[:, 1]
+                if isinstance(slopec, PyrSlopec):
+                    map_data = slopec.pupdata.ind_pup[:, 1]
                     slope_side = None  # Auto scaled
 #                TODO --- these SlopeC are not available yet
 #                elif isinstance(self._slopec, (IdealWfsSlopec, ShSlopec, ShSlopec)):
@@ -102,15 +94,13 @@ class SlopecDisplay(BaseProcessingObj):
                 else:
                     TARGET = None
                 title = self._title if self._title else 'Slope Display'
-                _, _, _, self.fig, self.ax = pupil_display(cpuArray(self._slopec.in_pixels.pixels), cpuArray(sx), cpuArray(sy), 
-                                                           cpuArray(map_data), self._slopec.in_pixels.pixels.shape[0], title=title, TARGET=TARGET,
+                _, _, _, self.fig, self.ax = pupil_display(cpuArray(slopec.inputs['in_pixels'].get().pixels), cpuArray(sx), cpuArray(sy), 
+                                                           cpuArray(map_data), slopec.inputs['in_pixels'].get().pixels.shape[0], title=title, TARGET=TARGET,
                                                            do_image_show=True)
 
     def run_check(self, time_step):
-        return self._slopec is not None
-
-    def cleanup(self):
-        plt.close(self._windows)
+        slopec = self.inputs['slopec'].get()
+        return slopec is not None
 
     @classmethod
     def from_dict(cls, params):

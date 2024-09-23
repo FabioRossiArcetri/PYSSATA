@@ -26,15 +26,7 @@ class PlotDisplay(BaseProcessingObj):
         self._opened = False
         self._first = True
         self._disp_factor = disp_factor
-        self.inputs['value'] = InputValue(object=self._value, type=BaseValue)
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, val):
-        self._value = val
+        self.inputs['value'] = InputValue(type=BaseValue)
 
     @property
     def histlen(self):
@@ -111,7 +103,9 @@ class PlotDisplay(BaseProcessingObj):
 #        plt.title(self._title)
 
     def trigger(self, t):
-        if self._value is not None and self._value.generation_time == t:
+        value = self.inputs['value'].get()
+        
+        if value is not None and value.generation_time == t:
             if not self._opened:
                 self.set_w()
                 self._opened = True
@@ -121,7 +115,7 @@ class PlotDisplay(BaseProcessingObj):
                 self._history[:-1] = self._history[1:]
                 self._count = n - 1
 
-            self._history[self._count] = self._value.value
+            self._history[self._count] = value.value
             self._count += 1
 
             x = np.arange(self._count)
@@ -149,7 +143,6 @@ class PlotDisplay(BaseProcessingObj):
             # plt.pause(0.01)
 
     def run_check(self, time_step, errmsg=None):
-        return self._value is not None and self._history is not None
+        value = self.inputs['value'].get()
+        return value is not None and self._history is not None
 
-    def cleanup(self):
-        pass

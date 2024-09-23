@@ -86,6 +86,7 @@ class FuncGenerator(BaseProcessingObj):
         self._nmodes = nmodes
         self._output = BaseValue()
         self._active = True
+        self.outputs['output'] = self._output
 
     def trigger(self, t):
         seconds = self.t_to_seconds(t)
@@ -122,17 +123,6 @@ class FuncGenerator(BaseProcessingObj):
             return xp.zeros_like(self._time_hist[0])
         i = xp.around(t / self._loop_dt)
         return self._time_hist[i]
-
-    def cleanup(self):
-        # Cleaning up resources
-        del self._seed
-        del self._constant
-        del self._amp
-        del self._freq
-        del self._offset
-        del self._vect_amplitude
-        del self._time_hist
-        del self._output
 
     # Getters and Setters for the attributes
     @property
@@ -224,6 +214,3 @@ class FuncGenerator(BaseProcessingObj):
 
         return True
 
-    @staticmethod
-    def revision_track():
-        return "$Rev$"

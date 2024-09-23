@@ -40,13 +40,6 @@ class Intensity(BaseDataObj):
     def sum(self, i2, factor=1.0):
         self._i += i2.i * factor
 
-    def revision_track(self):
-        return '$Rev$'
-
-    def cleanup(self):
-        del self._i
-        super().cleanup()
-
     def save(self, filename, hdr):
         hdr = fits.Header()
         hdr.append(('VERSION', 1))

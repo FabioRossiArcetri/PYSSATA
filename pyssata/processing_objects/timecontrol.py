@@ -140,10 +140,3 @@ class TimeControl:
     def state(self, state):
         self._state = state
 
-    @staticmethod
-    def revision_track():
-        return "$Rev$"
-
-    def cleanup(self):
-        del self._comm
-        del self._state

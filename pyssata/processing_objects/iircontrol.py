@@ -2,7 +2,7 @@ import numpy as np
 
 from pyssata import xp
 from pyssata.base_processing_obj import BaseProcessingObj
-from pyssata.connections import InputValue, OutputValue
+from pyssata.connections import InputValue
 from pyssata.processing_objects.timecontrol import TimeControl
 from pyssata.base_value import BaseValue
 from pyssata.lib.compute_comm import compute_comm
@@ -25,8 +25,8 @@ class IIRControl(TimeControl, BaseProcessingObj):
         self._out_comm = BaseValue()
         self._delta_comm = None
 
-        self.inputs['in_delta_comm'] = InputValue(object=self._delta_comm, type=np.ndarray)
-        self.outputs['out_comm'] = OutputValue(object=self._out_comm, type=BaseValue)
+        self.inputs['in_delta_comm'] = self.in_delta_comm
+     #   self.outputs['out_comm'] = OutputValue(object=self._out_comm, type=BaseValue)
 
         self._opticalgain = None
         self._og_shaper = None
@@ -202,31 +202,6 @@ class IIRControl(TimeControl, BaseProcessingObj):
 
         if self._verbose:
             print(f"first {min(6, len(self._out_comm.value))} output comm values: {self._out_comm.value[:min(6, len(self._out_comm.value))]}")
-
-    def cleanup(self):
-        del self._ist
-        del self._ost
-        del self._offset
-        del self._deltaCommHistEx
-        del self._commHistEx
-        del self._deltaCommFutureHistEx
-        del self._ostMatEx
-        del self._istMatEx
-        del self._bootstrap_ptr
-        del self._og_shaper
-        del self._time_gmt_imm
-        del self._gain_gmt_imm
-        del self._modal_start_time
-        self._delta_comm.cleanup()
-        self._out_comm.cleanup()
-        self._iirfilter.cleanup()
-        self._opticalgain.cleanup()
-        super(TimeControl, self).cleanup()
-        super(BaseProcessingObj, self).cleanup()
-
-    @staticmethod
-    def revision_track():
-        return "$Rev$"
 
     def run_check(self, time_step, errmsg=""):
         return True

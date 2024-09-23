@@ -13,6 +13,7 @@ from pyssata.processing_objects.datastore import Datastore
 import yaml
 import io
 
+
 class Simul():
     '''
     Simulation organizer
@@ -42,18 +43,14 @@ class Simul():
             hints.update(typing.get_type_hints(getattr(x, '__init__')))
         return hints
     
-    def _handle_lists(self, parname, f, lst):
-        if parname.endswith('_list'):
-            return parname[:-5], [f(y) for y in lst]
-    
-    def _resolve(self, x):
-        return self.resolve_output(x)
-
     def resolve_output(self, output_name):
         if '.' in output_name:
             obj_name, attr_name = output_name.split('.')
-            # TODO will be replaced by input/output get/set methods
-            output_ref = getattr(self.objs[obj_name], attr_name)
+            if not obj_name in self.objs:
+                raise ValueError(f'Object {obj_name} does not exist')
+            if not attr_name in self.objs[obj_name].outputs:
+                raise ValueError(f'Object {obj_name} does not define an output with name {attr_name}')
+            output_ref = self.objs[obj_name].outputs[attr_name]
         else:
             output_ref = self.objs[output_name]
         return output_ref
@@ -69,76 +66,59 @@ class Simul():
         cm = CalibManager(main['root_dir'])
         skip_pars = 'class inputs'.split()
 
-        # Initialize housekeeping objects
-        factory = Factory(params['main'])
-
-        # Initialize processing objects (waiting for porting of the relevant constructors)
-        pyr_params = params['pyramid'].copy()
-        ccd_params = params['detector'].copy()
-        if 'inputs' in pyr_params:
-            del pyr_params['inputs']
-        if 'inputs' in ccd_params:
-            del ccd_params['inputs']
-        pyramid = factory.get_modulated_pyramid(pyr_params)
-        detector = factory.get_ccd(ccd_params)
-
         for key, pars in params.items():
-            if key in 'pupilstop slopec psf on_axis_source prop atmo seeing wind_speed wind_direction control dm rec sc_disp sr_disp ph_disp dm_disp psf_disp'.split():
-                print(key, pars)
-                try:
-                    classname = pars['class']
-                except KeyError:
-                    raise KeyError(f'Object {key} does not define the "class" parameter')
+            if key == 'main':
+                continue
+            print(key, pars)
+            try:
+                classname = pars['class']
+            except KeyError:
+                raise KeyError(f'Object {key} does not define the "class" parameter')
 
-                klass = self._import_class(classname)
-                args = inspect.getfullargspec(getattr(klass, '__init__')).args
-                hints = self._get_type_hints(klass)
+            klass = self._import_class(classname)
+            args = inspect.getfullargspec(getattr(klass, '__init__')).args
+            hints = self._get_type_hints(klass)
 
-                pars2 = {}
-                for name, value in pars.items():
-                    if name in skip_pars:
-                        continue
+            pars2 = {}
+            for name, value in pars.items():
+                if name in skip_pars:
+                    continue
 
-                    if name.endswith('_list_ref'):
-                        data = [self.resolve_output(x) for x in value]
-                        pars2[name[:-4]] = data
+                if name.endswith('_list_ref'):
+                    data = [self.resolve_output(x) for x in value]
+                    pars2[name[:-4]] = data
 
-                    elif name.endswith('_dict_ref'):
-                        data = {x : self.resolve_output(x) for x in value}
-                        pars2[name[:-4]] = data
+                elif name.endswith('_dict_ref'):
+                    data = {x : self.resolve_output(x) for x in value}
+                    pars2[name[:-4]] = data
 
-                    elif name.endswith('_ref'):
-                        data = self.resolve_output(value)
-                        pars2[name[:-4]] = data
+                elif name.endswith('_ref'):
+                    data = self.resolve_output(value)
+                    pars2[name[:-4]] = data
 
-                    elif name.endswith('_data'):
-                        data = cm.read_data(value)
-                        pars2[name[:-5]] = data
+                elif name.endswith('_data'):
+                    data = cm.read_data(value)
+                    pars2[name[:-5]] = data
 
-                    elif name.endswith('_object'):
-                        parname = name[:-7]
-                        if parname in hints:
-                            partype = hints[parname]
-                            filename = cm.filename(parname, value)  # TODO use partype instead of parname?
-                            parobj = partype.restore(filename)
-                            pars2[parname] = parobj
-                        else:
-                            raise ValueError(f'No type hint for parameter {parname} of class {classname}')
-
+                elif name.endswith('_object'):
+                    parname = name[:-7]
+                    if parname in hints:
+                        partype = hints[parname]
+                        filename = cm.filename(parname, value)  # TODO use partype instead of parname?
+                        parobj = partype.restore(filename)
+                        pars2[parname] = parobj
                     else:
-                        pars2[name] = value
+                        raise ValueError(f'No type hint for parameter {parname} of class {classname}')
 
-                # Add global and class-specific params if needed
-                my_params = {k: main[k] for k in args if k in main}
-                if 'data_dir' in args:  # TODO special case
-                    my_params['data_dir'] = cm.root_subdir(classname)
-                my_params.update(pars2)
-                self.objs[key] = klass(**my_params)
-            elif key == 'pyramid':
-                self.objs['pyramid'] = pyramid
-            elif key == 'detector':
-                self.objs['detector'] = detector
+                else:
+                    pars2[name] = value
 
+            # Add global and class-specific params if needed
+            my_params = {k: main[k] for k in args if k in main}
+            if 'data_dir' in args:  # TODO special case
+                my_params['data_dir'] = cm.root_subdir(classname)
+            my_params.update(pars2)
+            self.objs[key] = klass(**my_params)
 
     def connect_objects(self, params):
         for dest_object, pars in params.items():
@@ -149,8 +129,9 @@ class Simul():
                     raise ValueError(f'Object {dest_object} does does not have an input called {input_name}')
                 if not isinstance(output_name, (str, list)):
                     raise ValueError(f'Object {dest_object}: invalid input definition type {type(output_name)}')
-
-                wanted_type = self.objs[dest_object].inputs[input_name].type
+                
+                wanted_type = self.objs[dest_object].inputs[input_name].type()
+                
                 if isinstance(output_name, str):
                     output_ref = self.resolve_output(output_name)
                     if not isinstance(output_ref, wanted_type):
@@ -163,8 +144,7 @@ class Simul():
                         if not isinstance(output, wanted_type):
                             raise ValueError(f'Input {input_name}: output {output} is not of type {wanted_type}')
 
-                # TODO will be replaced by input/output get/set methods
-                setattr(self.objs[dest_object], input_name, output_ref)
+                self.objs[dest_object].inputs[input_name].set(output_ref)
 
     def run(self):
         params = {}
@@ -192,14 +172,10 @@ class Simul():
             if isinstance(obj, BaseProcessingObj):
                 if name not in ['control']:
                     loop.add(obj)
-
         loop.add(store)
 
         # Run simulation loop
-        loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'])
-
-        # Add integrated PSF to store
-        store.add(psf.out_int_psf)
+        loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'], speed_report=True)
 
         print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']]) * 100.)}")
 

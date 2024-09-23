@@ -17,6 +17,11 @@ class Slopes(BaseDataObj):
         self._interleave = interleave
         self._pupdata_tag = ''
 
+    # TODO needed to support late SlopeC-derived class initialization
+    # Replace with a full initialization in base class?
+    def resize(self, new_size):
+        self._slopes = xp.zeros(new_size, dtype=self.dtype)
+        
     @property
     def slopes(self):
         return self._slopes
@@ -151,10 +156,3 @@ class Slopes(BaseDataObj):
             s.pupdata_tag = str(hdr['PUPD_TAG']).strip()
         s.read(filename, hdr)
         return s
-
-    def revision_track(self):
-        return '$Rev$'
-
-    def cleanup(self):
-        self._slopes = None
-        super().cleanup()
