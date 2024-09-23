@@ -1,5 +1,5 @@
 import pyssata
-pyssata.init(1)
+pyssata.init(device_idx=1, precision=0)
 from pyssata.simul import Simul
 
 import cProfile
@@ -8,7 +8,7 @@ from pstats import SortKey
 
 def main():
     dir = './'
-    simul = Simul(dir + 'params_scao_plots.yml')
+    simul = Simul(dir + 'params_scao.yml')
     simul.run()
 
 if __name__ == '__main__':

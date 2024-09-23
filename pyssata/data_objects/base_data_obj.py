@@ -4,14 +4,14 @@ from pyssata.base_time_obj import BaseTimeObj
 from pyssata import float_dtype
 
 class BaseDataObj(BaseTimeObj):
-    def __init__(self, precision=None):
+    def __init__(self, target_device_idx=None, precision=None):
         """
         Initialize the base data object.
 
         Parameters:
         precision (int, optional):if None will use the global_precision, otherwise pass 0 for double, 1 for single
         """
-        super().__init__(precision)
+        super().__init__(target_device_idx, precision)
         self._tag = ''        
 
     @property

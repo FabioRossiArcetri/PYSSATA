@@ -5,7 +5,7 @@ from pyssata import global_precision
 from pyssata import float_dtype_list
 from pyssata import complex_dtype_list
 
-def calc_spatialfrequency(dimension, precision=None):
+def calc_spatialfrequency(dimension, target_device_idx=None, precision=None):
     """
     This function returns a square matrix of size [dimension X dimension]
     with the spatial frequencies calculated as row^2 + column^2.

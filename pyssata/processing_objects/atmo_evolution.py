@@ -15,11 +15,11 @@ from pyssata.connections import InputValue
 
 class AtmoEvolution(BaseProcessingObj):
     def __init__(self, L0, pixel_pitch, heights, Cn2, pixel_pupil, data_dir, source_list, wavelengthInNm: float=500.0,
-                 zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed: int=1, precision=None,
+                 zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed: int=1, target_device_idx=None, precision=None,
                  verbose=None, user_defined_phasescreen: str='', force_mcao_fov=False, make_cycle=None,
                  fov_in_m=None, pupil_position=None):
         
-        super().__init__(precision=precision)
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
         
         self._last_position = None
         self._last_t = 0

@@ -1,15 +1,16 @@
 from astropy.io import fits
-from pyssata import global_precision
-from pyssata import float_dtype_list
-from pyssata import complex_dtype_list
+from pyssata import xp, global_precision, default_target_device, default_target_device_idx
+from pyssata import cpu_float_dtype_list, gpu_float_dtype_list
+from pyssata import cpu_complex_dtype_list, gpu_complex_dtype_list
 
 class BaseTimeObj:
-    def __init__(self, precision=None):
+    def __init__(self, target_device_idx=None, precision=None):
         """
         Creates a new base_time object.
 
         Parameters:
         precision (int, optional): if None will use the global_precision, otherwise pass 0 for double, 1 for single
+        target_device_idx (int, optional): if None will use the default_target_device_idx, otherwise pass -1 for cpu, i for GPU of index i
 
         """
         self._time_resolution = int(1e9)
@@ -19,8 +20,20 @@ class BaseTimeObj:
             self._precision = global_precision
         else:
             self._precision = precision
-        self.dtype = float_dtype_list[self._precision]
-        self.complex_dtype = complex_dtype_list[self._precision]
+
+        if target_device_idx is None:
+            self._device_idx = default_target_device_idx
+        else:
+            self._device_idx = target_device_idx
+
+        if self._device_idx is None or not self._device_idx>-1:
+            self._device = default_target_device                # CPU case
+            self.dtype = cpu_float_dtype_list[self._precision]
+            self.complex_dtype = cpu_complex_dtype_list[self._precision]
+        else:
+            self._device = xp.cuda.Device(self._device_idx)      # GPU case
+            self.dtype = gpu_float_dtype_list[self._precision]
+            self.complex_dtype = gpu_complex_dtype_list[self._precision]
 
     @property
     def generation_time(self):
@@ -45,8 +58,15 @@ class BaseTimeObj:
     @precision.setter
     def precision(self, value):
         self._precision = value
-        self.dtype = float_dtype_list[self._precision]
-        self.complex_dtype = complex_dtype_list[self._precision]
+        if self._device_idx is None or not self._device_idx>-1:
+            self._device = default_target_device                # CPU case
+            self.dtype = cpu_float_dtype_list[self._precision]
+            self.complex_dtype = cpu_complex_dtype_list[self._precision]
+        else:
+            self._device = cp.cuda.Device(self._device_idx)      # GPU case
+            self.dtype = gpu_float_dtype_list[self._precision]
+            self.complex_dtype = gpu_complex_dtype_list[self._precision]
+
 
 
     def t_to_seconds(self, t):

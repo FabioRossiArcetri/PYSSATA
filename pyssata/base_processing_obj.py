@@ -4,14 +4,15 @@ from pyssata.base_time_obj import BaseTimeObj
 from pyssata.base_parameter_obj import BaseParameterObj
 
 class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
-    def __init__(self, precision=None):
+    def __init__(self, target_device_idx=None, precision=None):
         """
         Initialize the base processing object.
 
         Parameters:
         precision (int, optional): if None will use the global_precision, otherwise pass 0 for double, 1 for single
+        target_device_idx (int, optional): if None will use the default_target_device_idx, otherwise pass -1 for cpu, i for GPU of index i
         """
-        BaseTimeObj.__init__(self, precision)
+        BaseTimeObj.__init__(self, target_device_idx, precision)
         BaseParameterObj.__init__(self)
         self._verbose = 0
         self._loop_dt = int(0)

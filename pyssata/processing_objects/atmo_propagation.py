@@ -15,11 +15,11 @@ class AtmoPropagation(BaseProcessingObj):
                  source_dict,
                  pixel_pupil: int,
                  pixel_pitch: float,
-                 precision=None,
+                 target_device_idx=None, precision=None,
                  doFresnel: bool=False,
                  wavelengthInNm: float=500.0,
                  pupil_position=(0., 0.)):
-        super().__init__(precision=precision)
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
 
         if doFresnel and wavelengthInNm is None:
             raise ValueError('get_atmo_propagation: wavelengthInNm is required when doFresnel key is set to correctly simulate physical propagation.')
