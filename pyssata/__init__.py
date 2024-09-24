@@ -86,7 +86,8 @@ def init(device_idx=-1, precision=0):
 
 
 def cpuArray(v):
-    if isinstance(v, (np.ndarray, np.float64, np.int64)):
+    print(type(v))
+    if isinstance(v, (np.ndarray, np.float64, np.int64, np.float32)):
         return v
     else:
         # which one is better, xp.asnumpy(v) or v.get() ? almost the same but asnumpy is more general
