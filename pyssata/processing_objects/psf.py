@@ -121,9 +121,9 @@ class PSF(BaseProcessingObj):
 
             if not self._ref:
                 self._ref = Intensity(s[0], s[1])
-                self._ref.i = calc_psf(in_ef.A * 0.0, in_ef.A, imwidth=s[0], normalize=True, xp=self.xp)
+                self._ref.i = calc_psf(in_ef.A * 0.0, in_ef.A, imwidth=s[0], normalize=True, xp=self.xp, complex_dtype=self.complex_dtype)
 
-            self._psf.value = calc_psf(in_ef.phi_at_lambda(self._wavelengthInNm), in_ef.A, imwidth=s[0], normalize=True, xp=self.xp)
+            self._psf.value = calc_psf(in_ef.phi_at_lambda(self._wavelengthInNm), in_ef.A, imwidth=s[0], normalize=True, xp=self.xp, complex_dtype=self.complex_dtype)
             if self.t_to_seconds(t) >= self._start_time:
                 self._int_psf.value += self._psf.value
 
