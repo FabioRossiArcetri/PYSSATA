@@ -1,11 +1,10 @@
 import numpy as np
 
-from pyssata import xp
+from pyssata.base_processing_obj import BaseProcessingObj
 
 from pyssata.lib.calc_loop_delay import calc_loop_delay
 
-
-def compute_comm(filter_obj, input, ist=None, ost=None):
+def compute_comm(filter_obj, input, ist=None, ost=None, xp=None):
     nfilter = filter_obj.num.shape[1]
     ninput = len(input)
 
@@ -49,7 +48,7 @@ def compute_comm(filter_obj, input, ist=None, ost=None):
 
     return output
 
-def online_filter(num, den, input, ost=None, ist=None):
+def online_filter(num, den, input, ost=None, ist=None, xp=None):
     # This function should implement the actual online filtering.
     # The implementation will depend on how the filtering needs to be done.
     # This is a placeholder implementation.
@@ -71,8 +70,11 @@ def online_filter(num, den, input, ost=None, ist=None):
     return output
 
 
-class TimeControl:
-    def __init__(self, delay=0, n=None, type=None, total_length=None):
+class TimeControl(BaseProcessingObj):
+    def __init__(self, delay=0, n=None, type=None, total_length=None, target_device_idx=None, precision=None ):
+
+        super().__init__(target_device_idx=target_device_idx, precision=precision)        
+
         self._delay = delay if delay is not None else 0
         self._n = n
         self._type = type
@@ -80,13 +82,13 @@ class TimeControl:
         if total_length is not None:
             self.set_state_buffer_length(total_length)
         else:
-            self.set_state_buffer_length(int(xp.ceil(self._delay)) + 1)
+            self.set_state_buffer_length(int(self.xp.ceil(self._delay)) + 1)
 
     def set_state_buffer_length(self, total_length):
         self._total_length = total_length
         if self._n is not None and self._type is not None:
-            self._state = xp.zeros((self._n, self._total_length), dtype=self.dtype)
-            self._comm = xp.zeros((self._n, 1), dtype=self.dtype)
+            self._state = self.xp.zeros((self._n, self._total_length), dtype=self.dtype)
+            self._comm = self.xp.zeros((self._n, 1), dtype=self.dtype)
 
     def auto_params_management(self, main_params, control_params, detector_params, dm_params, slopec_params):
         result = control_params.copy()
@@ -103,8 +105,8 @@ class TimeControl:
         return result
 
     def state_update(self, comm):
-        finite_mask = xp.isfinite(comm)
-        if xp.any(finite_mask):
+        finite_mask = self.xp.isfinite(comm)
+        if self.xp.any(finite_mask):
             if self._delay > 0:
                 self._state[:, 1:self._total_length] = self._state[:, 0:self._total_length-1]
 
@@ -129,8 +131,8 @@ class TimeControl:
         if remainder_delay == 0:
             return self._state[:, int(past_step)]
         else:
-            return (remainder_delay * self._state[:, int(xp.ceil(past_step))] +
-                    (1 - remainder_delay) * self._state[:, int(xp.ceil(past_step))-1])
+            return (remainder_delay * self._state[:, int(self.xp.ceil(past_step))] +
+                    (1 - remainder_delay) * self._state[:, int(self.xp.ceil(past_step))-1])
 
     @property
     def comm(self):

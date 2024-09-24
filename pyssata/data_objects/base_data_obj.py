@@ -1,7 +1,6 @@
 from astropy.io import fits
 
 from pyssata.base_time_obj import BaseTimeObj
-from pyssata import float_dtype
 
 class BaseDataObj(BaseTimeObj):
     def __init__(self, target_device_idx=None, precision=None):

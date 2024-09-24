@@ -68,12 +68,14 @@ def init(device_idx=-1, precision=0):
         gpu_complex_dtype_list = [cp.complex128, cp.complex64]
         default_target_device = cp.cuda.Device(default_target_device_idx)
         default_target_device.use()
+        print('Default device is GPU number ', default_target_device_idx)
         # print('Using device: ', cp.cuda.runtime.getDeviceProperties(default_target_device)['name'])
         # attributes = default_target_device.attributes
         # properties = cp.cuda.runtime.getDeviceProperties(default_target_device)
         # print('Number of multiprocessors:', attributes['MultiProcessorCount'])
         # print('Global memory size (GB):', properties['totalGlobalMem'] / (1024**3))
     else:
+        print('Default device is CPU')
         xp = np
 
     float_dtype_list = [xp.float64, xp.float32]

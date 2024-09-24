@@ -1,8 +1,4 @@
-import numpy as np
-
-from pyssata import xp
 from pyssata.lib.make_xy import make_xy
-
 
 def closest(value, array):
     """Find the closest value in the array and return its index."""
@@ -10,7 +6,7 @@ def closest(value, array):
 
 
 def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0, 
-              square=False, inverse=False, centeronpixel=False, get_idx=False):
+              square=False, inverse=False, centeronpixel=False, get_idx=False, xp=None):
     """
     Create a mask array.
 
@@ -35,7 +31,7 @@ def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0,
         obsratio = 0.0
 
     # Generate coordinate grids
-    x, y = make_xy(sampling=np_size, ratio=1.0)
+    x, y = make_xy(sampling=np_size, ratio=1.0, xp=xp)
 
     # Adjust center if centeronpixel is set
     if centeronpixel:

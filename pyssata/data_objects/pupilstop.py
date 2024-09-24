@@ -1,6 +1,3 @@
-import numpy as np
-
-from pyssata import xp
 
 from astropy.io import fits
 
@@ -14,7 +11,7 @@ class Pupilstop(Layer):
     def __init__(self,
                  pixel_pupil: int,
                  pixel_pitch: float,
-                 input_mask: xp.ndarray=None,
+                 input_mask = None,
                  mask_diam: float=1.0,
                  obs_diam: float=None,
                  shiftXYinPixel=(0.0, 0.0),
@@ -30,11 +27,12 @@ class Pupilstop(Layer):
         self._mask_diam = mask_diam
         self._obs_diam = obs_diam
 
-        if input_mask is not None:
-            mask_amp = input_mask
+        if self._input_mask is not None:
+            self._input_mask = self.xp.array(input_mask)
+            mask_amp = self._input_mask
         else:
-            mask_amp = make_mask(pixel_pupil, obs_diam, mask_diam)
-
+            mask_amp = make_mask(pixel_pupil, obs_diam, mask_diam, xp=self.xp)
+        print('mask_amp', type(mask_amp))
         self.A = mask_amp
 
     def save(self, filename, hdr=None):

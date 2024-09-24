@@ -1,6 +1,5 @@
 import numpy as np
 
-from pyssata import xp
 from pyssata import float_dtype
 
 from scipy.ndimage import rotate
@@ -10,7 +9,7 @@ from scipy.interpolate import RegularGridInterpolator
 
 def single_layer2pupil_ef(layer_ef, polar_coordinate, height_source, update_ef=None, shiftXY=None, rotAnglePhInDeg=None,
                           magnify=None, pupil_position=None, temp_ef=None, doFresnel=False, propagator=None,
-                          wavelengthInNm=None, temp_array=None):
+                          wavelengthInNm=None, temp_array=None, xp=None):
     
     height_layer = layer_ef.height
     pixel_pitch = layer_ef.pixel_pitch

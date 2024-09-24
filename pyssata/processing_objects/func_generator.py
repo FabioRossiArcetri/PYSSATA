@@ -1,16 +1,17 @@
 import numpy as np
 
-from pyssata import xp
-
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 
 
 class FuncGenerator(BaseProcessingObj):
     def __init__(self, func_type='SIN', nmodes=None, time_hist=None, psd=None, fr_psd=None, continuous_psd=None, 
-                 constant=None, amp=None, freq=None, offset=None, vect_amplitude=None, 
-                 seed=None, ncycles=None):
-        super().__init__()
+                constant=None, amp=None, freq=None, offset=None, vect_amplitude=None, 
+                seed=None, ncycles=None,
+                target_device_idx=None, 
+                precision=None
+                ):
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
 
         self._type = func_type.upper()
 
@@ -22,7 +23,7 @@ class FuncGenerator(BaseProcessingObj):
 
         if seed is not None:
             if str(seed).strip() == 'auto':
-                seed = xp.around(xp.random.random() * 1e4)
+                seed = self.xp.around(self.xp.random.random() * 1e4)
             self._seed = seed
 
         # Initialize attributes based on the type
@@ -95,7 +96,7 @@ class FuncGenerator(BaseProcessingObj):
             if not self._active:
                 s = 0.0
             else:
-                s = xp.array(self._amp, dtype=self.dtype)*xp.sin(self._freq*2*xp.pi*seconds + self._offset)+xp.array(self._constant, dtype=self.dtype)
+                s = self.xp.array(self._amp, dtype=self.dtype)*self.xp.sin(self._freq*2*self.xp.pi*seconds + self._offset)+self.xp.array(self._constant, dtype=self.dtype)
 
         elif self._type == 'LINEAR':
             if not self._active:
@@ -107,7 +108,7 @@ class FuncGenerator(BaseProcessingObj):
             if not self._active:
                 s = 0.0
             else:
-                s = xp.random.normal(size=len(self._amp)) * self._amp + self._constant
+                s = self.xp.random.normal(size=len(self._amp)) * self._amp + self._constant
 
         elif self._type in ['VIB_HIST', 'VIB_PSD', 'PUSH', 'PUSHPULL', 'TIME_HIST']:
             s = self.get_time_hist_at_time(t)
@@ -120,8 +121,8 @@ class FuncGenerator(BaseProcessingObj):
 
     def get_time_hist_at_time(self, t):
         if not self._active:
-            return xp.zeros_like(self._time_hist[0])
-        i = xp.around(t / self._loop_dt)
+            return self.xp.zeros_like(self._time_hist[0])
+        i = self.xp.around(t / self._loop_dt)
         return self._time_hist[i]
 
     # Getters and Setters for the attributes

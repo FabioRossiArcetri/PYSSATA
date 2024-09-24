@@ -1,10 +1,8 @@
 import numpy as np
 
-from pyssata import xp
-from pyssata import cpuArray
-from pyssata import float_dtype
+from pyssata import cpuArray, float_dtype
 
-def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm_fact=None, threshold=None):
+def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm_fact=None, threshold=None, xp=None):
     """
     Computes the pyramid signals from a CCD frame.
     

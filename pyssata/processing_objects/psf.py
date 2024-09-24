@@ -1,6 +1,3 @@
-import numpy as np
-
-from pyssata import xp
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
@@ -9,13 +6,17 @@ from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.calc_psf import calc_psf
 from pyssata.connections import InputValue
 
+import numpy as np
+
 class PSF(BaseProcessingObj):
     def __init__(self,
                  wavelengthInNm: float,
                  nd: int=1,
-                 start_time: float=0.0):
-
-        super().__init__()
+                 start_time: float=0.0,
+                 target_device_idx: int = None, 
+                 precision: int = None
+                ):
+        super().__init__(target_device_idx=target_device_idx, precision=precision)        
         self._nd = nd
         self._start_time = start_time
         self._wavelengthInNm = wavelengthInNm
@@ -76,7 +77,7 @@ class PSF(BaseProcessingObj):
 
     @property
     def size(self):
-        in_ef = self.inputs['in_ef'].get()
+        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
         return in_ef.size if in_ef else None
 
     @property
@@ -88,7 +89,7 @@ class PSF(BaseProcessingObj):
         return self._count
 
     def run_check(self, time_step, errmsg=''):
-        in_ef = self.inputs['in_ef'].get()
+        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
         if not in_ef:
             errmsg += ' Input intensity object has not been set'
         if self._wavelengthInNm == 0:
@@ -97,20 +98,20 @@ class PSF(BaseProcessingObj):
 
     def reset_integration(self):
         self._count = 0
-        in_ef = self.inputs['in_ef'].get()
+        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
         if in_ef:
             self._int_psf.value *= 0
         self._intsr = 0
 
     def trigger(self, t):
-        in_ef = self.inputs['in_ef'].get()
+        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
         
         if in_ef and in_ef.generation_time == t:
 
             if self._psf.value is None:
                 s = [dim * self._nd for dim in in_ef.size]
-                self._psf.value = xp.zeros(s, dtype=self.dtype)
-                self._int_psf.value = xp.zeros(s, dtype=self.dtype)
+                self._psf.value = self.xp.zeros(s, dtype=self.dtype)
+                self._int_psf.value = self.xp.zeros(s, dtype=self.dtype)
                 self._ref = None
         
             if self.t_to_seconds(t) >= self._start_time:
@@ -120,9 +121,9 @@ class PSF(BaseProcessingObj):
 
             if not self._ref:
                 self._ref = Intensity(s[0], s[1])
-                self._ref.i = calc_psf(in_ef.A * 0.0, in_ef.A, imwidth=s[0], normalize=True)
+                self._ref.i = calc_psf(in_ef.A * 0.0, in_ef.A, imwidth=s[0], normalize=True, xp=self.xp)
 
-            self._psf.value = calc_psf(in_ef.phi_at_lambda(self._wavelengthInNm), in_ef.A, imwidth=s[0], normalize=True)
+            self._psf.value = calc_psf(in_ef.phi_at_lambda(self._wavelengthInNm), in_ef.A, imwidth=s[0], normalize=True, xp=self.xp)
             if self.t_to_seconds(t) >= self._start_time:
                 self._int_psf.value += self._psf.value
 

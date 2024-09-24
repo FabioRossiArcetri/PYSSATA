@@ -1,7 +1,5 @@
 import math
 
-from pyssata import xp
-
 from scipy.stats import gamma
 from scipy.ndimage import convolve
 
@@ -32,8 +30,9 @@ class CCD(BaseProcessingObj):
                  quantum_eff=1.0, pixelGains=None, charge_diffusion=False, charge_diffusion_fwhm=None,
                  wfs=None, pixel_pupil=None, pixel_pitch=None, sky_bg_norm=None, photon_seed=1,
                  readout_seed=2, excess_seed=3, cic_seed=4, excess_delta=1.0, start_time=0,
-                 ADU_gain=None, ADU_bias=400, emccd_gain=None):
-        super().__init__()
+                 ADU_gain=None, ADU_bias=400, emccd_gain=None,
+                 target_device_idx=None, precision=None):
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
 
         if wfs:
             if not isinstance(wfs, ModalAnalysisWFS):
@@ -109,7 +108,7 @@ class CCD(BaseProcessingObj):
         self._darkcurrent_level = darkcurrent_level
         self._background_level = background_level
         self._cic_level = cic_level
-        self._cte_mat = cte_mat if cte_mat is not None else xp.zeros((size[0], size[1], 2), dtype=self.dtype)
+        self._cte_mat = cte_mat if cte_mat is not None else self.xp.zeros((size[0], size[1], 2), dtype=self.dtype)
         self._qe = quantum_eff
 
         self._pixels = Pixels(size[0] // binning, size[1] // binning)
@@ -139,8 +138,8 @@ class CCD(BaseProcessingObj):
         self._normNotUniformQe = False
         self._poidev = None
         self._gaussian_noise = None
-        self._photon_rng = xp.random.default_rng(self._photon_seed)
-        self._readout_rng = xp.random.default_rng(self._readout_seed)
+        self._photon_rng = self.xp.random.default_rng(self._photon_seed)
+        self._readout_rng = self.xp.random.default_rng(self._readout_seed)
 
         self.inputs['in_i'] = InputValue(type=Intensity)
         self.outputs['out_pixels'] = self._pixels
@@ -180,7 +179,7 @@ class CCD(BaseProcessingObj):
 
     def trigger(self, t):
         if self._start_time <= 0 or t >= self._start_time:
-            in_i = self.inputs['in_i'].get()
+            in_i = self.inputs['in_i'].get(self._target_device_idx)
             if in_i.generation_time == t:
                 if self._loop_dt == 0:
                     raise ValueError('ccd object loop_dt property must be set.')
@@ -206,10 +205,10 @@ class CCD(BaseProcessingObj):
             ccd_frame += (self._background_level + self._darkcurrent_level)
 
         if self._cte_noise:
-            ccd_frame = xp.dot(xp.dot(self._cte_mat[:, :, 0], ccd_frame), self._cte_mat[:, :, 1])
+            ccd_frame = self.xp.dot(self.xp.dot(self._cte_mat[:, :, 0], ccd_frame), self._cte_mat[:, :, 1])
 
         if self._cic_noise:
-            ccd_frame += xp.random.binomial(1, self._cic_level, ccd_frame.shape)
+            ccd_frame += self.xp.random.binomial(1, self._cic_level, ccd_frame.shape)
 
         if self._charge_diffusion:
             ccd_frame = convolve(ccd_frame, self._chDiffKernel, mode='constant', cval=0.0)
@@ -233,7 +232,7 @@ class CCD(BaseProcessingObj):
             ccd_frame *= self._one_over_notUniformQeMatrix
 
         if self._photon_noise:
-            ccd_frame = xp.round(ccd_frame * self._ADU_gain) + self._ADU_bias
+            ccd_frame = self.xp.round(ccd_frame * self._ADU_gain) + self._ADU_bias
             ccd_frame[ccd_frame < 0] = 0
 
             if not self._keep_ADU_bias:
@@ -254,15 +253,15 @@ class CCD(BaseProcessingObj):
         out_dim = self._pixels.size
 
         if in_dim[0] != out_dim[0] * self._binning:
-            ccd_frame = xp.zeros(out_dim * self._binning, dtype=self.dtype)
+            ccd_frame = self.xp.zeros(out_dim * self._binning, dtype=self.dtype)
             ccd_frame[:in_dim[0], :in_dim[1]] = self._integrated_i.i
         else:
             ccd_frame = self._integrated_i.i.copy()
 
         if self._binning > 1:
-            tot_ccd_frame = xp.sum(ccd_frame)
+            tot_ccd_frame = self.xp.sum(ccd_frame)
             ccd_frame = ccd_frame.reshape(out_dim[0], self._binning, out_dim[1], self._binning).sum(axis=(1, 3))
-            ccd_frame = ccd_frame * self._binning ** 2 * (tot_ccd_frame / xp.sum(ccd_frame))
+            ccd_frame = ccd_frame * self._binning ** 2 * (tot_ccd_frame / self.xp.sum(ccd_frame))
             self._pixels.pixels = ccd_frame
         else:
             self._pixels.pixels = self._integrated_i.i.copy()
@@ -276,7 +275,7 @@ class CCD(BaseProcessingObj):
 
     def setQuadrantGains(self, quadrantsGains):
         dim2d = self._pixels.pixels.shape
-        pixelGains = xp.zeros(dim2d, dtype=self.dtype)
+        pixelGains = self.xp.zeros(dim2d, dtype=self.dtype)
         for i in range(2):
             for j in range(2):
                 pixelGains[(dim2d[0] // self._binning // 2) * i:(dim2d[0] // self._binning // 2) * (i + 1),
@@ -284,7 +283,7 @@ class CCD(BaseProcessingObj):
         self._pixelGains = pixelGains
 
     def run_check(self, time_step, errmsg=''):
-        in_i = self.inputs['in_i'].get()
+        in_i = self.inputs['in_i'].get(self._target_device_idx)
         if self._loop_dt == 0:
             self._loop_dt = time_step
         if in_i is None:

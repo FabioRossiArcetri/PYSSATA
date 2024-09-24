@@ -1,9 +1,4 @@
-import numpy as np
-
-from pyssata import xp
-from pyssata import global_precision
-from pyssata import float_dtype_list
-from pyssata import complex_dtype_list
+from pyssata.data_objects.base_data_obj import BaseDataObj
 
 from astropy.io import fits
 
@@ -16,11 +11,11 @@ def compute_mixed_ifunc(*args, **kwargs):
     raise NotImplementedError
 
 
-class IFunc:
+class IFunc(BaseDataObj):
     def __init__(self,
-                 ifunc: xp.array=None,
+                 ifunc=None,
                  type_str: str=None,
-                 mask: xp.array=None,
+                 mask=None,
                  npixels: int=None,
                  nzern: int=None,
                  obsratio: float=None,
@@ -30,35 +25,30 @@ class IFunc:
                  idx_modes=None,
                  target_device_idx=None, precision=None
                 ):
+        super().__init__(precision=precision, target_device_idx=target_device_idx)
         self._doZeroPad = False
-        if precision is None:
-            self._precision = global_precision
-        else:
-            self._precision = precision
-        self.dtype = float_dtype_list[self._precision]
-        self.complex_dtype = complex_dtype_list[self._precision]
-
+        
         if ifunc is None:
             if type_str is None:
                 raise ValueError('At least one of ifunc and type must be set')
             if mask is not None:
-                mask = (xp.array(mask, dtype=self.dtype) > 0).astype(self.dtype)
+                mask = (self.xp.array(mask, dtype=self.dtype) > 0).astype(self.dtype)
             if npixels is None:
                 raise ValueError("If ifunc is not set, then npixels must be set!")
             
             type_lower = type_str.lower()
             if type_lower == 'kl':
-                ifunc, mask = compute_kl_ifunc(npixels, nmodes=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask)
+                ifunc, mask = compute_kl_ifunc(npixels, nmodes=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask, xp=self.xp)
             elif type_lower in ['zern', 'zernike']:
-                ifunc, mask = compute_zern_ifunc(npixels, nzern=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask)
+                ifunc, mask = compute_zern_ifunc(npixels, nzern=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask, xp=self.xp)
             elif type_lower == 'mixed':
-                ifunc, mask = compute_mixed_ifunc(npixels, nzern=nzern, nmodes=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask)
+                ifunc, mask = compute_mixed_ifunc(npixels, nzern=nzern, nmodes=nmodes, obsratio=obsratio, diaratio=diaratio, mask=mask, xp=self.xp, adtype=self.dtype)
             else:
                 raise ValueError(f'Invalid ifunc type {type_str}')
         
         self._influence_function = ifunc
         self._mask_inf_func = mask
-        self._idx_inf_func = xp.where(mask)
+        self._idx_inf_func = self.xp.where(mask)
         self.cut(start_mode=start_mode, nmodes=nmodes, idx_modes=idx_modes)
 
     @property
@@ -74,15 +64,15 @@ class IFunc:
             sIfunc = ifunc.shape
 
             if sIfunc[0] < sIfunc[1]:
-                ifuncPad = xp.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=ifunc.dtype)
+                ifuncPad = self.xp.zeros((sIfunc[0], len(self._mask_inf_func)), dtype=ifunc.dtype)
                 ifuncPad[:, self._idx_inf_func] = ifunc
             else:
-                ifuncPad = xp.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=ifunc.dtype)
+                ifuncPad = self.xp.zeros((len(self._mask_inf_func), sIfunc[1]), dtype=ifunc.dtype)
                 ifuncPad[self._idx_inf_func, :] = ifunc
 
             ifunc = ifuncPad
 
-        self._influence_function = xp.array(ifunc, dtype=self.dtype)
+        self._influence_function = self.xp.array(ifunc, dtype=self.dtype)
 
     @property
     def mask_inf_func(self):
@@ -90,8 +80,8 @@ class IFunc:
 
     @mask_inf_func.setter
     def mask_inf_func(self, mask_inf_func):
-        self._mask_inf_func = xp.array(mask_inf_func, dtype=self.dtype)
-        self._idx_inf_func = xp.where(mask_inf_func)
+        self._mask_inf_func = self.xp.array(mask_inf_func, dtype=self.dtype)
+        self._idx_inf_func = self.xp.where(mask_inf_func)
 
     @property
     def idx_inf_func(self):
@@ -117,21 +107,8 @@ class IFunc:
     def zeroPad(self, zeroPad):
         self._doZeroPad = zeroPad
 
-    @property
-    def precision(self):
-        return self._precision
-
     def inverse(self):
-        return xp.linalg.pinv(self._influence_function)
-
-    @precision.setter
-    def precision(self, precision):
-        if self._influence_function.dtype == float_dtype_list[precision]:
-            return
-        self._precision = precision
-        self.dtype = float_dtype_list[self._precision]
-        self.complex_dtype = complex_dtype_list[self._precision]
-        self.influence_function = self._influence_function.astype(self.dtype)
+        return self.xp.linalg.pinv(self._influence_function)
         
     def save(self, filename, hdr=None):
         hdr = hdr if hdr is not None else fits.Header()

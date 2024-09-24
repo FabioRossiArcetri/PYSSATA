@@ -2,8 +2,6 @@ import numpy as np
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
 
-from pyssata import xp
-
 from pyssata.data_objects.ifunc import IFunc
 from pyssata.data_objects.layer import Layer
 from pyssata.data_objects.pupilstop import Pupilstop
@@ -18,13 +16,15 @@ class DM(BaseProcessingObj):
                  nmodes: int=None,
                  nzern: int=None,
                  start_mode: int=None,
-                 idx_modes: xp.ndarray=None,
+                 idx_modes = None,
                  npixels: int=None,
                  obsratio: float=None,
                  diaratio: float=None,
                  pupilstop: Pupilstop=None,
+                 target_device_idx=None, 
+                 precision=None
                  ):
-        super().__init__()
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
 
         mask = None
         if pupilstop:
@@ -41,7 +41,7 @@ class DM(BaseProcessingObj):
         s = self._ifunc.mask_inf_func.shape
         nmodes_if = self._ifunc.size[0]
         
-        self._if_commands = xp.zeros(nmodes_if, dtype=self._ifunc.dtype)
+        self._if_commands = self.xp.zeros(nmodes_if, dtype=self._ifunc.dtype)
         self._layer = Layer(s[0], s[1], pixel_pitch, height)
         self._layer.A = self._ifunc.mask_inf_func
         
@@ -56,7 +56,7 @@ class DM(BaseProcessingObj):
         self._gain = 0.5
     
     def compute_shape(self):
-        commands_input = self.inputs['in_command'].get()
+        commands_input = self.inputs['in_command'].get(self._target_device_idx)
         commands = commands_input.value
 
         if self._history is None:
@@ -68,21 +68,21 @@ class DM(BaseProcessingObj):
 
         commands = self._integrated_commands * self._gain
 
-        temp_matrix = xp.zeros(self._layer.size, dtype=self.dtype)
+        temp_matrix = self.xp.zeros(self._layer.size, dtype=self.dtype)
         
         # Compute phase only if commands vector is not zero
-        if xp.sum(xp.abs(commands)) != 0:
+        if self.xp.sum(self.xp.abs(commands)) != 0:
             if len(commands) > len(self._if_commands):
                 raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
             
             self._if_commands[:len(commands)] = self._sign * commands
             
-            temp_matrix[self._ifunc.idx_inf_func] = xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
+            temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
 
         self._layer.phaseInNm = temp_matrix
 
     def trigger(self, t):
-        command = self.inputs['in_command'].get()
+        command = self.inputs['in_command'].get(self._target_device_idx)
         if self._verbose:
             print(f"time: {self.t_to_seconds(t)}")
             print(f"command generation time: {self.t_to_seconds(command.generation_time)}")
@@ -149,7 +149,7 @@ class DM(BaseProcessingObj):
         self._layer.magnification = value
 
     def run_check(self, time_step, errmsg=""):
-        commands_input = self.inputs['in_command'].get()
+        commands_input = self.inputs['in_command'].get(self._target_device_idx)
         if commands_input is None:
             errmsg += f"{self.repr()} No input command defined"
         

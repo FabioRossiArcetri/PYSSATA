@@ -12,7 +12,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         precision (int, optional): if None will use the global_precision, otherwise pass 0 for double, 1 for single
         target_device_idx (int, optional): if None will use the default_target_device_idx, otherwise pass -1 for cpu, i for GPU of index i
         """
-        BaseTimeObj.__init__(self, target_device_idx, precision)
+        BaseTimeObj.__init__(self, target_device_idx=target_device_idx, precision=precision)
         BaseParameterObj.__init__(self)
         self._verbose = 0
         self._loop_dt = int(0)
@@ -46,11 +46,6 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
     def loop_niters(self, value):
         self._loop_niters = value
 
-    def trigger(self, t):
-        """
-        Must be implemented by derived classes.
-        """
-        raise NotImplementedError("Derived class must implement this method")
 
     def run_check(self, time_step, errmsg=None):
         """

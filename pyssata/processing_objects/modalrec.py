@@ -1,6 +1,3 @@
-import numpy as np
-
-from pyssata import xp
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
@@ -19,14 +16,16 @@ class Modalrec(BaseProcessingObj):
                  projmat: Recmat=None,
                  intmat: Intmat=None,
                  polc: bool=False,
-                 filtmat: xp.ndarray=None,
+                 filtmat = None,
                  identity: bool=False,
                  ncutmodes: int=None,
                  nSlopesToBeDiscarded: int=None,
                  dmNumber: int=0,
                  noProj: bool=False,
+                 target_device_idx=None, 
+                 precision=None
                 ):
-        super().__init__()
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
 
         if polc:
             if identity:
@@ -39,7 +38,7 @@ class Modalrec(BaseProcessingObj):
                     recmat = Recmat()
                     if nmodes is None:
                         raise ValueError('modalrec nmodes key must be set!')
-                    recmat.recmat = xp.identity(nmodes)
+                    recmat.recmat = self.xp.identity(nmodes)
                 elif intmat:
                     if nmodes:
                         nmodes_intmat = intmat.size[0]
@@ -96,7 +95,7 @@ class Modalrec(BaseProcessingObj):
             n = self._recmat.modes2recLayer.shape[0]
             for i in range(n):
                 self._layer_modes_list.append(BaseValue(f'output modes for layer no {i + 1}'))
-                self._layer_idx_list.append(xp.where(self._recmat.modes2recLayer[i, :] > 0)[0])
+                self._layer_idx_list.append(self.xp.where(self._recmat.modes2recLayer[i, :] > 0)[0])
 
     @property
     def recmat(self):
@@ -179,7 +178,7 @@ class Modalrec(BaseProcessingObj):
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
 
-        slopes = self.inputs['in_slopes'].get()
+        slopes = self.inputs['in_slopes'].get(self._target_device_idx)
         
         if slopes.generation_time == t:
             comm_new = []
@@ -230,7 +229,7 @@ class Modalrec(BaseProcessingObj):
 
     def compute_pseudo_ol_slopes(self, t, slopes=None):
         if slopes is None:
-            slopes = self.inputs['in_slopes'].get()
+            slopes = self.inputs['in_slopes'].get(self._target_device_idx)
 
         if isinstance(slopes, Slopes):
             self._pseudo_ol_slopes.slopes = slopes.slopes
@@ -244,7 +243,7 @@ class Modalrec(BaseProcessingObj):
         if not self._intmat:
             raise Exception("POLC requires intmat, but it is not set")
 
-        comm_slopes = self.compute_modes(self._intmat, xp.array(comm, dtype=self.dtype), intmat=True)
+        comm_slopes = self.compute_modes(self._intmat, self.xp.array(comm, dtype=self.dtype), intmat=True)
         self._pseudo_ol_slopes.slopes += comm_slopes
         self._pseudo_ol_slopes.generation_time = t
 
@@ -255,28 +254,28 @@ class Modalrec(BaseProcessingObj):
                 slope_ptr = self._slopes.ptr_slopes
                 if self._verbose:
                     print('Slopes')
-                    print(f"modalrec.compute_modes slope RMS: {xp.sqrt(xp.mean(slope_ptr**2))}")
+                    print(f"modalrec.compute_modes slope RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
             elif isinstance(self._slopes, BaseValue):
                 slope_ptr = self._slopes.ptr_value
                 if self._verbose:
-                    print(f"modalrec.compute_modes base_value RMS: {xp.sqrt(xp.mean(slope_ptr**2))}")
+                    print(f"modalrec.compute_modes base_value RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
             elif isinstance(self._slopes, Cheat):
                 slopes = self._slopes.value
                 slope_ptr = slopes
                 if self._verbose:
-                    print(f"modalrec.compute_modes value from cheat RMS: {xp.sqrt(xp.mean(slope_ptr**2))}")
+                    print(f"modalrec.compute_modes value from cheat RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
 
         if intmat:
             m = slope_ptr @ intmat
         else:
-            matrix.recmat = xp.array(matrix.recmat, dtype=self.dtype)
-            m = slope_ptr @ xp.transpose(matrix.recmat)
+            matrix.recmat = self.xp.array(matrix.recmat, dtype=self.dtype)
+            m = slope_ptr @ self.xp.transpose(matrix.recmat)
 
         return m
 
     def run_check(self, time_step):
         errmsg = []
-        slopes = self.inputs['in_slopes'].get()
+        slopes = self.inputs['in_slopes'].get(self._target_device_idx)
         if not slopes:
             errmsg.append("Slopes object not valid")
         if not self._recmat:

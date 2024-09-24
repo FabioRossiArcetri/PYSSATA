@@ -1,7 +1,3 @@
-import numpy as np
-
-from pyssata import xp
-
 from astropy.io import fits
 
 from pyssata.data_objects.base_data_obj import BaseDataObj
@@ -10,14 +6,14 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 class Pixels(BaseDataObj):
     '''Pixels'''
 
-    def __init__(self, dimx, dimy, bits=16, signed=0):
-        super().__init__()
+    def __init__(self, dimx, dimy, bits=16, signed=0, target_device_idx=None, precision=None):
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
         self._validate_bits(bits)
         self._signed = signed
         self._type = self._get_type(bits, signed)
-        self._pixels = xp.zeros((dimx, dimy), dtype=self.dtype)
+        self._pixels = self.xp.zeros((dimx, dimy), dtype=self.dtype)
         self._bpp = bits
-        self._bytespp = (bits + 7) // 8  # bits xp.arounded to the next multiple of 8
+        self._bytespp = (bits + 7) // 8  # bits self.xp.arounded to the next multiple of 8
 
         super().__init__()
 
@@ -27,14 +23,14 @@ class Pixels(BaseDataObj):
 
     def _get_type(self, bits, signed):
         type_matrix = [
-            [xp.uint8, xp.int8],
-            [xp.uint16, xp.int16],
-            [xp.uint32, xp.int32],
-            [xp.uint32, xp.int32],
-            [xp.uint64, xp.int64],
-            [xp.uint64, xp.int64],
-            [xp.uint64, xp.int64],
-            [xp.uint64, xp.int64]
+            [self.xp.uint8, self.xp.int8],
+            [self.xp.uint16, self.xp.int16],
+            [self.xp.uint32, self.xp.int32],
+            [self.xp.uint32, self.xp.int32],
+            [self.xp.uint64, self.xp.int64],
+            [self.xp.uint64, self.xp.int64],
+            [self.xp.uint64, self.xp.int64],
+            [self.xp.uint64, self.xp.int64]
         ]
         return type_matrix[(bits - 1) // 8][signed]
 
@@ -70,7 +66,7 @@ class Pixels(BaseDataObj):
         self._pixels *= factor
 
     def set_size(self, size):
-        self._pixels = xp.zeros(size, dtype=self.dtype)
+        self._pixels = self.xp.zeros(size, dtype=self.dtype)
 
     def save(self, filename, hdr=None):
         if hdr is None:
