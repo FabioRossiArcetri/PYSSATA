@@ -139,7 +139,6 @@ class LoopControl:
             self.stop_profiling()
 
     def seconds_to_t(self, seconds):
-        print(seconds, self._time_resolution)
         return int(seconds * self._time_resolution)
 
     def start_profiling(self):
