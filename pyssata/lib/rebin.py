@@ -9,11 +9,7 @@
 #
 #########################################################
 
-import numpy as np
-
-from pyssata import xp
-
-def rebin2d(a, shape, sample=False):
+def rebin2d(a, shape, sample=False, xp=None):
     '''
     Replacement of IDL's rebin() function for 2d arrays.
     '''

@@ -103,7 +103,7 @@ class PlotDisplay(BaseProcessingObj):
 #        plt.title(self._title)
 
     def trigger(self, t):
-        value = self.inputs['value'].get()
+        value = self.inputs['value'].get(self._target_device_idx)
         
         if value is not None and value.generation_time == t:
             if not self._opened:
@@ -143,6 +143,6 @@ class PlotDisplay(BaseProcessingObj):
             # plt.pause(0.01)
 
     def run_check(self, time_step, errmsg=None):
-        value = self.inputs['value'].get()
+        value = self.inputs['value'].get(self._target_device_idx)
         return value is not None and self._history is not None
 

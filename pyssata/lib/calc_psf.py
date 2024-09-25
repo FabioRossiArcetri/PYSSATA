@@ -1,10 +1,6 @@
 import numpy as np
 
-from pyssata import xp
-from pyssata import float_dtype
-from pyssata import complex_dtype
-
-def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False):
+def calc_psf(phase, amp, imwidth=None, normalize=False, nocenter=False, xp=None, complex_dtype=None):
     """
     Calculates a PSF from an electrical field phase and amplitude.
 

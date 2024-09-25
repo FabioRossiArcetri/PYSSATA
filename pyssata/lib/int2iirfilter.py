@@ -27,12 +27,10 @@
 from pyssata.data_objects.iirfilter import IIRFilter
 
 import numpy as np
-
-from pyssata import xp
 from pyssata import cpuArray
 from pyssata import float_dtype
 
-def int2iirfilter(gain, ff=None):
+def int2iirfilter(gain, ff=None, xp=None):
     n = len(gain)
     
     if ff is None:

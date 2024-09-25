@@ -27,7 +27,7 @@ def lcm(a,b):
     return (a*b) // gcd(a,b)
 
 
-def toccd(a, newshape, set_total=None):
+def toccd(a, newshape, set_total=None, xp=None):
     '''
     Clone of oaalib's toccd() function, using least common multiple
     to rebin an array similar to openvc's INTER_AREA interpolation.
@@ -47,9 +47,9 @@ def toccd(a, newshape, set_total=None):
     mcmx = lcm(a.shape[0], newshape[0])
     mcmy = lcm(a.shape[1], newshape[1])
 
-    temp = rebin2d(a, (mcmx, a.shape[1]), sample=True)
-    temp = rebin2d(temp, (newshape[0], a.shape[1]))
-    temp = rebin2d(temp, (newshape[0], mcmy), sample=True)
-    rebinned = rebin2d(temp, newshape)
+    temp = rebin2d(a, (mcmx, a.shape[1]), sample=True, xp=xp)
+    temp = rebin2d(temp, (newshape[0], a.shape[1]), xp=xp)
+    temp = rebin2d(temp, (newshape[0], mcmy), sample=True, xp=xp)
+    rebinned = rebin2d(temp, newshape, xp=xp)
 
     return rebinned / rebinned.sum() * set_total

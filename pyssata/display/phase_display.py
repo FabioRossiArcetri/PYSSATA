@@ -72,7 +72,7 @@ class PhaseDisplay(BaseProcessingObj):
 #        plt.title(self._title)
 
     def trigger(self, t):
-        phase = self.inputs['phase'].get()
+        phase = self.inputs['phase'].get(self._target_device_idx)
 
         if phase.generation_time == t:
             frame = cpuArray(phase.phaseInNm * (phase.A > 0).astype(float))
@@ -109,7 +109,7 @@ class PhaseDisplay(BaseProcessingObj):
             # plt.pause(0.01)
 
     def run_check(self, time_step):
-        phase = self.inputs['phase'].get()
+        phase = self.inputs['phase'].get(self._target_device_idx)
         return phase is not None
 
     @classmethod

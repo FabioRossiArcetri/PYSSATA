@@ -8,13 +8,9 @@
 #  A. Puglisi    2019-09-08  ported to Python, added dtype parameter
 ###############################################################################
 
-import numpy as np
-
-from pyssata import xp
-
 
 def make_xy(sampling, ratio, dtype=None, polar=False, vector=False,
-            zero_sampled=False, quarter=False, fft=False):
+            zero_sampled=False, quarter=False, fft=False, xp=None):
     '''
     Generates zero-centered domains in a cartesian plane.
 

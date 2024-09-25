@@ -1,8 +1,5 @@
 import numpy as np
-
-from pyssata import xp
 from pyssata import cpuArray
-from pyssata import float_dtype
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
@@ -35,15 +32,16 @@ class ModulatedPyramid(BaseProcessingObj):
                  pyr_edge_def_ld: float = 0.0,
                  pyr_tip_def_ld: float = 0.0,
                  pyr_tip_maya_ld: float = 0.0,
-                 min_pup_dist: float = None,
-                 precision: int = None,
-                 ):
-        super().__init__(precision=precision)
-        
+                 min_pup_dist: float = None,                 
+                 target_device_idx: int = None, 
+                 precision: int = None
+                ):
+        super().__init__(target_device_idx=target_device_idx, precision=precision)        
+
         DpupPix = pixel_pupil
         FoV = fov
         ccd_side = output_resolution        
-        result = ModulatedPyramid.calc_geometry(DpupPix, pixel_pitch, wavelengthInNm, FoV, pup_diam, ccd_side,
+        result = self.calc_geometry(DpupPix, pixel_pitch, wavelengthInNm, FoV, pup_diam, ccd_side,
                                             fov_errinf=fov_errinf, fov_errsup=fov_errsup, pup_dist=pup_dist, pup_margin=pup_margin,
                                             fft_res=fft_res, min_pup_dist=min_pup_dist)
 
@@ -96,10 +94,10 @@ class ModulatedPyramid(BaseProcessingObj):
 
         fft_totsize = int(fft_totsize)
         
-        self._out_i = Intensity(final_ccd_side, final_ccd_side, precision=precision)
-        self._psf_tot = BaseValue(xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype))
-        self._psf_bfm = BaseValue(xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype))
-        self._out_transmission = BaseValue(0)
+        self._out_i = Intensity(final_ccd_side, final_ccd_side, precision=self.precision, target_device_idx=self._target_device_idx)
+        self._psf_tot = BaseValue(self.xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype), target_device_idx=self._target_device_idx)
+        self._psf_bfm = BaseValue(self.xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype), target_device_idx=self._target_device_idx)
+        self._out_transmission = BaseValue(0, target_device_idx=self._target_device_idx)
 
         self.inputs['in_ef'] = InputValue(type=ElectricField)
         self.outputs['out_i'] = self.out_i
@@ -114,7 +112,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self._fp_mask = self.get_fp_mask(fft_totsize, fp_masking, obsratio=fp_obsratio)
         self._extended_source_in_on = False
         iu = 1j  # complex unit
-        self._myexp = xp.exp(-2 * xp.pi * iu * self._pyr_tlt, dtype=self.complex_dtype)
+        self._myexp = self.xp.exp(-2 * self.xp.pi * iu * self._pyr_tlt, dtype=self.complex_dtype)
 
         # Pre-computation of ttexp will be done when mod_steps will be set or re-set
         if int(mod_step) != mod_step:
@@ -181,8 +179,7 @@ class ModulatedPyramid(BaseProcessingObj):
     def out_i(self):
         return self._out_i
 
-    @staticmethod
-    def calc_geometry(
+    def calc_geometry(self,
         DpupPix,                # number of pixels of input phase array
         pixel_pitch,            # pixel sampling [m] of DpupPix
         lambda_,                # working lambda of the sensor [nm]
@@ -249,13 +246,13 @@ class ModulatedPyramid(BaseProcessingObj):
         if fft_res < fft_res_min:
             fft_res = fft_res_min
 
-        internal_ccd_side = xp.around(fft_res * pup_diam / 2) * 2
+        internal_ccd_side = self.xp.around(fft_res * pup_diam / 2) * 2
         fft_res = internal_ccd_side / float(pup_diam)
 
-        totsize = xp.around(DpupPixFov * fft_res / 2) * 2
+        totsize = self.xp.around(DpupPixFov * fft_res / 2) * 2
         fft_res = totsize / float(DpupPixFov)
 
-        padding = xp.around((DpupPixFov * fft_res - DpupPixFov) / 2) * 2
+        padding = self.xp.around((DpupPixFov * fft_res - DpupPixFov) / 2) * 2
 
         results = {
             'fov_res': fov_res,
@@ -276,9 +273,9 @@ class ModulatedPyramid(BaseProcessingObj):
         self._extSource = source
         self._extended_source_in_on = True
 
-        self._ext_xtilt = self.zern(2, make_xy(self._fft_sampling, 1.0))
-        self._ext_ytilt = self.zern(3, make_xy(self._fft_sampling, 1.0))
-        self._ext_focus = self.zern(4, make_xy(self._fft_sampling, 1.0))
+        self._ext_xtilt = self.zern(2, make_xy(self._fft_sampling, 1.0), xp=self.xp)
+        self._ext_ytilt = self.zern(3, make_xy(self._fft_sampling, 1.0), xp=self.xp)
+        self._ext_focus = self.zern(4, make_xy(self._fft_sampling, 1.0), xp=self.xp)
 
         if source.npoints == 0:
             raise ValueError('ERROR: number of points of extended source is 0!')
@@ -295,36 +292,36 @@ class ModulatedPyramid(BaseProcessingObj):
         iu = 1j  # complex unit
 
         for tt in range(self._mod_steps):
-            angle = 2 * xp.pi * (tt / self._mod_steps)
+            angle = 2 * self.xp.pi * (tt / self._mod_steps)
             pup_tt = source.coeff_tiltx[tt] * self._ext_xtilt + source.coeff_tilty[tt] * self._ext_ytilt
             pup_focus = -1 * source.coeff_focus[tt] * self._ext_focus
-            self._ttexp[tt] = xp.exp(-iu * (pup_tt + pup_focus))
+            self._ttexp[tt] = self.xp.exp(-iu * (pup_tt + pup_focus))
 
         i = source.coeff_flux
-        idx = xp.where(xp.abs(i) < xp.max(xp.abs(i)) * 1e-5)[0]
+        idx = self.xp.where(self.xp.abs(i) < self.xp.max(self.xp.abs(i)) * 1e-5)[0]
         if len(idx[0]) > 0:
             i[idx] = 0
         self._flux_factor_vector = i
 
     def get_pyr_tlt(self, p, c):
         A = int((p + c) // 2)
-        pyr_tlt = xp.zeros((2 * A, 2 * A), dtype=self.dtype)
-        #tlt_basis = xp.tile(xp.arange(A), (A, 1))
-        y, x = xp.mgrid[0:A,0:A]
+        pyr_tlt = self.xp.zeros((2 * A, 2 * A), dtype=self.dtype)
+        #tlt_basis = self.xp.tile(self.xp.arange(A), (A, 1))
+        y, x = self.xp.mgrid[0:A,0:A]
 
         if self._pyr_tlt_coeff is not None:
             k = self._pyr_tlt_coeff
 
-            tlt_basis -= xp.mean(tlt_basis)
+            tlt_basis -= self.xp.mean(tlt_basis)
 
             pyr_tlt[0:A, 0:A] = k[0, 0] * tlt_basis + k[1, 0] * tlt_basis.T
             pyr_tlt[A:2*A, 0:A] = k[0, 1] * tlt_basis + k[1, 1] * tlt_basis.T
             pyr_tlt[A:2*A, A:2*A] = k[0, 2] * tlt_basis + k[1, 2] * tlt_basis.T
             pyr_tlt[0:A, A:2*A] = k[0, 3] * tlt_basis + k[1, 3] * tlt_basis.T
-            pyr_tlt[0:A, 0:A] -= xp.min(pyr_tlt[0:A, 0:A])
-            pyr_tlt[A:2*A, 0:A] -= xp.min(pyr_tlt[A:2*A, 0:A])
-            pyr_tlt[A:2*A, A:2*A] -= xp.min(pyr_tlt[A:2*A, A:2*A])
-            pyr_tlt[0:A, A:2*A] -= xp.min(pyr_tlt[0:A, A:2*A])
+            pyr_tlt[0:A, 0:A] -= self.xp.min(pyr_tlt[0:A, 0:A])
+            pyr_tlt[A:2*A, 0:A] -= self.xp.min(pyr_tlt[A:2*A, 0:A])
+            pyr_tlt[A:2*A, A:2*A] -= self.xp.min(pyr_tlt[A:2*A, A:2*A])
+            pyr_tlt[0:A, A:2*A] -= self.xp.min(pyr_tlt[0:A, A:2*A])
 
         else:
             #pyr_tlt[0:A, 0:A] = tlt_basis + tlt_basis.T
@@ -336,28 +333,28 @@ class ModulatedPyramid(BaseProcessingObj):
             pyr_tlt[A:, :A] = x + y[::-1]
             pyr_tlt[A:, A:] = x[:,::-1] + y[::-1]
 
-        xx, yy = make_xy(A * 2, A)
+        xx, yy = make_xy(A * 2, A, xp=self.xp)
 
         # distance from edge
-        dx = xp.sqrt(xx ** 2)
-        dy = xp.sqrt(yy ** 2)
-        idx_edge = xp.where((dx <= self._pyr_edge_def_ld * self._fft_res / 2) | 
+        dx = self.xp.sqrt(xx ** 2)
+        dy = self.xp.sqrt(yy ** 2)
+        idx_edge = self.xp.where((dx <= self._pyr_edge_def_ld * self._fft_res / 2) | 
                             (dy <= self._pyr_edge_def_ld * self._fft_res / 2))[0]
         if len(idx_edge) > 0:
-            pyr_tlt[idx_edge] = xp.max(pyr_tlt) * xp.random.rand(len(idx_edge[0]))
+            pyr_tlt[idx_edge] = self.xp.max(pyr_tlt) * self.xp.random.rand(len(idx_edge[0]))
             print(f'get_pyr_tlt: {len(idx_edge[0])} pixels set to 0 to consider pyramid imperfect edges')
 
         # distance from tip
-        d = xp.sqrt(xx ** 2 + yy ** 2)
-        idx_tip = xp.where(d <= self._pyr_tip_def_ld * self._fft_res / 2)[0]
+        d = self.xp.sqrt(xx ** 2 + yy ** 2)
+        idx_tip = self.xp.where(d <= self._pyr_tip_def_ld * self._fft_res / 2)[0]
         if len(idx_tip) > 0:
-            pyr_tlt[idx_tip] = xp.max(pyr_tlt) * xp.random.rand(len(idx_tip[0]))
+            pyr_tlt[idx_tip] = self.xp.max(pyr_tlt) * self.xp.random.rand(len(idx_tip[0]))
             print(f'get_pyr_tlt: {len(idx_tip[0])} pixels set to 0 to consider pyramid imperfect tip')
 
         # distance from tip
-        idx_tip_m = xp.where(d <= self._pyr_tip_maya_ld * self._fft_res / 2)[0]
+        idx_tip_m = self.xp.where(d <= self._pyr_tip_maya_ld * self._fft_res / 2)[0]
         if len(idx_tip_m) > 0:
-            pyr_tlt[idx_tip_m] = xp.min(pyr_tlt[idx_tip_m])
+            pyr_tlt[idx_tip_m] = self.xp.min(pyr_tlt[idx_tip_m])
             print(f'get_pyr_tlt: {len(idx_tip_m[0])} pixels set to 0 to consider pyramid imperfect tip')
 
         return pyr_tlt / self._tilt_scale
@@ -365,21 +362,21 @@ class ModulatedPyramid(BaseProcessingObj):
     def get_tlt_f(self, p, c):
         iu = 1j  # complex unit
         p = int(p)
-        xx, yy = make_xy(2 * p, p, quarter=True, zero_sampled=True)
+        xx, yy = make_xy(2 * p, p, quarter=True, zero_sampled=True, xp=self.xp)
         tlt_g = xx + yy
 
-        tlt_f = xp.exp(-2 * xp.pi * iu * tlt_g / (2 * (p + c)))
+        tlt_f = self.xp.exp(-2 * self.xp.pi * iu * tlt_g / (2 * (p + c)))
         return tlt_f
 
     def get_fp_mask(self, totsize, mask_ratio, obsratio=0):
-        return make_mask(totsize, diaratio=mask_ratio, obsratio=obsratio)
+        return make_mask(totsize, diaratio=mask_ratio, obsratio=obsratio, xp=self.xp)
 
     def get_modulation_tilt(self, p, X=False, Y=False):
         p = int(p)
-        xx, yy = make_xy(p, p // 2)
+        xx, yy = make_xy(p, p // 2, xp=self.xp)
         mm = self.minmax(xx)
-        tilt_x = xx * xp.pi / ((mm[1] - mm[0]) / 2)
-        tilt_y = yy * xp.pi / ((mm[1] - mm[0]) / 2)
+        tilt_x = xx * self.xp.pi / ((mm[1] - mm[0]) / 2)
+        tilt_y = yy * self.xp.pi / ((mm[1] - mm[0]) / 2)
 
         if X:
             return tilt_x
@@ -395,48 +392,48 @@ class ModulatedPyramid(BaseProcessingObj):
             iu = 1j  # complex unit
 
             for tt in range(self._mod_steps):
-                angle = 2 * xp.pi * (tt / self._mod_steps)
-                pup_tt = self._mod_amp * xp.sin(angle) * self._tilt_x + \
-                         self._mod_amp * xp.cos(angle) * self._tilt_y
+                angle = 2 * self.xp.pi * (tt / self._mod_steps)
+                pup_tt = self._mod_amp * self.xp.sin(angle) * self._tilt_x + \
+                         self._mod_amp * self.xp.cos(angle) * self._tilt_y
 
-                self._ttexp[tt] = xp.exp(-iu * pup_tt)
+                self._ttexp[tt] = self.xp.exp(-iu * pup_tt, dtype=self.complex_dtype)
 
-            self._flux_factor_vector = xp.ones(self._mod_steps, dtype=self.dtype)
+            self._flux_factor_vector = self.xp.ones(self._mod_steps, dtype=self.dtype)
 
     def trigger(self, t):
-        in_ef = self.inputs['in_ef'].get()
+        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
         if in_ef.generation_time != t:
             return
 
         if self._extended_source_in_on and self._extSourcePsf is not None:
             if self._extSourcePsf.generation_time == t:
-                if xp.sum(xp.abs(self._extSourcePsf.value)) > 0:
+                if self.xp.sum(self.xp.abs(self._extSourcePsf.value)) > 0:
                     self._extSource.updatePsf(self._extSourcePsf.value)
                     self._flux_factor_vector = self._extSource.coeff_flux
 
         s = in_ef.size
 
         if self._rotAnglePhInDeg != 0:
-            A = (self.ROT_AND_SHIFT_IMAGE(in_ef.A, self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(xp.uint8)
+            A = (self.ROT_AND_SHIFT_IMAGE(in_ef.A, self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(self.xp.uint8)
             phi_at_lambda = self.ROT_AND_SHIFT_IMAGE(in_ef.phi_at_lambda(self._wavelength_in_nm), self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True)
-            ef = xp.complex64(xp.rebin(A, (s[0] * self._fov_res, s[1] * self._fov_res)) + 
-                              xp.rebin(phi_at_lambda, (s[0] * self._fov_res, s[1] * self._fov_res)) * 1j)
+            ef = self.xp.complex64(self.xp.rebin(A, (s[0] * self._fov_res, s[1] * self._fov_res)) + 
+                              self.xp.rebin(phi_at_lambda, (s[0] * self._fov_res, s[1] * self._fov_res)) * 1j)
         else:
             if self._fov_res != 1:
-                ef = xp.complex64(xp.rebin(in_ef.A, (s[0] * self._fov_res, s[1] * self._fov_res)) + 
-                                  xp.rebin(in_ef.phi_at_lambda(self._wavelength_in_nm), (s[0] * self._fov_res, s[1] * self._fov_res)) * 1j)
+                ef = self.xp.complex64(self.xp.rebin(in_ef.A, (s[0] * self._fov_res, s[1] * self._fov_res)) + 
+                                  self.xp.rebin(in_ef.phi_at_lambda(self._wavelength_in_nm), (s[0] * self._fov_res, s[1] * self._fov_res)) * 1j)
             else:
                 ef = in_ef.ef_at_lambda(self._wavelength_in_nm)
 
         u_tlt_const = ef * self._tlt_f
 
-        pup_pyr_tot = xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-        psf_bfm = xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-        psf_tot = xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
+        pup_pyr_tot = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
+        psf_bfm = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
+        psf_tot = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
 
-        u_tlt = xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.complex_dtype)
+        u_tlt = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.complex_dtype)
         
-        mean_value = cpuArray(xp.median(self._flux_factor_vector) * 1e-3)
+        mean_value = cpuArray(self.xp.median(self._flux_factor_vector) * 1e-3)
         cpu_flux_factor_vector = cpuArray(self._flux_factor_vector)
 
         for tt in range(self._mod_steps):
@@ -447,9 +444,9 @@ class ModulatedPyramid(BaseProcessingObj):
             ss = tmp.shape
             u_tlt[0:ss[0], 0:ss[1]] = tmp
 
-            u_fp = xp.fft.fftshift(xp.fft.fft2(u_tlt))
+            u_fp = self.xp.fft.fftshift(self.xp.fft.fft2(u_tlt))
 
-            psf = xp.abs(u_fp) ** 2
+            psf = self.xp.abs(u_fp) ** 2
 
             psf_bfm += psf * self._flux_factor_vector[tt]
 
@@ -460,20 +457,20 @@ class ModulatedPyramid(BaseProcessingObj):
 
             u_fp_pyr = u_fp * self._myexp
 
-            pup_pyr_tot += xp.abs(xp.fft.ifft2(u_fp_pyr)) ** 2 * self._flux_factor_vector[tt]
+            pup_pyr_tot += self.xp.abs(self.xp.fft.ifft2(u_fp_pyr)) ** 2 * self._flux_factor_vector[tt]
 
         self._fft_padding = int(self._fft_padding)
 
-        pup_pyr_tot = xp.roll(pup_pyr_tot, xp.array( [self._fft_padding//2, self._fft_padding//2], dtype=xp.int64), [0,1] )
+        pup_pyr_tot = self.xp.roll(pup_pyr_tot, self.xp.array( [self._fft_padding//2, self._fft_padding//2], dtype=self.xp.int64), [0,1] )
 
-        factor = 1.0 / xp.sum(self._flux_factor_vector)
+        factor = 1.0 / self.xp.sum(self._flux_factor_vector)
         pup_pyr_tot *= factor
         psf_tot *= factor
         psf_bfm *= factor
 
-        sum_psf = xp.sum(psf_tot)
-        sum_bfm = xp.sum(psf_bfm)
-        sum_pup = xp.sum(pup_pyr_tot)
+        sum_psf = self.xp.sum(psf_tot)
+        sum_bfm = self.xp.sum(psf_bfm)
+        sum_pup = self.xp.sum(pup_pyr_tot)
         transmission = sum_psf / sum_bfm
         phot = in_ef.S0 * in_ef.masked_area()
         pup_pyr_tot *= (phot / sum_pup) * transmission
@@ -483,23 +480,23 @@ class ModulatedPyramid(BaseProcessingObj):
 
         # TODO handle shifts as an input from a func generator (for time-varying shifts)
         if self._pup_shifts is not None and self._pup_shifts != (0.0, 0.0):
-            image = xp.pad(pup_pyr_tot, 1, mode='constant')
+            image = self.xp.pad(pup_pyr_tot, 1, mode='constant')
             imscale = float(self._fft_totsize) / float(self._toccd_side)
 
             pup_shiftx = self._pup_shifts[0] * imscale
             pup_shifty = self._pup_shifts[1] * imscale
 
-            image = self.interpolate(image, xp.arange(self._fft_totsize + 2) - pup_shiftx, 
-                                     xp.arange(self._fft_totsize + 2) - pup_shifty, grid=True, missing=0)
+            image = self.interpolate(image, self.xp.arange(self._fft_totsize + 2) - pup_shiftx, 
+                                     self.xp.arange(self._fft_totsize + 2) - pup_shifty, grid=True, missing=0)
             pup_pyr_tot = image[1:-1, 1:-1]
 
 
         self._toccd_side = int(self._toccd_side)
-        ccd_internal = toccd(pup_pyr_tot, (self._toccd_side, self._toccd_side))
+        ccd_internal = toccd(pup_pyr_tot, (self._toccd_side, self._toccd_side), xp=self.xp)
 
         if self._final_ccd_side > self._toccd_side:
             delta = (self._final_ccd_side - self._toccd_side) // 2
-            ccd = xp.zeros((self._final_ccd_side, self._final_ccd_side), dtype=self.dtype)
+            ccd = self.xp.zeros((self._final_ccd_side, self._final_ccd_side), dtype=self.dtype)
             ccd[delta:delta + ccd_internal.shape[0], delta:delta + ccd_internal.shape[1]] = ccd_internal
         elif self._final_ccd_side < self._toccd_side:
             delta = (self._toccd_side - self._final_ccd_side) // 2
@@ -519,17 +516,16 @@ class ModulatedPyramid(BaseProcessingObj):
     def run_check(self, time_step):
         if self._extended_source_in_on:
             return 1
-        elif self._mod_steps < xp.around(2 * xp.pi * self._mod_amp):
-            raise Exception(f'Number of modulation steps is too small ({self._mod_steps}), it must be at least 2*pi times the modulation amplitude ({xp.around(2 * xp.pi * self._mod_amp)})!')
+        elif self._mod_steps < self.xp.around(2 * self.xp.pi * self._mod_amp):
+            raise Exception(f'Number of modulation steps is too small ({self._mod_steps}), it must be at least 2*pi times the modulation amplitude ({self.xp.around(2 * self.xp.pi * self._mod_amp)})!')
         return 1
 
     def hdr(self, hdr):
         hdr['MODAMP'] = self._mod_amp
         hdr['MODSTEPS'] = self._mod_steps
-
-    @staticmethod
-    def minmax(array):
-        return xp.min(array), xp.max(array)
+    
+    def minmax(self, array):
+        return self.xp.min(array), self.xp.max(array)
 
     # TODO needed for extended source
     @staticmethod
