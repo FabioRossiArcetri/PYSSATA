@@ -1,9 +1,6 @@
-import numpy as np
-
-from pyssata import xp
-
 from astropy.io import fits
 
+from pyssata import xp
 from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class PupData(BaseDataObj):

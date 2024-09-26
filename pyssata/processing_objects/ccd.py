@@ -10,6 +10,13 @@ from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.calc_detector_noise import calc_detector_noise
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 
+import cupy as cp
+clamp_generic = cp.ElementwiseKernel(
+        'T x, T c',
+        'T y',
+        'y = (y < x)?c:y',
+        'clamp_generic')
+
 
 # TODO
 class SH:
@@ -233,7 +240,8 @@ class CCD(BaseProcessingObj):
 
         if self._photon_noise:
             ccd_frame = self.xp.round(ccd_frame * self._ADU_gain) + self._ADU_bias
-            ccd_frame[ccd_frame < 0] = 0
+            clamp_generic(0, 0, ccd_frame)
+            #ccd_frame = self.xp.where(ccd_frame > 0, ccd_frame, 0)
 
             if not self._keep_ADU_bias:
                 ccd_frame -= self._ADU_bias

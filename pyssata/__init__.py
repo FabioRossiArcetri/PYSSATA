@@ -50,6 +50,7 @@ def init(device_idx=-1, precision=0):
             import cupy as cp
             print("Cupy import successfull. Installed version is:", cp.__version__)
             gpuEnabled = True
+            cp = cp
         except:
             print("Cupy import failed. PYSSATA will fall back to CPU use.")
             cp = np
@@ -85,8 +86,7 @@ def init(device_idx=-1, precision=0):
     complex_dtype = complex_dtype_list[global_precision]
 
 
-def cpuArray(v):
-    print(type(v))
+def cpuArray(v):    
     if isinstance(v, (np.ndarray, np.float64, np.int64, np.float32)):
         return v
     else:

@@ -2,7 +2,7 @@ import numpy as np
 
 from scipy.ndimage import rotate
 
-def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, delta_time, pixel_pitch, scale_coeff, layer_list, position=None, cycle_screens=False), xp=None:
+def phasescreens_shift(phasescreens, pixel_layer, wind_speed, wind_direction, delta_time, pixel_pitch, scale_coeff, layer_list, position=None, cycle_screens=False, xp=None):
     # Compute the delta position in pixels
     delta_position = wind_speed * delta_time / pixel_pitch  # [pixel]
 

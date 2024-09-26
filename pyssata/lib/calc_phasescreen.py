@@ -37,7 +37,7 @@ def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, target_device_idx=None,
     if verbose:
         print("Compute random matrices")
 
-    xp.random.seed(cpuArray(seed))
+    xp.random.seed(seed)
     re_gauss = xp.random.standard_normal((half_dim + 1, 2 * half_dim + 1))
     im_gauss = xp.random.standard_normal((half_dim + 1, 2 * half_dim + 1))
 
