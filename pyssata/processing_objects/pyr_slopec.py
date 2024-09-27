@@ -95,7 +95,9 @@ class PyrSlopec(Slopec):
             self._flux_per_subaperture_vector.value = flux
             self._flux_per_subaperture_vector.generation_time = t
 
-            px = self.xp.array(cpuArray(pixels).flat[cpuArray(self._pupdata.ind_pup)].ravel(), dtype=self.dtype)
+            idx  = self._pupdata.ind_pup.flatten().astype(self.xp.int64)
+            v = pixels.flatten()
+            px = v[idx].ravel()
             self._total_counts.value = self.xp.sum(px)
             self._subap_counts.value = self.xp.sum(px) / self._pupdata.n_subap
 
