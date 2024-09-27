@@ -117,5 +117,18 @@ def show_in_profiler(message=None, color_id=None, argb_color=None, sync=False):
             return wrapper
         return decorator
 
+def fuse(kernel_name=None):
+    try:
+        from cupy import fuse
+        return fuse(kernel_name=kernel_name)
+
+    except ImportError:
+        def decorator(f):
+            @wraps(f)
+            def wrapper(*args, **kwargs):
+                return f(*args, **kwargs)
+            return wrapper
+        return decorator
+
 
 
