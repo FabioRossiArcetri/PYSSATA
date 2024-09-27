@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from functools import wraps
 
 cpu_float_dtype_list = [np.float64, np.float32]
 cpu_complex_dtype_list = [np.complex128, np.complex64]
@@ -92,5 +93,29 @@ def cpuArray(v):
     else:
         # which one is better, xp.asnumpy(v) or v.get() ? almost the same but asnumpy is more general
         return xp.asnumpy(v)
+
+
+def show_in_profiler(message=None, color_id=None, argb_color=None, sync=False):
+    '''
+    Decorator to allow using cupy's TimeRangeDecorator
+    in a safe way even when cupy is not installed
+    Parameters are the same as TimeRangeDecorator
+    '''
+    try:
+        from cupyx.profiler import time_range
+
+        return time_range(message=message,
+                          color_id=color_id,
+                          argb_color=argb_color,
+                          sync=sync)
+
+    except ImportError:
+        def decorator(f):
+            @wraps(f)
+            def wrapper(*args, **kwargs):
+                return f(*args, **kwargs)
+            return wrapper
+        return decorator
+
 
 
