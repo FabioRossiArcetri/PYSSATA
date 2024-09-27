@@ -1,8 +1,14 @@
 import numpy as np
 
-from pyssata import cpuArray, float_dtype
+from pyssata import cp
 
-def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm_fact=None, threshold=None, xp=None):
+clamp_generic = cp.ElementwiseKernel(
+        'T x, T c',
+        'T y',
+        'y = (y < x)?c:y',
+        'clamp_generic')
+
+def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm_fact=None, threshold=None, xp=None, float_dtype=None):
     """
     Computes the pyramid signals from a CCD frame.
     
@@ -23,44 +29,60 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
     if INTENSITY_BASED and SHLIKE:
         raise ValueError('INTENSITY_BASED and SHLIKE keywords cannot be set together.')
 
+    A = frame.flatten()[ind_pup[:, 0]]
+    B = frame.flatten()[ind_pup[:, 1]]
+    C = frame.flatten()[ind_pup[:, 2]]
+    D = frame.flatten()[ind_pup[:, 3]]
     # Extract intensity arrays for each sub-pupil
-    intensity = xp.array( [frame.flatten()[ind_pup[:, i]].reshape(-1) for i in range(4)], dtype=float_dtype )
-
+    
     # Compute total intensity
-    flux = xp.sum(xp.array([xp.sum(arr) for arr in intensity], dtype=float_dtype))
-    
+    flux = xp.sum(A+B+C+D)
+
     if threshold is not None:
-        # Apply thresholding
-        intensity = xp.array([xp.maximum(arr - threshold, 0) for arr in intensity])
-    
-    total_intensity = xp.sum(intensity)    
+        A -= threshold
+        clamp_generic(0,0,A)
+        B -= threshold
+        clamp_generic(0,0,B)
+        C -= threshold
+        clamp_generic(0,0,C)
+        D -= threshold
+        clamp_generic(0,0,D)
 
+    summed = A+B+C+D
+    total_intensity = xp.sum(summed)
     n_subap = ind_pup.shape[0]
+    sx = (A+B-C-D).astype(float_dtype)
+    sy = (B+C-A-D).astype(float_dtype)
+    inv_factor = summed
+    clamp_generic(0,1e-6, inv_factor)
+    factor = 1.0 / inv_factor
+    clamp_generic(0,0, factor)
+    sx *= factor
+    sy *= factor
 
-    if total_intensity > 0:
-        if norm_fact is not None:
-            factor = 1.0 / norm_fact
-        elif INTENSITY_BASED:
-            factor = 4 * n_subap / total_intensity
-            sx = factor * xp.concatenate([intensity[0], intensity[1]])
-            sy = factor * xp.concatenate([intensity[2], intensity[3]])
-        else:
-            if not SHLIKE:
-                factor = n_subap / total_intensity
-            else:
-                inv_factor = xp.array([xp.sum(arr) for arr in intensity], dtype=self.dtype)
-                inv_factor[inv_factor <= 0] = 1e-6
-                factor = 1.0 / inv_factor
-                factor[inv_factor <= 0] = 0.0
-                
-            sx = (intensity[0] + intensity[1] - intensity[2] - intensity[3]) * factor
-            sy = (intensity[1] + intensity[2] - intensity[3] - intensity[0]) * factor
-    else:
-        if INTENSITY_BASED:
-            sx = xp.zeros(2 * n_subap, dtype=self.dtype)
-            sy = xp.zeros(2 * n_subap, dtype=self.dtype)
-        else:
-            sx = xp.zeros(n_subap, dtype=self.dtype)
-            sy = xp.zeros(n_subap, dtype=self.dtype)
+    # if total_intensity > 0:
+    #     if norm_fact is not None:
+    #         factor = 1.0 / norm_fact
+    #     elif INTENSITY_BASED:
+    #         factor = 4 * n_subap / total_intensity
+    #         sx = factor * xp.concatenate([A, B])
+    #         sy = factor * xp.concatenate([C, D])
+    #     else:
+    #         if not SHLIKE:
+    #             factor = n_subap / total_intensity
+    #         else:
+    #             inv_factor = summed
+    #             clamp_generic(0,1e-6, inv_factor)
+    #             factor = 1.0 / inv_factor
+    #             clamp_generic(0,0, factor)
+    #         sx *= factor
+    #         sy *= factor
+    # else:
+    #     if INTENSITY_BASED:
+    #         sx = xp.zeros(2 * n_subap, dtype=float_dtype)
+    #         sy = xp.zeros(2 * n_subap, dtype=float_dtype)
+    #     else:
+    #         sx = xp.zeros(n_subap, dtype=float_dtype)
+    #         sy = xp.zeros(n_subap, dtype=float_dtype)
 
     return sx, sy, flux
