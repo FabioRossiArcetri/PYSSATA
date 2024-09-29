@@ -1,3 +1,4 @@
+import math
 from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class SubapData(BaseDataObj):
@@ -28,7 +29,7 @@ class SubapData(BaseDataObj):
 
     @property
     def np_sub(self):
-        return int(self.xp.sqrt(self._idxs.shape[1])) if self._idxs is not None else 0
+        return int(math.sqrt(self._idxs.shape[1])) if self._idxs is not None else 0
 
     @property
     def map(self):
@@ -77,12 +78,6 @@ class SubapData(BaseDataObj):
     def set_subap_map(self, n, pos):
         """Sets the mapping position of subaperture `n`."""
         self._map[n] = pos
-
-    def cleanup(self):
-        """Cleans up the data."""
-        self._idxs = None
-        self._map = None
-        super().cleanup()
 
     def save(self, filename, hdr):
         """Saves the subaperture data to a file."""
