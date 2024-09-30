@@ -69,7 +69,7 @@ class BaseTimeObj:
                         if aType==np.ndarray:
                             setattr(cloned, attr, cp.asarray( getattr(cloned, attr) ) )
                             # print('Member', attr, 'of class', type(cloned).__name__, 'is now on GPU')
-            if target_device_idx > 0:
+            if target_device_idx >= 0:
                 cloned.xp = cp
             else:
                 cloned.xp = np
