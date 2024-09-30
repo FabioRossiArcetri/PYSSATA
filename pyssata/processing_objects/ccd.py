@@ -120,7 +120,7 @@ class CCD(BaseProcessingObj):
 
         self._pixels = Pixels(size[0] // binning, size[1] // binning)
         s = self._pixels.size * self._binning
-        self._integrated_i = Intensity(s[0], s[1])
+        self._integrated_i = Intensity(s[0], s[1], target_device_idx=target_device_idx, precision=precision)
         self._photon_seed = photon_seed
         self._readout_seed = readout_seed
         self._excess_seed = excess_seed
