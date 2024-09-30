@@ -132,7 +132,7 @@ class CCD(BaseProcessingObj):
         self._cte_mat = cte_mat if cte_mat is not None else self.xp.zeros((size[0], size[1], 2), dtype=self.dtype)
         self._qe = quantum_eff
 
-        self._pixels = Pixels(size[0] // binning, size[1] // binning)
+        self._pixels = Pixels(size[0] // binning, size[1] // binning, target_device_idx=target_device_idx)
         s = self._pixels.size * self._binning
         self._integrated_i = Intensity(s[0], s[1], target_device_idx=target_device_idx, precision=precision)
         self._photon_seed = photon_seed
