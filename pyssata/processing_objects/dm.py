@@ -71,13 +71,13 @@ class DM(BaseProcessingObj):
         temp_matrix = self.xp.zeros(self._layer.size, dtype=self.dtype)
         
         # Compute phase only if commands vector is not zero
-        if self.xp.sum(self.xp.abs(commands)) != 0:
-            if len(commands) > len(self._if_commands):
-                raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
+        #if self.xp.sum(self.xp.abs(commands)) != 0:
+        #    if len(commands) > len(self._if_commands):
+        #        raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
             
-            self._if_commands[:len(commands)] = self._sign * commands
-            
-            temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
+        self._if_commands[:len(commands)] = self._sign * commands
+        
+        temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
 
         self._layer.phaseInNm = temp_matrix
 
@@ -154,4 +154,3 @@ class DM(BaseProcessingObj):
             errmsg += f"{self.repr()} No input command defined"
         
         return commands_input is not None and self._layer is not None and self._ifunc is not None
-

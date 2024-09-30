@@ -63,7 +63,7 @@ class ElectricField(BaseDataObj):
             subrect = [0, 0]
         sz1 = self.xp.array(self.size) - self.xp.array(subrect)
         sz2 = self.xp.array(ef2.size)
-        if any(sz1 != sz2):
+        if self.xp.any(sz1 != sz2):
             raise ValueError(f'{ef2} has size {sz2} instead of the required {sz1}')
         return subrect
         
@@ -75,7 +75,7 @@ class ElectricField(BaseDataObj):
         return self._A * self.xp.exp(1j * phi, dtype=self.complex_dtype)
 
     def product(self, ef2, subrect=None):
-        subrect = self.checkOther(ef2, subrect=subrect)
+        # subrect = self.checkOther(ef2, subrect=subrect)
         x2 = subrect[0] + self.size[0]
         y2 = subrect[1] + self.size[1]
         self._A *= ef2._A[subrect[0] : x2, subrect[1] : y2]
