@@ -177,7 +177,7 @@ class Simul():
         # Run simulation loop
         loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'], speed_report=True)
 
-        print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']]) * 100.)}")
+        print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']])) * 100.}")
 
         # Saving method with a single sav file
         store.save('save_file.pickle')
