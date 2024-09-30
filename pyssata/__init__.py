@@ -118,6 +118,11 @@ def show_in_profiler(message=None, color_id=None, argb_color=None, sync=False):
         return decorator
 
 def fuse(kernel_name=None):
+    '''
+    Decorator to allow using cupy's fuse
+    in a safe way even when cupy is not installed
+    Parameters are the same as cp.fuse()
+    '''
     try:
         from cupy import fuse
         return fuse(kernel_name=kernel_name)
