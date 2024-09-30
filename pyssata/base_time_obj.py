@@ -58,7 +58,6 @@ class BaseTimeObj:
         else:
             pp = get_properties(type(self))
             cloned = copy(self)
-#           print(dir(self))
             for attr in dir(self):
                 if attr not in excluded and attr not in pp:
                     aType = type(getattr(self, attr))
@@ -70,6 +69,11 @@ class BaseTimeObj:
                         if aType==np.ndarray:
                             setattr(cloned, attr, cp.asarray( getattr(cloned, attr) ) )
                             # print('Member', attr, 'of class', type(cloned).__name__, 'is now on GPU')
+            if target_device_idx > 0:
+                cloned.xp = cp
+            else:
+                cloned.xp = np
+            cloned._target_device_idx = target_device_idx
             return cloned
 
     @property
