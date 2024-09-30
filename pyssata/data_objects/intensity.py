@@ -1,6 +1,3 @@
-import numpy as np
-
-from pyssata import xp
 
 from astropy.io import fits
 
@@ -11,7 +8,7 @@ class Intensity(BaseDataObj):
     def __init__(self, dimx, dimy, target_device_idx=None, precision=None):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
                 
-        self._i = xp.zeros((dimx, dimy), dtype=self.dtype)
+        self._i = self.xp.zeros((dimx, dimy), dtype=self.dtype)
 
     @property
     def i(self):
