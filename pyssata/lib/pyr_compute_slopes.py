@@ -1,8 +1,20 @@
 import numpy as np
 
-from pyssata import cpuArray, float_dtype
+from pyssata import cp
 
-def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm_fact=None, threshold=None, xp=None):
+clamp_generic_less = cp.ElementwiseKernel(
+        'T x, T c',
+        'T y',
+        'y = (y < x)?c:y',
+        'clamp_generic')
+
+clamp_generic_more = cp.ElementwiseKernel(
+        'T x, T c',
+        'T y',
+        'y = (y > x)?c:y',
+        'clamp_generic')
+
+def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm_fact=None, threshold=None, xp=None, float_dtype=None):
     """
     Computes the pyramid signals from a CCD frame.
     
@@ -23,44 +35,51 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
     if INTENSITY_BASED and SHLIKE:
         raise ValueError('INTENSITY_BASED and SHLIKE keywords cannot be set together.')
 
+    if INTENSITY_BASED and SHLIKE:
+        raise ValueError('INTENSITY_BASED and SHLIKE keywords cannot be set together.')
+
+    A = frame.flatten()[ind_pup[:, 0]]
+    B = frame.flatten()[ind_pup[:, 1]]
+    C = frame.flatten()[ind_pup[:, 2]]
+    D = frame.flatten()[ind_pup[:, 3]]
     # Extract intensity arrays for each sub-pupil
-    intensity = xp.array( [frame.flatten()[ind_pup[:, i]].reshape(-1) for i in range(4)], dtype=float_dtype )
-
+    
     # Compute total intensity
-    flux = xp.sum(xp.array([xp.sum(arr) for arr in intensity], dtype=float_dtype))
-    
+    flux = xp.sum(A+B+C+D)
+
     if threshold is not None:
-        # Apply thresholding
-        intensity = xp.array([xp.maximum(arr - threshold, 0) for arr in intensity])
-    
-    total_intensity = xp.sum(intensity)    
+        A -= threshold
+        clamp_generic_less(0,0,A)
+        B -= threshold
+        clamp_generic_less(0,0,B)
+        C -= threshold
+        clamp_generic_less(0,0,C)
+        D -= threshold
+        clamp_generic_less(0,0,D)
 
-    n_subap = ind_pup.shape[0]
+    per_subap_sum = A+B+C+D
+    total_intensity = xp.sum(per_subap_sum)
+    clamp_generic_less(0,0, total_intensity)
 
-    if total_intensity > 0:
-        if norm_fact is not None:
-            factor = 1.0 / norm_fact
-        elif INTENSITY_BASED:
-            factor = 4 * n_subap / total_intensity
-            sx = factor * xp.concatenate([intensity[0], intensity[1]])
-            sy = factor * xp.concatenate([intensity[2], intensity[3]])
-        else:
-            if not SHLIKE:
-                factor = n_subap / total_intensity
-            else:
-                inv_factor = xp.array([xp.sum(arr) for arr in intensity], dtype=self.dtype)
-                inv_factor[inv_factor <= 0] = 1e-6
-                factor = 1.0 / inv_factor
-                factor[inv_factor <= 0] = 0.0
-                
-            sx = (intensity[0] + intensity[1] - intensity[2] - intensity[3]) * factor
-            sy = (intensity[1] + intensity[2] - intensity[3] - intensity[0]) * factor
+    if norm_fact is not None:
+        factor = 1.0 / norm_fact
+    elif INTENSITY_BASED:
+        factor = 4 * n_subap / total_intensity
+        sx = factor * xp.concatenate([A, B])
+        sy = factor * xp.concatenate([C, D])
     else:
-        if INTENSITY_BASED:
-            sx = xp.zeros(2 * n_subap, dtype=self.dtype)
-            sy = xp.zeros(2 * n_subap, dtype=self.dtype)
+        if not SHLIKE:
+            n_subap = ind_pup.shape[0]
+            factor = n_subap / total_intensity
         else:
-            sx = xp.zeros(n_subap, dtype=self.dtype)
-            sy = xp.zeros(n_subap, dtype=self.dtype)
+            inv_factor = per_subap_sum                
+            clamp_generic_less(0,1e-6, inv_factor)
+            factor = 1.0 / inv_factor
+            clamp_generic_less(0,0, factor)
+            
 
-    return sx, sy, flux
+        sx = (A+B-C-D).astype(float_dtype) * factor
+        sy = (B+C-A-D).astype(float_dtype) * factor
+
+    clamp_generic_more(0,1, total_intensity)        
+    return sx*total_intensity, sy*total_intensity, flux
