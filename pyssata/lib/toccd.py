@@ -115,16 +115,16 @@ def toccd_gpu(a, newshape, set_total=None):
 
 # only define kernels if cupy has been loaded
 if cp:
-    _rebin2D_step1_float = cp.RawKernel(r'''
+    kernel_step1 = r'''
 extern "C" __global__
-void rebin2D_step1(float *g_in, float *g_tmp, int inx, int iny, int outx, int outy,
-                   int dx_out, float oneOverDxIn) {
+void rebin2D_step1_TYPE(TYPE *g_in, TYPE *g_tmp, int inx, int iny, int outx, int outy,
+                   int dx_out, TYPE oneOverDxIn) {
 
    int y = blockIdx.y * blockDim.y + threadIdx.y;
    int x = blockIdx.x * blockDim.x + threadIdx.x;
    int i, pos, prev_pos;
-   float value;
-   float res=0;
+   TYPE value;
+   TYPE res=0;
 
    if ((y<iny) && (x<outx)) {
        i = x*dx_out;
@@ -142,12 +142,10 @@ void rebin2D_step1(float *g_in, float *g_tmp, int inx, int iny, int outx, int ou
    g_tmp[y*outx+x] =res;
    }
 }
-''', name='rebin2D_step1')
-
-
-    _rebin2D_step2_float = cp.RawKernel(r'''
+'''
+    kernel_step2  = r'''
 extern "C" __global__
-void rebin2D_step2(float *g_tmp, float* g_out, int outx, int outy,
+void rebin2D_step2_TYPE(TYPE *g_tmp, TYPE* g_out, int outx, int outy,
                    int dy_in, int dy_out, float f) {
 
    int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -161,55 +159,8 @@ void rebin2D_step2(float *g_tmp, float* g_out, int outx, int outy,
        g_out[y*outx+x] *= f;
     }
 }
-''', name='rebin2D_step2')
-
-
-    _rebin2D_step1_double = cp.RawKernel(r'''
-extern "C" __global__
-void rebin2D_step1(double *g_in, double *g_tmp, int inx, int iny, int outx, int outy,
-                   int dx_out, double oneOverDxIn) {
-
-   int y = blockIdx.y * blockDim.y + threadIdx.y;
-   int x = blockIdx.x * blockDim.x + threadIdx.x;
-   int i, pos, prev_pos;
-   double value;
-   double res=0;
-
-   if ((y<iny) && (x<outx)) {
-       i = x*dx_out;
-       prev_pos = i * oneOverDxIn;
-       value = g_in[y*inx + prev_pos];
-
-       for ( ; i<(x+1)*dx_out; i++) {
-          pos = i * oneOverDxIn;
-          if (pos != prev_pos) {
-             value = g_in[y*inx + pos];
-             prev_pos = pos;
-          }
-          res += value;
-       }
-   g_tmp[y*outx+x] =res;
-   }
-}
-''', name='rebin2D_step1')
-
-
-    _rebin2D_step2_double = cp.RawKernel(r'''
-extern "C" __global__
-void rebin2D_step2(double *g_tmp, double* g_out, int outx, int outy,
-                   int dy_in, int dy_out, double f) {
-
-   int y = blockIdx.y * blockDim.y + threadIdx.y;
-   int x = blockIdx.x * blockDim.x + threadIdx.x;
-   int j;
-
-   if ((y<outy) && (x<outx)) {
-       g_out[y*outx+x]=0;
-       for (j=y*dy_out; j<(y+1)*dy_out; j++)
-          g_out[y*outx+x] += g_tmp[(j/dy_in)*outx + x];
-       g_out[y*outx+x] *= f;
-    }
-}
-''', name='rebin2D_step2')
-
-
+'''
+    _rebin2D_step1_float = cp.RawKernel(kernel_step1.replace('TYPE', 'float'), name='rebin2D_step1_float')
+    _rebin2D_step2_float = cp.RawKernel(kernel_step2.replace('TYPE', 'float'), name='rebin2D_step2_float')
+    _rebin2D_step1_double = cp.RawKernel(kernel_step1.replace('TYPE', 'double'), name='rebin2D_step1_double')
+    _rebin2D_step2_double = cp.RawKernel(kernel_step2.replace('TYPE', 'double'), name='rebin2D_step2_double')
