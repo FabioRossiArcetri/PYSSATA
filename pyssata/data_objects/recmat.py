@@ -1,6 +1,3 @@
-import numpy as np
-
-from pyssata import xp
 
 from astropy.io import fits
 
@@ -8,8 +5,8 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 
 
 class Recmat(BaseDataObj):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, target_device_idx=None, precision=None):
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
         self._recmat = None
         self._modes2recLayer = None
         self._im_tag = ''
@@ -64,9 +61,9 @@ class Recmat(BaseDataObj):
         self._proj_list = []
         n = modes2recLayer.shape
         for i in range(n[0]):
-            idx = xp.where(modes2recLayer[i, :] > 0)[0]
-            proj = xp.zeros((n[1], len(idx)), dtype=self.dtype)
-            proj[idx, :] = xp.identity(len(idx))
+            idx = self.xp.where(modes2recLayer[i, :] > 0)[0]
+            proj = self.xp.zeros((n[1], len(idx)), dtype=self.dtype)
+            proj[idx, :] = self.xp.identity(len(idx))
             self._proj_list.append(proj)
 
     def reduce_size(self, nModesToBeDiscarded):
@@ -108,14 +105,14 @@ class Recmat(BaseDataObj):
         exten += 1
 
     @staticmethod
-    def restore(filename):
+    def restore(filename, target_device_idx=None):
         hdr = fits.getheader(filename)
         version = int(hdr['VERSION'])
 
         if version != 1:
             raise ValueError(f"Error: unknown version {version} in file {filename}")
 
-        rec = Recmat()
+        rec = Recmat(target_device_idx=target_device_idx)
         rec.im_tag = str(hdr['IM_TAG']).strip()
         rec.read(filename, hdr)
 

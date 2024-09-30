@@ -2,17 +2,31 @@ import numpy as np
 
 from pyssata import cp
 
-clamp_generic_less = cp.ElementwiseKernel(
+try:
+    import cupy as cp
+    clamp_generic_less_gpu = cp.ElementwiseKernel(
         'T x, T c',
         'T y',
         'y = (y < x)?c:y',
         'clamp_generic')
 
-clamp_generic_more = cp.ElementwiseKernel(
+    clamp_generic_more_gpu = cp.ElementwiseKernel(
         'T x, T c',
         'T y',
         'y = (y > x)?c:y',
         'clamp_generic')
+
+except ImportError:
+    pass
+
+
+def clamp_generic_less_cpu(x, c, y):
+    y[:] = np.where(y < x, c, y)
+
+
+def clamp_generic_more_cpu(x, c, y):
+    y[:] = np.where(y > x, c, y)
+
 
 def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm_fact=None, threshold=None, xp=None, float_dtype=None):
     """
@@ -32,6 +46,13 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
         flux (float): Total intensity.
     """
     
+    if xp == cp:
+        clamp_generic_less = clamp_generic_less_gpu
+        clamp_generic_more = clamp_generic_more_gpu
+    else:
+        clamp_generic_less = clamp_generic_less_cpu
+        clamp_generic_more = clamp_generic_more_cpu
+
     if INTENSITY_BASED and SHLIKE:
         raise ValueError('INTENSITY_BASED and SHLIKE keywords cannot be set together.')
 
@@ -59,7 +80,11 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
 
     per_subap_sum = A+B+C+D
     total_intensity = xp.sum(per_subap_sum)
-    clamp_generic_less(0,0, total_intensity)
+    if xp == cp:
+        clamp_generic_less(0,0, total_intensity)
+    else:
+        if total_intensity < 0:
+            total_intensity = 0
 
     if norm_fact is not None:
         factor = 1.0 / norm_fact
@@ -81,5 +106,10 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
         sx = (A+B-C-D).astype(float_dtype) * factor
         sy = (B+C-A-D).astype(float_dtype) * factor
 
-    clamp_generic_more(0,1, total_intensity)        
+    if xp == cp:
+        clamp_generic_more(0, 1, total_intensity)
+    else:
+        if total_intensity > 0:
+            total_intensity = 1
+
     return sx*total_intensity, sy*total_intensity, flux
