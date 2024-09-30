@@ -15,8 +15,6 @@ class Pixels(BaseDataObj):
         self._bpp = bits
         self._bytespp = (bits + 7) // 8  # bits self.xp.arounded to the next multiple of 8
 
-        super().__init__()
-
     def _validate_bits(self, bits):
         if bits > 64:
             raise ValueError("Cannot create pixel object with more than 64 bits per pixel")
