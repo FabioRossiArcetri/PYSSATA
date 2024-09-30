@@ -1,7 +1,6 @@
 import numpy as np
 
 from pyssata import xp
-from pyssata import cpuArray
 from pyssata import global_precision
 from pyssata import float_dtype_list
 from pyssata import complex_dtype_list

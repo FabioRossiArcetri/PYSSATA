@@ -104,7 +104,7 @@ class AtmoPropagation(BaseProcessingObj):
         shiftXY_list = self._shiftXY_list if self._shiftXY_list else None
         rotAnglePhInDeg_list = self._rotAnglePhInDeg_list if self._rotAnglePhInDeg_list else None
         magnification_list = self._magnification_list if self._magnification_list else None
-        pupil_position = self.xp.array(self._pupil_position, dtype=self.dtype) if self.xp.any(self.xp.array(self._pupil_position, dtype=self.dtype)) else None
+        pupil_position = self.xp.array(self._pupil_position, dtype=self.dtype)
 
         self._layer_list = self.inputs['layer_list'].get(self._target_device_idx)
     
@@ -173,13 +173,12 @@ class AtmoPropagation(BaseProcessingObj):
         diff_height = height_source - height_layer
 
         if (height_layer == 0 or (self.xp.isinf(height_source) and polar_coordinate[0] == 0)) and \
-        ((shiftXY is None) or (self.xp.all(shiftXY == self.xp.array([0, 0], dtype=self.dtype)))) and \
-        ((pupil_position is None) or (pupil_position == 0)) and \
+        ((shiftXY is None) or (not self.xp.any(shiftXY))) and \
+        ((not pupil_position.any())) and \
         ((rotAnglePhInDeg is None) or (rotAnglePhInDeg == 0)) and \
         ((magnify is None) or (magnify == 1)):
 
             s_layer = layer_ef.size
-
             topleft = [(s_layer[0] - pixel_pupil) // 2, (s_layer[1] - pixel_pupil) // 2]
             update_ef.product(layer_ef, subrect=topleft)
 
