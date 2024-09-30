@@ -35,16 +35,7 @@ class IIRControl(TimeControl):
         self._modal_start_time = None
         self._time_gmt_imm = None
         self._gain_gmt_imm = None
-        self._deltaCommHistEx = None
-        self._commHistEx = None
-        self._deltaCommFutureHistEx = None
-        self._ostMatEx = None
-        self._istMatEx = None
-        self._doExtraPol = False
         self._do_gmt_init_mod_manager = False
-        self._nPastStepsEx = 0
-        self._gainEx = 0.0
-        self._extraPolMinMax = [0, 0]
         self._skipOneStep = False
         self._StepIsNotGood = False
         self._start_time = 0
@@ -143,47 +134,11 @@ class IIRControl(TimeControl):
                 if self._offset is not None:
                     delta_comm[:len(self._offset)] += self._offset
 
-                if self._doExtraPol:
-                    if self._nPastStepsEx == 0:
-                        self._nPastStepsEx = 8
-
-                if self._deltaCommFutureHistEx is not None:
-                    if abs(round(self._delay) - self._delay) <= 1e-3:
-                        delta_temp = self._deltaCommFutureHistEx[:, self._nPastStepsEx - self.xp.around(self._delay)]
-                    else:
-                        delta_temp = (self._delay - self.xp.floor(self._delay)) * self._deltaCommFutureHistEx[:, self._nPastStepsEx - self.xp.ceil(self._delay)] + \
-                                     (self.xp.ceil(self._delay) - self._delay) * self._deltaCommFutureHistEx[:, self._nPastStepsEx - self.xp.floor(self._delay)]
-                    delta_comm += delta_temp
-
-                newc = compute_comm(self._iirfilter, delta_comm, ist=ist, ost=ost)                
+                newc = compute_comm(delta_comm)                
 
                 if self.xp.all(newc == 0) and self._offset is not None:
                     newc[:len(self._offset)] += self._offset
                     print("WARNING (IIRCONTROL): newc is a null vector, applying offset.")
-
-                if self._doExtraPol:
-                    print("doing extrapolation")
-                    thr_chisqr = 0.9
-                    LPF = True
-                    if self.xp.all(self._extraPolMinMax == 0):
-                        self._extraPolMinMax = [0, self._iirfilter.nfilter]
-                    deltaCommHist = self._deltaCommHistEx if self._deltaCommHistEx is not None else self.xp.zeros((0, 0), dtype=self.dtype)
-                    commHist = self._commHistEx if self._commHistEx is not None else self.xp.zeros((0, 0), dtype=self.dtype)
-                    deltaCommFutureHist = self._deltaCommFutureHistEx if self._deltaCommFutureHistEx is not None else self.xp.zeros((0, 0), dtype=self.dtype)
-                    if LPF:
-                        ostMat = self._ostMatEx if self._ostMatEx is not None else self.xp.zeros((0, 0), dtype=self.dtype)
-                        istMat = self._istMatEx if self._istMatEx is not None else self.xp.zeros((0, 0), dtype=self.dtype)
-                    newcExtrapol = compute_extrapol_comm(newc, self._delay + 1, self._nPastStepsEx, thr_chisqr, 
-                                                         deltaCommHist=deltaCommHist, commHist=commHist, 
-                                                         deltaCommFutureHist=deltaCommFutureHist, gainFuture=None, 
-                                                         nMinMaxMode=self._extraPolMinMax, LPF=LPF, filterGain=self._gainEx, 
-                                                         ostMat=ostMat, istMat=istMat)
-                    self._deltaCommHistEx = deltaCommHist
-                    self._commHistEx = commHist
-                    self._deltaCommFutureHistEx = deltaCommFutureHist
-                    if LPF:
-                        self._ostMatEx = ostMat
-                        self._istMatEx = istMat
 
                 if self._verbose:
                     print(f"first {min(6, len(delta_comm))} delta_comm values: {delta_comm[:min(6, len(delta_comm))]}")
@@ -202,6 +157,77 @@ class IIRControl(TimeControl):
 
         if self._verbose:
             print(f"first {min(6, len(self._out_comm.value))} output comm values: {self._out_comm.value[:min(6, len(self._out_comm.value))]}")
+
+    def compute_comm(self, input_data):
+        nfilter = self._iirfilter.num.shape[0]
+        ninput = len(input_data)
+
+        if nfilter < ninput:
+            raise ValueError(f"Error: IIR filter needs no more than {nfilter} coefficients ({ninput} given)")
+
+        idx_finite = self.xp.where(self.xp.isfinite(input_data))[0]
+        temp_input = input_data[idx_finite]
+        temp_ist = self._ist[idx_finite]
+        temp_ost = self._ost[idx_finite]
+        temp_output, temp_ost, temp_ist = self.online_filter(
+            self._iirfilter.num[idx_finite, :],
+            self._iirfilter.den[idx_finite, :],
+            temp_input,
+            ost=temp_ost,
+            ist=temp_ist
+        )
+        output[idx_finite] = temp_output
+        self._ost[idx_finite] = temp_ost
+        self._ist[idx_finite] = temp_ist
+        
+        return output
+    
+    def online_filter(self, num, den, input_data, ost=None, ist=None):
+        # Initialize state vectors if not provided
+        if ost is None:
+            ost = self.xp.zeros(len(den), dtype=self.dtype)
+        if ist is None:
+            ist = self.xp.zeros(len(num), dtype=self.dtype)
+        
+        sden = self.xp.shape(den)
+        snum = self.xp.shape(num)
+        
+        if len(sden) == 1 and len(snum) == 1:
+            no = sden[0]
+            ni = snum[0]
+
+            # Delay the vectors
+            ost = self.xp.concatenate((ost[1:], [0]))
+            ist = self.xp.concatenate((ist[1:], [0]))
+
+            # New input
+            ist[ni - 1] = input_data
+
+            # New output
+            factor = 1/den[no - 1]
+            ost[no - 1] = factor * self.xp.sum(num * ist)
+            ost[no - 1] -= factor * self.xp.sum(den[:no - 1] * ost[:no - 1])
+            output = ost[no - 1]
+
+        else:
+            no = sden[1]
+            ni = snum[1]
+
+            # Delay the vectors
+            ost = self.xp.concatenate((ost[:, 1:], self.xp.zeros((sden[0], 1), dtype=self.dtype)), axis=1)
+            ist = self.xp.concatenate((ist[:, 1:], self.xp.zeros((sden[0], 1), dtype=self.dtype)), axis=1)
+
+            # New input
+            ist[:len(input_data), ni - 1] = input_data
+
+            # New output
+            factor = 1/den[:, no - 1]
+            ost[:, no - 1] = factor * self.xp.sum(num * ist, axis=1)
+            ost[:, no - 1] -= factor * self.xp.sum(den[:, :no - 1] * ost[:, :no - 1], axis=1)
+
+            output = ost[:len(input_data), no - 1]
+
+        return output, ost, ist
 
     def run_check(self, time_step, errmsg=""):
         return True
