@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 from scipy.stats import gamma
 from scipy.ndimage import convolve
@@ -10,12 +11,20 @@ from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.calc_detector_noise import calc_detector_noise
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 
-import cupy as cp
-clamp_generic = cp.ElementwiseKernel(
+
+try:
+    import cupy as cp
+    clamp_generic_gpu = cp.ElementwiseKernel(
         'T x, T c',
         'T y',
         'y = (y < x)?c:y',
         'clamp_generic')
+
+except ImportError:
+    pass
+
+def clamp_generic_cpu(x, c, y):
+    y[:] = np.where(y < x, c, y)
 
 
 # TODO
@@ -40,6 +49,11 @@ class CCD(BaseProcessingObj):
                  ADU_gain=None, ADU_bias=400, emccd_gain=None,
                  target_device_idx=None, precision=None):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
+
+        if self.xp is cp:
+            self._clamp_generic = clamp_generic_gpu
+        else:
+            self._clamp_generic = clamp_generic_cpu
 
         if wfs:
             if not isinstance(wfs, ModalAnalysisWFS):
@@ -240,7 +254,7 @@ class CCD(BaseProcessingObj):
 
         if self._photon_noise:
             ccd_frame = self.xp.round(ccd_frame * self._ADU_gain) + self._ADU_bias
-            clamp_generic(0, 0, ccd_frame)
+            self._clamp_generic(0, 0, ccd_frame)
             #ccd_frame = self.xp.where(ccd_frame > 0, ccd_frame, 0)
 
             if not self._keep_ADU_bias:
