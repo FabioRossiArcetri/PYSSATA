@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import cp, cpuArray
+from pyssata import cp, cpuArray, fuse
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
@@ -13,7 +13,7 @@ from pyssata.lib.toccd import toccd
 # from cupyx.scipy.fft import get_fft_plan
 # import cupyx.scipy.fft
 
-@cp.fuse(kernel_name='pyr1_fused')
+@fuse(kernel_name='pyr1_fused')
 def pyr1_fused(u_fp, ffv, myexp, fp_mask):
     psf = cp.real(u_fp * cp.conj(u_fp))
     fpsf = psf * ffv

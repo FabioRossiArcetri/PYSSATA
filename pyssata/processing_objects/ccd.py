@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 from scipy.stats import gamma
 from scipy.ndimage import convolve
@@ -10,12 +11,18 @@ from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.calc_detector_noise import calc_detector_noise
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 
-import cupy as cp
-clamp_generic = cp.ElementwiseKernel(
+
+try:
+    import cupy as cp
+    clamp_generic = cp.ElementwiseKernel(
         'T x, T c',
         'T y',
         'y = (y < x)?c:y',
         'clamp_generic')
+
+except ImportError:
+    def clamp_generic(x, c, y):
+        y[:] = np.where(y < x, c, y)
 
 
 # TODO
