@@ -2,6 +2,7 @@ import os
 import numpy as np
 
 from pyssata import xp
+from pyssata import show_in_profiler
 from collections import OrderedDict
 import pickle
 import time
@@ -197,6 +198,7 @@ class Datastore(BaseProcessingObj):
                 plt.plot(times[init:], values, **kwargs)
         plt.show()
 
+    @show_in_profiler('Datastore.trigger')
     def trigger(self, t):
         do_store_values = self._decimation_t == 0 or t % self._decimation_t == 0
         if do_store_values:
