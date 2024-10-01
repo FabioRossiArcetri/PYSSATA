@@ -1,7 +1,5 @@
 import numpy as np
 
-from pyssata import xp
-
 from pyssata.base_parameter_obj import BaseParameterObj
 from pyssata.data_objects.base_data_obj import BaseDataObj
 from pyssata.lib.n_phot import n_phot
@@ -23,12 +21,12 @@ class Source(BaseDataObj, BaseParameterObj):
         super().__init__()
         
         if zenithAngleInDeg is not None:
-            airmass = 1. / xp.cos(zenithAngleInDeg / 180. * xp.pi)
+            airmass = 1. / np.cos(zenithAngleInDeg / 180. * np.pi)
             height *= airmass
             if verbose:
                     print(f'get_source: changing source height by airmass value ({airmass})')
 
-        polar_coordinate = xp.array(polar_coordinate, dtype=self.dtype) + xp.array(error_coord, dtype=self.dtype)
+        polar_coordinate = np.array(polar_coordinate, dtype=self.dtype) + np.array(error_coord, dtype=self.dtype)
         if any(error_coord):
             print(f'there is a desired error ({error_coord[0]},{error_coord[1]}) on source coordinates.')
             print(f'final coordinates are: {polar_coordinate[0]},{polar_coordinate[1]}')
@@ -47,7 +45,7 @@ class Source(BaseDataObj, BaseParameterObj):
 
     @polar_coordinate.setter
     def polar_coordinate(self, value):
-        self._polar_coordinate = xp.array(value, dtype=self.dtype)
+        self._polar_coordinate = np.array(value, dtype=self.dtype)
 
     @property
     def height(self):
@@ -76,14 +74,14 @@ class Source(BaseDataObj, BaseParameterObj):
     @property
     def x_coord(self):
         alpha = self._polar_coordinate[0] * 4.848e-6
-        d = self._height * xp.sin(alpha)
-        return xp.cos(xp.radians(self._polar_coordinate[1])) * d
+        d = self._height * np.sin(alpha)
+        return np.cos(np.radians(self._polar_coordinate[1])) * d
 
     @property
     def y_coord(self):
         alpha = self._polar_coordinate[0] * 4.848e-6
-        d = self._height * xp.sin(alpha)
-        return xp.sin(xp.radians(self._polar_coordinate[1])) * d
+        d = self._height * np.sin(alpha)
+        return np.sin(np.radians(self._polar_coordinate[1])) * d
 
     @property
     def band(self):

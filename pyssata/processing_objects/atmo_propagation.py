@@ -1,5 +1,8 @@
+
+import numpy as np
 from astropy.io import fits
 
+from pyssata import show_in_profiler
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.ef import ElectricField
 #from pyssata.lib.layers2pupil_ef import layers2pupil_ef
@@ -80,9 +83,9 @@ class AtmoPropagation(BaseProcessingObj):
             nlayers = len(self._layer_list)
             self._propagators = []
 
-            height_layers = self.xp.array([layer.height for layer in self._layer_list], dtype=self.dtype)
-            sorted_heights = self.xp.sort(height_layers)
-            if not (self.xp.allclose(height_layers, sorted_heights) or self.xp.allclose(height_layers, sorted_heights[::-1])):
+            height_layers = np.array([layer.height for layer in self._layer_list], dtype=self.dtype)
+            sorted_heights = np.sort(height_layers)
+            if not (np.allclose(height_layers, sorted_heights) or np.allclose(height_layers, sorted_heights[::-1])):
                 raise ValueError('Layers must be sorted from highest to lowest or from lowest to highest')
 
             for j in range(nlayers):
@@ -104,7 +107,7 @@ class AtmoPropagation(BaseProcessingObj):
         shiftXY_list = self._shiftXY_list if self._shiftXY_list else None
         rotAnglePhInDeg_list = self._rotAnglePhInDeg_list if self._rotAnglePhInDeg_list else None
         magnification_list = self._magnification_list if self._magnification_list else None
-        pupil_position = self.xp.array(self._pupil_position, dtype=self.dtype)
+        pupil_position = np.array(self._pupil_position, dtype=self.dtype)
 
         self._layer_list = self.inputs['layer_list'].get(self._target_device_idx)
     
@@ -122,13 +125,14 @@ class AtmoPropagation(BaseProcessingObj):
 
             pupil.generation_time = t
 
+    @show_in_profiler('atmo_propagation.trigger')
     def trigger(self, t):
         self.propagate(t)
 
     def run_check(self, time_step):
         # TODO here for no better place, we need something like a "setup()" method called before the loop starts        
         self._layer_list = self.inputs['layer_list'].get(self._target_device_idx)        
-        self._shiftXY_list = [layer.shiftXYinPixel if hasattr(layer, 'shiftXYinPixel') else self.xp.array([0, 0]) for layer in self._layer_list]
+        self._shiftXY_list = [layer.shiftXYinPixel if hasattr(layer, 'shiftXYinPixel') else np.array([0, 0]) for layer in self._layer_list]
         self._rotAnglePhInDeg_list = [layer.rotInDeg if hasattr(layer, 'rotInDeg') else 0 for layer in self._layer_list]
         self._magnification_list = [max(layer.magnification, 1.0) if hasattr(layer, 'magnification') else 1.0 for layer in self._layer_list]
 
@@ -172,8 +176,8 @@ class AtmoPropagation(BaseProcessingObj):
 
         diff_height = height_source - height_layer
 
-        if (height_layer == 0 or (self.xp.isinf(height_source) and polar_coordinate[0] == 0)) and \
-        ((shiftXY is None) or (not self.xp.any(shiftXY))) and \
+        if (height_layer == 0 or (np.isinf(height_source) and polar_coordinate[0] == 0)) and \
+        ((shiftXY is None) or (not np.any(shiftXY))) and \
         ((not pupil_position.any())) and \
         ((rotAnglePhInDeg is None) or (rotAnglePhInDeg == 0)) and \
         ((magnify is None) or (magnify == 1)):
@@ -184,7 +188,7 @@ class AtmoPropagation(BaseProcessingObj):
 
         elif diff_height > 0:
             sec2rad = 4.848e-6
-            degree2rad = self.xp.pi / 180.
+            degree2rad = np.pi / 180.
             r_angle = polar_coordinate[0] * sec2rad
             phi_angle = polar_coordinate[1] * degree2rad
 
@@ -195,14 +199,14 @@ class AtmoPropagation(BaseProcessingObj):
                 half_pixel_layer_x -= shiftXY[0]
                 half_pixel_layer_y -= shiftXY[1]
 
-            if pupil_position is not None and pixel_layer > pixel_pupil and self.xp.isfinite(height_source):
+            if pupil_position is not None and pixel_layer > pixel_pupil and np.isfinite(height_source):
                 pixel_position = r_angle * height_layer / pixel_pitch
-                pixel_position_x = pixel_position * self.xp.cos(phi_angle) + pupil_position[0] / pixel_pitch
-                pixel_position_y = pixel_position * self.xp.sin(phi_angle) + pupil_position[1] / pixel_pitch
-            elif pupil_position is not None and pixel_layer > pixel_pupil and not self.xp.isfinite(height_source):
+                pixel_position_x = pixel_position * np.cos(phi_angle) + pupil_position[0] / pixel_pitch
+                pixel_position_y = pixel_position * np.sin(phi_angle) + pupil_position[1] / pixel_pitch
+            elif pupil_position is not None and pixel_layer > pixel_pupil and not np.isfinite(height_source):
                 pixel_position = r_angle * height_source / pixel_pitch
-                sky_pixel_position_x = pixel_position * self.xp.cos(phi_angle)
-                sky_pixel_position_y = pixel_position * self.xp.sin(phi_angle)
+                sky_pixel_position_x = pixel_position * np.cos(phi_angle)
+                sky_pixel_position_y = pixel_position * np.sin(phi_angle)
 
                 pupil_pixel_position_x = pupil_position[0] / pixel_pitch
                 pupil_pixel_position_y = pupil_position[1] / pixel_pitch
@@ -211,10 +215,10 @@ class AtmoPropagation(BaseProcessingObj):
                 pixel_position_y = (sky_pixel_position_y - pupil_pixel_position_y) * height_layer / height_source + pupil_pixel_position_y
             else:
                 pixel_position = r_angle * height_layer / pixel_pitch
-                pixel_position_x = pixel_position * self.xp.cos(phi_angle)
-                pixel_position_y = pixel_position * self.xp.sin(phi_angle)
+                pixel_position_x = pixel_position * np.cos(phi_angle)
+                pixel_position_y = pixel_position * np.sin(phi_angle)
 
-            if self.xp.isfinite(height_source):
+            if np.isfinite(height_source):
                 pixel_pupmeta = pixel_pupil
             else:
                 cone_coeff = abs(height_source - abs(height_layer)) / height_source
@@ -227,12 +231,13 @@ class AtmoPropagation(BaseProcessingObj):
                 tempP[tempA == 0] = self.xp.mean(tempP[tempA != 0])
                 layer_ef.phaseInNm = tempP
 
-            xx, yy = self.xp.meshgrid(self.xp.arange(pixel_pupil), self.xp.arange(pixel_pupil))
+            myrange = self.xp.arange(pixel_pupil)
+            xx, yy = self.xp.meshgrid(myrange, myrange)
 
             if rotAnglePhInDeg is not None:
                 angle = (-rotAnglePhInDeg % 360) * self.xp.pi / 180
-                x = self.xp.cos(angle) * xx - self.xp.sin(angle) * yy + half_pixel_layer_x + pixel_position_x
-                y = self.xp.sin(angle) * xx + self.xp.cos(angle) * yy + half_pixel_layer_y + pixel_position_y
+                x = np.cos(angle) * xx - np.sin(angle) * yy + half_pixel_layer_x + pixel_position_x
+                y = np.sin(angle) * xx + np.cos(angle) * yy + half_pixel_layer_y + pixel_position_y
                 GRID = 0
             else:
                 x = xx + half_pixel_layer_x + pixel_position_x
@@ -240,11 +245,12 @@ class AtmoPropagation(BaseProcessingObj):
                 GRID = 1
 
             points = self.xp.vstack((x.ravel(), y.ravel())).T
-            interpolator_A = RegularGridInterpolator((self.xp.arange(layer_ef.size[0]), self.xp.arange(layer_ef.size[1])), layer_ef.A, bounds_error=False, fill_value=0)
-            interpolator_phase = RegularGridInterpolator((self.xp.arange(layer_ef.size[0]), self.xp.arange(layer_ef.size[1])), layer_ef.phaseInNm, bounds_error=False, fill_value=0)
+            range0 = self.xp.arange(layer_ef.size[0])
+            range1 = self.xp.arange(layer_ef.size[1])
+            interpolator_A = RegularGridInterpolator((range0, range1), layer_ef.A, bounds_error=False, fill_value=0)
+            interpolator_phase = RegularGridInterpolator((range0, range1), layer_ef.phaseInNm, bounds_error=False, fill_value=0)
             pupil_ampl_temp = interpolator_A(points).reshape(pixel_pupil, pixel_pupil)
             pupil_phase_temp = interpolator_phase(points).reshape(pixel_pupil, pixel_pupil)
-
 
             update_ef.A *= pupil_ampl_temp
             update_ef.phaseInNm += pupil_phase_temp
