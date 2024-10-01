@@ -20,6 +20,7 @@ def pyr1_fused(u_fp, ffv, myexp, fp_mask):
     u_fp *= fp_mask
     u_fp_pyr = u_fp * myexp
     return u_fp_pyr, fpsf                                                
+
             
 class ModulatedPyramid(BaseProcessingObj):
     def __init__(self,
@@ -123,6 +124,10 @@ class ModulatedPyramid(BaseProcessingObj):
         self._extended_source_in_on = False
         iu = 1j  # complex unit
         self._myexp = self.xp.exp(-2 * self.xp.pi * iu * self._pyr_tlt, dtype=self.complex_dtype)
+        self._ffv = None
+        self._ffv_sum = None
+        self._ffv_thresholded = None
+        self._u_tlt = None
 
         # Pre-computation of ttexp will be done when mod_steps will be set or re-set
         if int(mod_step) != mod_step:
@@ -184,6 +189,12 @@ class ModulatedPyramid(BaseProcessingObj):
     @rot_angle_ph_in_deg.setter
     def rot_angle_ph_in_deg(self, value):
         self._rotAnglePhInDeg = value
+
+    def set_flux_factor_vector(self, vector):
+        self._ffv = self.xp.array(vector, dtype=self.dtype)
+        self._ffv_sum = self.xp.sum(vector)
+        mean_value = self.xp.median(vector) * 1e-3
+        self._ffv_thresholded = self.xp.where(vector > mean_value, vector, 0)
 
     @property
     def out_i(self):
@@ -313,7 +324,7 @@ class ModulatedPyramid(BaseProcessingObj):
         idx = self.xp.where(self.xp.abs(i) < self.xp.max(self.xp.abs(i)) * 1e-5)[0]
         if len(idx[0]) > 0:
             i[idx] = 0
-        self._flux_factor_vector = i
+        self.set_flux_factor_vector(i)
 
     def get_pyr_tlt(self, p, c):
         A = int((p + c) // 2)
@@ -394,7 +405,7 @@ class ModulatedPyramid(BaseProcessingObj):
             return tilt_x
         if Y:
             return tilt_y
-
+        
     def cache_ttexp(self):
         if not self._extended_source_in_on:
             del self._ttexp
@@ -410,7 +421,8 @@ class ModulatedPyramid(BaseProcessingObj):
                          self._mod_amp * self.xp.cos(angle) * self._tilt_y
                 self._ttexp[:, :, tt] = self.xp.exp(-iu * pup_tt, dtype=self.complex_dtype)
 
-            self._flux_factor_vector = self.xp.ones(self._mod_steps, dtype=self.dtype)
+            self.set_flux_factor_vector(self.xp.ones(self._mod_steps, dtype=self.dtype))
+            self._u_tlt = self.xp.zeros((self._fft_totsize, self._fft_totsize, self.mod_steps), dtype=self.complex_dtype)
 
     def trigger(self, t):
         in_ef = self.inputs['in_ef'].get(self._target_device_idx)
@@ -421,7 +433,7 @@ class ModulatedPyramid(BaseProcessingObj):
             if self._extSourcePsf.generation_time == t:
                 if self.xp.sum(self.xp.abs(self._extSourcePsf.value)) > 0:
                     self._extSource.updatePsf(self._extSourcePsf.value)
-                    self._flux_factor_vector = self._extSource.coeff_flux
+                    self.set_flux_factor_vector(self._extSource.coeff_flux)
 
         s = in_ef.size
 
@@ -439,19 +451,15 @@ class ModulatedPyramid(BaseProcessingObj):
 
         u_tlt_const = ef * self._tlt_f
 
-        pup_pyr_tot = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-        psf_bfm = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-        psf_tot = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-
+        # APU: it's faster to keep this allocation here. Maybe it warms up the cache?
         u_tlt = self.xp.zeros((self._fft_totsize, self._fft_totsize, self.mod_steps), dtype=self.complex_dtype)
         
-        mean_value = self.xp.median(self._flux_factor_vector) * 1e-3
         fp_mask = self._fp_mask[:,:, self.xp.newaxis]
         my_exp = self._myexp[:,:, self.xp.newaxis]
 
         #plan1 = get_fft_plan(u_tlt, axes=(0, 1), value_type='C2C')            
         #plan2 = get_fft_plan(u_tlt, axes=(0, 1), value_type='C2C')            
-        ffv = self.xp.where(self._flux_factor_vector > mean_value, self._flux_factor_vector, 0)
+        ffv = self._ffv_thresholded
         tmp = self.xp.repeat(u_tlt_const[:, :, self.xp.newaxis], ffv.shape[0], axis=2)            
         tmp = tmp * self._ttexp
         ss = tmp.shape
@@ -473,7 +481,7 @@ class ModulatedPyramid(BaseProcessingObj):
 
         pup_pyr_tot = self.xp.roll(pup_pyr_tot, self.xp.array( [self._fft_padding//2, self._fft_padding//2], dtype=self.xp.int64), [0,1] )
 
-        factor = 1.0 / self.xp.sum(self._flux_factor_vector)
+        factor = 1.0 / self._ffv_sum
         pup_pyr_tot *= factor
         psf_tot *= factor
         psf_bfm *= factor
