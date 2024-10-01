@@ -124,6 +124,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self._extended_source_in_on = False
         iu = 1j  # complex unit
         self._myexp = self.xp.exp(-2 * self.xp.pi * iu * self._pyr_tlt, dtype=self.complex_dtype)
+        self._roll_amount = (self._fft_padding // 2, self._fft_padding//2)
         self._ffv = None
         self._ffv_sum = None
         self._ffv_thresholded = None
@@ -479,7 +480,7 @@ class ModulatedPyramid(BaseProcessingObj):
         psf_tot = self.xp.sum(fpsf*fp_mask, axis=2)
         # self.xp.cuda.runtime.deviceSynchronize()
 
-        pup_pyr_tot = self.xp.roll(pup_pyr_tot, self.xp.array( [self._fft_padding//2, self._fft_padding//2], dtype=self.xp.int64), [0,1] )
+        pup_pyr_tot = self.xp.roll(pup_pyr_tot, self._roll_amount, [0,1] )
 
         factor = 1.0 / self._ffv_sum
         pup_pyr_tot *= factor
