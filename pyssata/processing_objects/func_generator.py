@@ -1,7 +1,16 @@
 import numpy as np
 
+from pyssata import show_in_profiler, fuse, cp
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+
+
+@fuse('calc_sin_gpu')
+def calc_sin_gpu(amp, freq, seconds, offset, constant):
+    return amp * cp.sin(freq*2*np.pi*seconds + offset) + constant
+
+def calc_sin_cpu(amp, freq, seconds, offset, constant):
+    return amp * np.sin(freq*2*np.pi*seconds + offset) + constant
 
 
 class FuncGenerator(BaseProcessingObj):
@@ -12,6 +21,11 @@ class FuncGenerator(BaseProcessingObj):
                 precision=None
                 ):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
+
+        if self.xp == cp:
+            self._calc_sin = calc_sin_gpu
+        else:
+            self._calc_sin = calc_sin_cpu
 
         self._type = func_type.upper()
 
@@ -28,19 +42,19 @@ class FuncGenerator(BaseProcessingObj):
 
         # Initialize attributes based on the type
         if self._type == 'SIN':
-            self._constant = constant or 0.0
-            self._amp = amp or 0.0
-            self._freq = freq or 0.0
-            self._offset = offset or 0.0
+            self.constant = constant or 0.0
+            self.amp = amp or 0.0
+            self.freq = freq or 0.0
+            self.offset = offset or 0.0
 
         elif self._type == 'LINEAR':
-            self._constant = constant or 0.0
-            self._slope = 0.0
+            self.constant = constant or 0.0
+            self.slope = 0.0
 
         elif self._type == 'RANDOM':
-            self._amp = amp or 0.0
-            self._constant = constant or 0.0
-            self._seed = seed or 0
+            self.amp = amp or 0.0
+            self.constant = constant or 0.0
+            self.seed = seed or 0
 
         elif self._type == 'VIB_HIST':
             if nmodes is None:
@@ -64,22 +78,22 @@ class FuncGenerator(BaseProcessingObj):
             if amp is None and vect_amplitude is None:
                 raise ValueError('AMP or VECT_AMPLITUDE keyword is mandatory for type PUSH')
             self._time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, only_push=True, ncycles=ncycles)
-            self._amp = amp
-            self._vect_amplitude = vect_amplitude
+            self.amp = amp
+            self.vect_amplitude = vect_amplitude
 
         elif self._type == 'PUSHPULL':
             if nmodes is None:
                 raise ValueError('NMODES keyword is mandatory for type PUSHPULL')
             if amp is None and vect_amplitude is None:
                 raise ValueError('AMP or VECT_AMPLITUDE keyword is mandatory for type PUSHPULL')
-            self._time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, ncycles=ncycles, repeat_ncycles=self._repeat_ncycles)
-            self._amp = amp
-            self._vect_amplitude = vect_amplitude
+            self.time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, ncycles=ncycles, repeat_ncycles=self._repeat_ncycles)
+            self.amp = amp
+            self.vect_amplitude = vect_amplitude
 
         elif self._type == 'TIME_HIST':
             if time_hist is None:
                 raise ValueError('TIME_HIST keyword is mandatory for type TIME_HIST')
-            self._time_hist = time_hist
+            self.time_hist = time_hist
 
         else:
             raise ValueError(f'Unknown function type: {self._type}')
@@ -89,6 +103,7 @@ class FuncGenerator(BaseProcessingObj):
         self._active = True
         self.outputs['output'] = self._output
 
+    @show_in_profiler('FuncGenerator.trigger')
     def trigger(self, t):
         seconds = self.t_to_seconds(t)
 
@@ -96,7 +111,7 @@ class FuncGenerator(BaseProcessingObj):
             if not self._active:
                 s = 0.0
             else:
-                s = self.xp.array(self._amp, dtype=self.dtype)*self.xp.sin(self._freq*2*self.xp.pi*seconds + self._offset)+self.xp.array(self._constant, dtype=self.dtype)
+                s = self._calc_sin(self._amp, self._freq, seconds, self._offset, self._constant)
 
         elif self._type == 'LINEAR':
             if not self._active:
@@ -148,7 +163,7 @@ class FuncGenerator(BaseProcessingObj):
 
     @constant.setter
     def constant(self, value):
-        self._constant = value
+        self._constant = self.xp.array(value, dtype=self.dtype)
 
     @property
     def amp(self):
@@ -156,7 +171,7 @@ class FuncGenerator(BaseProcessingObj):
 
     @amp.setter
     def amp(self, value):
-        self._amp = value
+        self._amp = self.xp.array(value, dtype=self.dtype)
 
     @property
     def freq(self):
@@ -164,7 +179,7 @@ class FuncGenerator(BaseProcessingObj):
 
     @freq.setter
     def freq(self, value):
-        self._freq = value
+        self._freq = self.xp.array(value, dtype=self.dtype)
 
     @property
     def offset(self):
@@ -172,7 +187,7 @@ class FuncGenerator(BaseProcessingObj):
 
     @offset.setter
     def offset(self, value):
-        self._offset = value
+        self._offset = self.xp.array(value, dtype=self.dtype)
 
     @property
     def vect_amplitude(self):
