@@ -1,16 +1,18 @@
 from astropy.io import fits
+from functools import cache
 from pyssata import np, cp, xp, global_precision, default_target_device, default_target_device_idx, cpuArray
 from pyssata import cpu_float_dtype_list, gpu_float_dtype_list
 from pyssata import cpu_complex_dtype_list, gpu_complex_dtype_list
 from copy import copy, deepcopy
 
+@cache
 def get_properties(cls):
     result = []
     classlist = cls.__mro__
     for cc in classlist:
         result.extend([attr for attr, value in vars(cc).items() if isinstance(value, property) ]) 
     return result
-    # return [attr for attr, value in vars(cls).items() if isinstance(value, property) ]
+
 
 class BaseTimeObj:
     def __init__(self, target_device_idx=None, precision=None):
@@ -51,22 +53,21 @@ class BaseTimeObj:
             self.xp = np
         
     def copyTo(self, target_device_idx):
-        cloned = self
-        excluded = ['_tag']
         if target_device_idx==self._target_device_idx:
             return self
         else:
+            excluded = ['_tag']
             pp = get_properties(type(self))
             cloned = copy(self)
             for attr in dir(self):
                 if attr not in excluded and attr not in pp:
                     aType = type(getattr(self, attr))
-                    if target_device_idx==-1:
-                        if aType==cp.ndarray:
+                    if aType == cp.ndarray:
+                        if target_device_idx == -1:
                             setattr(cloned, attr, cp.asnumpy( getattr(cloned, attr) ) )
                             # print('Member', attr, 'of class', type(cloned).__name__, 'is now on CPU')
-                    elif self._target_device_idx==-1:
-                        if aType==np.ndarray:
+                    elif aType == np.ndarray:
+                       if self._target_device_idx == -1:
                             setattr(cloned, attr, cp.asarray( getattr(cloned, attr) ) )
                             # print('Member', attr, 'of class', type(cloned).__name__, 'is now on GPU')
             if target_device_idx >= 0:
