@@ -5,7 +5,7 @@ import inspect
 import importlib
 from pyssata.base_processing_obj import BaseProcessingObj
 
-from pyssata.factory import Factory
+from pyssata.loop_control import LoopControl
 from pyssata.lib.flatten import flatten
 from pyssata.calib_manager import CalibManager
 from pyssata.processing_objects.datastore import Datastore
@@ -162,8 +162,7 @@ class Simul():
             params = yaml.safe_load(stream)
 
         # Initialize housekeeping objects
-        factory = Factory(params['main'])
-        loop = factory.get_loop_control()
+        loop = LoopControl(run_time=params['main']['total_time'], dt=params['main']['time_step'])
         store = Datastore(params['main']['store_dir'])
 
         # Actual creation code
