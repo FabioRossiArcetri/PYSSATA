@@ -85,7 +85,7 @@ class FuncGenerator(BaseProcessingObj):
             raise ValueError(f'Unknown function type: {self._type}')
 
         self._nmodes = nmodes
-        self._output = BaseValue()
+        self._output = BaseValue(target_device_idx=target_device_idx)
         self._active = True
         self.outputs['output'] = self._output
 
