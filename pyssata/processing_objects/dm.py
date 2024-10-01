@@ -22,10 +22,10 @@ class DM(BaseProcessingObj):
                  obsratio: float=None,
                  diaratio: float=None,
                  pupilstop: Pupilstop=None,
-                 target_device_idx=None, 
+                 device_idx=None, 
                  precision=None
                  ):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+        super().__init__(device_idx=device_idx, precision=precision)
 
         mask = None
         if pupilstop:
@@ -37,14 +37,14 @@ class DM(BaseProcessingObj):
             ifunc = IFunc(type_str=type_str, mask=mask, npixels=npixels,
                            obsratio=obsratio, diaratio=diaratio, nzern=nzern,
                            nmodes=nmodes, start_mode=start_mode, idx_modes=idx_modes,
-                           target_device_idx=target_device_idx, precision=precision)
+                           device_idx=device_idx, precision=precision)
         self._ifunc = ifunc
         
         s = self._ifunc.mask_inf_func.shape
         nmodes_if = self._ifunc.size[0]
         
         self._if_commands = self.xp.zeros(nmodes_if, dtype=self._ifunc.dtype)
-        self._layer = Layer(s[0], s[1], pixel_pitch, height, target_device_idx=target_device_idx, precision=precision)
+        self._layer = Layer(s[0], s[1], pixel_pitch, height, device_idx=device_idx, precision=precision)
         self._layer.A = self._ifunc.mask_inf_func
         
         # sign is -1 to take into account the reflection in the propagation
@@ -58,7 +58,7 @@ class DM(BaseProcessingObj):
         self._gain = 0.5
     
     def compute_shape(self):
-        commands_input = self.inputs['in_command'].get(self._target_device_idx)
+        commands_input = self.inputs['in_command'].get(self._device_idx)
         commands = commands_input.value
 
         if self._history is None:
@@ -85,7 +85,7 @@ class DM(BaseProcessingObj):
 
     @show_in_profiler('dm.trigger')
     def trigger(self, t):
-        command = self.inputs['in_command'].get(self._target_device_idx)
+        command = self.inputs['in_command'].get(self._device_idx)
         if self._verbose:
             print(f"time: {self.t_to_seconds(t)}")
             print(f"command generation time: {self.t_to_seconds(command.generation_time)}")
@@ -152,7 +152,7 @@ class DM(BaseProcessingObj):
         self._layer.magnification = value
 
     def run_check(self, time_step, errmsg=""):
-        commands_input = self.inputs['in_command'].get(self._target_device_idx)
+        commands_input = self.inputs['in_command'].get(self._device_idx)
         if commands_input is None:
             errmsg += f"{self.repr()} No input command defined"
         

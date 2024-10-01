@@ -7,8 +7,8 @@ class PupData(BaseDataObj):
     TODO change to have the pupil index in the second index
     (for compatibility with existing PASSATA data)
     '''
-    def __init__(self, target_device_idx=None, precision=None):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+    def __init__(self, device_idx=None, precision=None):
+        super().__init__(device_idx=device_idx, precision=precision)
         self._radius = self.xp.zeros(4, dtype=self.dtype)
         self._cx = self.xp.zeros(4, dtype=self.dtype)
         self._cy = self.xp.zeros(4, dtype=self.dtype)
@@ -101,14 +101,14 @@ class PupData(BaseDataObj):
         exten += 4
 
     @staticmethod
-    def restore(filename, target_device_idx=None):
+    def restore(filename, device_idx=None):
         hdr = fits.getheader(filename)
         version = int(hdr['VERSION'])
 
         if version > 2:
             raise ValueError(f"Error: unknown version {version} in file {filename}")
 
-        p = PupData(target_device_idx=target_device_idx)
+        p = PupData(device_idx=device_idx)
         if version >= 2:
             p.framesize = [int(hdr['FSIZEX']), int(hdr['FSIZEY'])]
 

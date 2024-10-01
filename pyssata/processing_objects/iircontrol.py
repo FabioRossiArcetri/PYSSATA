@@ -9,7 +9,7 @@ from pyssata.lib.compute_comm import compute_comm
 class IIRControl(TimeControl):
     '''Infinite Impulse Response filter based Time Control'''
     def __init__(self, iirfilter, delay=0,
-                target_device_idx=None, 
+                device_idx=None, 
                 precision=None
                 ):
 
@@ -17,7 +17,7 @@ class IIRControl(TimeControl):
         typeIIR = iirfilter.num.dtype
         nIIR = iirfilter.nfilter
 
-        TimeControl.__init__(self, delay=delay, n=nIIR, type=typeIIR, target_device_idx=target_device_idx, precision=precision)
+        TimeControl.__init__(self, delay=delay, n=nIIR, type=typeIIR, device_idx=device_idx, precision=precision)
 
         self._ist = self.xp.zeros_like(iirfilter.num)
         self._ost = self.xp.zeros_like(iirfilter.den)

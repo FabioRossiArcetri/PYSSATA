@@ -3,7 +3,7 @@ from astropy.io import fits
 from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class BaseValue(BaseDataObj):
-    def __init__(self, description='', value=None, target_device_idx=None):
+    def __init__(self, description='', value=None, device_idx=None):
         """
         Initialize the base value object.
 
@@ -11,7 +11,7 @@ class BaseValue(BaseDataObj):
         description (str, optional)
         value (any, optional): data to store. If not set, the value is initialized to None.
         """
-        super().__init__(target_device_idx=target_device_idx)
+        super().__init__(device_idx=device_idx)
         self._description = description
         self._value = value
 

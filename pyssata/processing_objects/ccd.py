@@ -48,8 +48,8 @@ class CCD(BaseProcessingObj):
                  wfs=None, pixel_pupil=None, pixel_pitch=None, sky_bg_norm=None, photon_seed=1,
                  readout_seed=2, excess_seed=3, cic_seed=4, excess_delta=1.0, start_time=0,
                  ADU_gain=None, ADU_bias=400, emccd_gain=None,
-                 target_device_idx=None, precision=None):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+                 device_idx=None, precision=None):
+        super().__init__(device_idx=device_idx, precision=precision)
 
         if self.xp is cp:
             self._clamp_generic = clamp_generic_gpu
@@ -133,9 +133,9 @@ class CCD(BaseProcessingObj):
         self._cte_mat = cte_mat if cte_mat is not None else self.xp.zeros((size[0], size[1], 2), dtype=self.dtype)
         self._qe = quantum_eff
 
-        self._pixels = Pixels(size[0] // binning, size[1] // binning, target_device_idx=target_device_idx)
+        self._pixels = Pixels(size[0] // binning, size[1] // binning, device_idx=device_idx)
         s = self._pixels.size * self._binning
-        self._integrated_i = Intensity(s[0], s[1], target_device_idx=target_device_idx, precision=precision)
+        self._integrated_i = Intensity(s[0], s[1], device_idx=device_idx, precision=precision)
         self._photon_seed = photon_seed
         self._readout_seed = readout_seed
         self._excess_seed = excess_seed
@@ -202,7 +202,7 @@ class CCD(BaseProcessingObj):
     @show_in_profiler('ccd.trigger')
     def trigger(self, t):
         if self._start_time <= 0 or t >= self._start_time:
-            in_i = self.inputs['in_i'].get(self._target_device_idx)
+            in_i = self.inputs['in_i'].get(self._device_idx)
             if in_i.generation_time == t:
                 if self._loop_dt == 0:
                     raise ValueError('ccd object loop_dt property must be set.')
@@ -307,7 +307,7 @@ class CCD(BaseProcessingObj):
         self._pixelGains = pixelGains
 
     def run_check(self, time_step, errmsg=''):
-        in_i = self.inputs['in_i'].get(self._target_device_idx)
+        in_i = self.inputs['in_i'].get(self._device_idx)
         if self._loop_dt == 0:
             self._loop_dt = time_step
         if in_i is None:

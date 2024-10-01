@@ -14,10 +14,10 @@ class PSF(BaseProcessingObj):
                  wavelengthInNm: float,
                  nd: int=1,
                  start_time: float=0.0,
-                 target_device_idx: int = None, 
+                 device_idx: int = None, 
                  precision: int = None
                 ):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)        
+        super().__init__(device_idx=device_idx, precision=precision)        
         self._nd = nd
         self._start_time = start_time
         self._wavelengthInNm = wavelengthInNm
@@ -78,7 +78,7 @@ class PSF(BaseProcessingObj):
 
     @property
     def size(self):
-        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
+        in_ef = self.inputs['in_ef'].get(self._device_idx)
         return in_ef.size if in_ef else None
 
     @property
@@ -90,7 +90,7 @@ class PSF(BaseProcessingObj):
         return self._count
 
     def run_check(self, time_step, errmsg=''):
-        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
+        in_ef = self.inputs['in_ef'].get(self._device_idx)
         if not in_ef:
             errmsg += ' Input intensity object has not been set'
         if self._wavelengthInNm == 0:
@@ -99,14 +99,14 @@ class PSF(BaseProcessingObj):
 
     def reset_integration(self):
         self._count = 0
-        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
+        in_ef = self.inputs['in_ef'].get(self._device_idx)
         if in_ef:
             self._int_psf.value *= 0
         self._intsr = 0
 
     @show_in_profiler('psf.trigger')
     def trigger(self, t):
-        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
+        in_ef = self.inputs['in_ef'].get(self._device_idx)
         
         if in_ef and in_ef.generation_time == t:
 

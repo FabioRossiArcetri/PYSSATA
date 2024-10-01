@@ -17,12 +17,12 @@ class AtmoPropagation(BaseProcessingObj):
                  source_dict,
                  pixel_pupil: int,
                  pixel_pitch: float,
-                 target_device_idx=None, 
+                 device_idx=None, 
                  precision=None,
                  doFresnel: bool=False,
                  wavelengthInNm: float=500.0,
                  pupil_position=(0., 0.)):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+        super().__init__(device_idx=device_idx, precision=precision)
 
         if doFresnel and wavelengthInNm is None:
             raise ValueError('get_atmo_propagation: wavelengthInNm is required when doFresnel key is set to correctly simulate physical propagation.')
@@ -47,7 +47,7 @@ class AtmoPropagation(BaseProcessingObj):
         self.inputs['layer_list'] = InputList(type=Layer)
 
     def add_source(self, name, source):
-        ef = ElectricField(self._pixel_pupil, self._pixel_pupil, self._pixel_pitch, target_device_idx=self._target_device_idx)
+        ef = ElectricField(self._pixel_pupil, self._pixel_pupil, self._pixel_pitch, device_idx=self._device_idx)
         ef.S0 = source.phot_density()
         self._pupil_dict[name] = ef
 
@@ -76,7 +76,7 @@ class AtmoPropagation(BaseProcessingObj):
    
         if not self._propagators:
                         
-            self._layer_list = self.inputs['layer_list'].get(self._target_device_idx)
+            self._layer_list = self.inputs['layer_list'].get(self._device_idx)
             
             nlayers = len(self._layer_list)
             self._propagators = []
@@ -108,7 +108,7 @@ class AtmoPropagation(BaseProcessingObj):
         magnification_list = self._magnification_list if self._magnification_list else None
         pupil_position = self.xp.array(self._pupil_position, dtype=self.dtype)
 
-        self._layer_list = self.inputs['layer_list'].get(self._target_device_idx)
+        self._layer_list = self.inputs['layer_list'].get(self._device_idx)
     
         for name, source in self._source_dict.items():
             height_star = source.height
@@ -129,7 +129,7 @@ class AtmoPropagation(BaseProcessingObj):
 
     def run_check(self, time_step):
         # TODO here for no better place, we need something like a "setup()" method called before the loop starts        
-        self._layer_list = self.inputs['layer_list'].get(self._target_device_idx)        
+        self._layer_list = self.inputs['layer_list'].get(self._device_idx)        
         self._shiftXY_list = [layer.shiftXYinPixel if hasattr(layer, 'shiftXYinPixel') else self.xp.array([0, 0]) for layer in self._layer_list]
         self._rotAnglePhInDeg_list = [layer.rotInDeg if hasattr(layer, 'rotInDeg') else 0 for layer in self._layer_list]
         self._magnification_list = [max(layer.magnification, 1.0) if hasattr(layer, 'magnification') else 1.0 for layer in self._layer_list]

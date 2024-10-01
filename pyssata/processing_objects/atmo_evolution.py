@@ -15,11 +15,11 @@ from scipy.ndimage import rotate
 
 class AtmoEvolution(BaseProcessingObj):
     def __init__(self, L0, pixel_pitch, heights, Cn2, pixel_pupil, data_dir, source_list, wavelengthInNm: float=500.0,
-                 zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed: int=1, target_device_idx=None, precision=None,
+                 zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed: int=1, device_idx=None, precision=None,
                  verbose=None, user_defined_phasescreen: str='', force_mcao_fov=False, make_cycle=None,
                  fov_in_m=None, pupil_position=None):
         
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+        super().__init__(device_idx=device_idx, precision=precision)
         
         self._last_position = None
         self._last_t = 0
@@ -90,10 +90,10 @@ class AtmoEvolution(BaseProcessingObj):
             self._user_defined_phasescreen = user_defined_phasescreen
         
         # Initialize layer list with correct heights
-        self._layer_list = BaseList(target_device_idx=self._target_device_idx)
+        self._layer_list = BaseList(device_idx=self._device_idx)
 
         for i in range(self._n_phasescreens):
-            layer = Layer(pixel_layer[i], pixel_layer[i], pixel_pitch, heights[i], precision=self._precision, target_device_idx=self._target_device_idx)
+            layer = Layer(pixel_layer[i], pixel_layer[i], pixel_pitch, heights[i], precision=self._precision, device_idx=self._device_idx)
             self._layer_list.append(layer)
         
         if seed is not None:
@@ -314,9 +314,9 @@ class AtmoEvolution(BaseProcessingObj):
         
     @show_in_profiler('atmo_evolution.shift_screens')
     def shift_screens(self, t):
-        seeing = self.inputs['seeing'].get(self._target_device_idx).value
-        wind_speed = self.inputs['wind_speed'].get(self._target_device_idx).value
-        wind_direction = self.inputs['wind_direction'].get(self._target_device_idx).value
+        seeing = self.inputs['seeing'].get(self._device_idx).value
+        wind_speed = self.inputs['wind_speed'].get(self._device_idx).value
+        wind_direction = self.inputs['wind_direction'].get(self._device_idx).value
 
         if len(self._phasescreens) != len(wind_speed) or len(self._phasescreens) != len(wind_direction):
             raise ValueError('Error: number of elements of wind speed and/or direction does not match the number of phasescreens')
@@ -373,9 +373,9 @@ class AtmoEvolution(BaseProcessingObj):
         if not self.xp.isclose(self.xp.sum(self._Cn2), 1.0, atol=1e-6):
             errmsg += f' Cn2 total must be 1. Instead is: {self.xp.sum(self._Cn2)}.'
 
-        seeing = self.inputs['seeing'].get(self._target_device_idx)
-        wind_speed = self.inputs['wind_speed'].get(self._target_device_idx)
-        wind_direction = self.inputs['wind_direction'].get(self._target_device_idx)
+        seeing = self.inputs['seeing'].get(self._device_idx)
+        wind_speed = self.inputs['wind_speed'].get(self._device_idx)
+        wind_direction = self.inputs['wind_direction'].get(self._device_idx)
 
         check = self._seed > 0 and isinstance(seeing, BaseValue) and isinstance(wind_direction, BaseValue) and isinstance(wind_speed, BaseValue)
         if not check:

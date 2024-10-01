@@ -6,8 +6,8 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 class ElectricField(BaseDataObj):
     '''Electric field'''
 
-    def __init__(self, dimx, dimy, pixel_pitch, target_device_idx=None, precision=None):
-        super().__init__(precision=precision, target_device_idx=target_device_idx)
+    def __init__(self, dimx, dimy, pixel_pitch, device_idx=None, precision=None):
+        super().__init__(precision=precision, device_idx=device_idx)
 
         dimx = int(dimx)
         dimy = int(dimy)

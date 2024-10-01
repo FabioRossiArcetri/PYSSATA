@@ -6,8 +6,8 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 class Pixels(BaseDataObj):
     '''Pixels'''
 
-    def __init__(self, dimx, dimy, bits=16, signed=0, target_device_idx=None, precision=None):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+    def __init__(self, dimx, dimy, bits=16, signed=0, device_idx=None, precision=None):
+        super().__init__(device_idx=device_idx, precision=precision)
         self._validate_bits(bits)
         self._signed = signed
         self._type = self._get_type(bits, signed)

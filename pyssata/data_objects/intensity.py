@@ -5,8 +5,8 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class Intensity(BaseDataObj):
     '''Intensity field object'''
-    def __init__(self, dimx, dimy, target_device_idx=None, precision=None):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+    def __init__(self, dimx, dimy, device_idx=None, precision=None):
+        super().__init__(device_idx=device_idx, precision=precision)
                 
         self._i = self.xp.zeros((dimx, dimy), dtype=self.dtype)
 

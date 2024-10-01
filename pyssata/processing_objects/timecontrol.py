@@ -71,9 +71,9 @@ def online_filter(num, den, input, ost=None, ist=None, xp=None):
 
 
 class TimeControl(BaseProcessingObj):
-    def __init__(self, delay=0, n=None, type=None, total_length=None, target_device_idx=None, precision=None ):
+    def __init__(self, delay=0, n=None, type=None, total_length=None, device_idx=None, precision=None ):
 
-        super().__init__(target_device_idx=target_device_idx, precision=precision)        
+        super().__init__(device_idx=device_idx, precision=precision)        
 
         self._delay = delay if delay is not None else 0
         self._n = n

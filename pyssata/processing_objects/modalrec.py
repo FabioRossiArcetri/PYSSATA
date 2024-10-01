@@ -24,10 +24,10 @@ class Modalrec(BaseProcessingObj):
                  nSlopesToBeDiscarded: int=None,
                  dmNumber: int=0,
                  noProj: bool=False,
-                 target_device_idx=None, 
+                 device_idx=None, 
                  precision=None
                 ):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+        super().__init__(device_idx=device_idx, precision=precision)
 
         if polc:
             if identity:
@@ -37,7 +37,7 @@ class Modalrec(BaseProcessingObj):
         else:
             if recmat is None:
                 if identity:
-                    recmat = Recmat(target_device_idx=target_device_idx, precision=precision)
+                    recmat = Recmat(device_idx=device_idx, precision=precision)
                     if nmodes is None:
                         raise ValueError('modalrec nmodes key must be set!')
                     recmat.recmat = self.xp.identity(nmodes)
@@ -47,7 +47,7 @@ class Modalrec(BaseProcessingObj):
                         intmat.reduce_size(nmodes_intmat - nmodes)
                     if nSlopesToBeDiscarded:
                         intmat.reduce_slopes(nSlopesToBeDiscarded)
-                    recmat = Recmat(target_device_idx=target_device_idx, precision=precision)
+                    recmat = Recmat(device_idx=device_idx, precision=precision)
                     recmat.recmat = intmat.intmat
 
             if ncutmodes:
@@ -71,7 +71,7 @@ class Modalrec(BaseProcessingObj):
             recmat.recmat = recmat.recmat @ filtmat
             print('recmat updated with filmat!')
 
-        self._recmat = recmat if recmat is not None else Recmat(target_device_idx=target_device_idx, precision=precision)
+        self._recmat = recmat if recmat is not None else Recmat(device_idx=device_idx, precision=precision)
         self._projmat = projmat
         self._intmat = intmat
         self._polc = polc
@@ -81,9 +81,9 @@ class Modalrec(BaseProcessingObj):
         self._control_list = []
         self._past_step_list = []
 
-        self._modes = BaseValue('output modes from modal reconstructor', target_device_idx=target_device_idx)
-        self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor', target_device_idx=target_device_idx)
-        self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor', target_device_idx=target_device_idx)
+        self._modes = BaseValue('output modes from modal reconstructor', device_idx=device_idx)
+        self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor', device_idx=device_idx)
+        self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor', device_idx=device_idx)
 
         self.inputs['in_slopes'] = InputValue(type=Slopes)
         self.outputs['out_modes'] = self.out_modes
@@ -181,7 +181,7 @@ class Modalrec(BaseProcessingObj):
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
 
-        slopes = self.inputs['in_slopes'].get(self._target_device_idx)
+        slopes = self.inputs['in_slopes'].get(self._device_idx)
         
         if slopes.generation_time == t:
             comm_new = []
@@ -232,7 +232,7 @@ class Modalrec(BaseProcessingObj):
 
     def compute_pseudo_ol_slopes(self, t, slopes=None):
         if slopes is None:
-            slopes = self.inputs['in_slopes'].get(self._target_device_idx)
+            slopes = self.inputs['in_slopes'].get(self._device_idx)
 
         if isinstance(slopes, Slopes):
             self._pseudo_ol_slopes.slopes = slopes.slopes
@@ -278,7 +278,7 @@ class Modalrec(BaseProcessingObj):
 
     def run_check(self, time_step):
         errmsg = []
-        slopes = self.inputs['in_slopes'].get(self._target_device_idx)
+        slopes = self.inputs['in_slopes'].get(self._device_idx)
         if not slopes:
             errmsg.append("Slopes object not valid")
         if not self._recmat:

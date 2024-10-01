@@ -79,7 +79,7 @@ class Simul():
             args = inspect.getfullargspec(getattr(klass, '__init__')).args
             hints = self._get_type_hints(klass)
 
-            target_device_idx = pars.get('target_device_idx', None)
+            device_idx = pars.get('device_idx', None)
                 
             pars2 = {}
             for name, value in pars.items():
@@ -107,7 +107,7 @@ class Simul():
                     if parname in hints:
                         partype = hints[parname]
                         filename = cm.filename(parname, value)  # TODO use partype instead of parname?
-                        parobj = partype.restore(filename, target_device_idx=target_device_idx)
+                        parobj = partype.restore(filename, device_idx=device_idx)
                         pars2[parname] = parobj
                     else:
                         raise ValueError(f'No type hint for parameter {parname} of class {classname}')

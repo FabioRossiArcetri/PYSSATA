@@ -11,10 +11,10 @@ from pyssata.data_objects.pupdata import PupData
     
 class PyrSlopec(Slopec):
     def __init__(self, pupdata: PupData=None, shlike=False, norm_factor=None, thr_value=0, slopes_from_intensity=False, filtmat_tag='', 
-                 target_device_idx=None, 
+                 device_idx=None, 
                  precision=None,
                 **kwargs):
-        super().__init__(target_device_idx=target_device_idx, precision=precision, **kwargs)
+        super().__init__(device_idx=device_idx, precision=precision, **kwargs)
         self._shlike = shlike
         self._norm_factor = norm_factor
         self._thr_value = int(thr_value)
@@ -79,7 +79,7 @@ class PyrSlopec(Slopec):
         if not self._pupdata:
             return
 
-        pixels = self.inputs['in_pixels'].get(self._target_device_idx).pixels
+        pixels = self.inputs['in_pixels'].get(self._device_idx).pixels
 
         if self._verbose:
             print('Average pixel counts:', self.xp.sum(pixels) / len(self._pupdata.ind_pup))

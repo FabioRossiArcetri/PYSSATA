@@ -5,8 +5,8 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 
 
 class Slopes(BaseDataObj):
-    def __init__(self, length=None, slopes=None, interleave=False, target_device_idx=None, precision=None):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+    def __init__(self, length=None, slopes=None, interleave=False, device_idx=None, precision=None):
+        super().__init__(device_idx=device_idx, precision=precision)
         if slopes is not None:
             self._slopes = slopes
         else:
@@ -140,14 +140,14 @@ class Slopes(BaseDataObj):
         exten += 1
 
     @staticmethod
-    def restore(filename, target_device_idx=None):
+    def restore(filename, device_idx=None):
         hdr = fits.getheader(filename)
         version = int(hdr['VERSION'])
 
         if version > 2:
             raise ValueError(f"Error: unknown version {version} in file {filename}")
 
-        s = Slopes(length=1, target_device_idx=target_device_idx)
+        s = Slopes(length=1, device_idx=device_idx)
         s.interleave = bool(hdr['INTRLVD'])
         if version >= 2:
             s.pupdata_tag = str(hdr['PUPD_TAG']).strip()

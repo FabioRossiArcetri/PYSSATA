@@ -8,10 +8,10 @@ class FuncGenerator(BaseProcessingObj):
     def __init__(self, func_type='SIN', nmodes=None, time_hist=None, psd=None, fr_psd=None, continuous_psd=None, 
                 constant=None, amp=None, freq=None, offset=None, vect_amplitude=None, 
                 seed=None, ncycles=None,
-                target_device_idx=None, 
+                device_idx=None, 
                 precision=None
                 ):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+        super().__init__(device_idx=device_idx, precision=precision)
 
         self._type = func_type.upper()
 
@@ -85,7 +85,7 @@ class FuncGenerator(BaseProcessingObj):
             raise ValueError(f'Unknown function type: {self._type}')
 
         self._nmodes = nmodes
-        self._output = BaseValue(target_device_idx=target_device_idx)
+        self._output = BaseValue(device_idx=device_idx)
         self._active = True
         self.outputs['output'] = self._output
 

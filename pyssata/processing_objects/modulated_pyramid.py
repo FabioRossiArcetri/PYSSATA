@@ -44,10 +44,10 @@ class ModulatedPyramid(BaseProcessingObj):
                  pyr_tip_def_ld: float = 0.0,
                  pyr_tip_maya_ld: float = 0.0,
                  min_pup_dist: float = None,                 
-                 target_device_idx: int = None, 
+                 device_idx: int = None, 
                  precision: int = None
                 ):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)        
+        super().__init__(device_idx=device_idx, precision=precision)        
 
         DpupPix = pixel_pupil
         FoV = fov
@@ -105,10 +105,10 @@ class ModulatedPyramid(BaseProcessingObj):
 
         fft_totsize = int(fft_totsize)
         
-        self._out_i = Intensity(final_ccd_side, final_ccd_side, precision=self.precision, target_device_idx=self._target_device_idx)
-        self._psf_tot = BaseValue(self.xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype), target_device_idx=self._target_device_idx)
-        self._psf_bfm = BaseValue(self.xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype), target_device_idx=self._target_device_idx)
-        self._out_transmission = BaseValue(0, target_device_idx=self._target_device_idx)
+        self._out_i = Intensity(final_ccd_side, final_ccd_side, precision=self.precision, device_idx=self._device_idx)
+        self._psf_tot = BaseValue(self.xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype), device_idx=self._device_idx)
+        self._psf_bfm = BaseValue(self.xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype), device_idx=self._device_idx)
+        self._out_transmission = BaseValue(0, device_idx=self._device_idx)
 
         self.inputs['in_ef'] = InputValue(type=ElectricField)
         self.outputs['out_i'] = self.out_i
@@ -415,7 +415,7 @@ class ModulatedPyramid(BaseProcessingObj):
 
     @show_in_profiler('pyramid.trigger')
     def trigger(self, t):
-        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
+        in_ef = self.inputs['in_ef'].get(self._device_idx)
         if in_ef.generation_time != t:
             return
 
@@ -460,7 +460,7 @@ class ModulatedPyramid(BaseProcessingObj):
         u_tlt[0:ss[0], 0:ss[1], :] = tmp
         #with plan1:
         u_fp = self.xp.fft.fftshift(self.xp.fft.fft2(u_tlt, axes=(0, 1)), axes=(0, 1))                                       
-        if self._target_device_idx>-1:
+        if self._device_idx>-1:
             u_fp_pyr, fpsf = pyr1_fused(u_fp, ffv, my_exp, fp_mask)
         else:
             psf = self.xp.real(u_fp * self.xp.conj(u_fp))

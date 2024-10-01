@@ -5,8 +5,8 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 
 
 class Recmat(BaseDataObj):
-    def __init__(self, target_device_idx=None, precision=None):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+    def __init__(self, device_idx=None, precision=None):
+        super().__init__(device_idx=device_idx, precision=precision)
         self._recmat = None
         self._modes2recLayer = None
         self._im_tag = ''
@@ -105,14 +105,14 @@ class Recmat(BaseDataObj):
         exten += 1
 
     @staticmethod
-    def restore(filename, target_device_idx=None):
+    def restore(filename, device_idx=None):
         hdr = fits.getheader(filename)
         version = int(hdr['VERSION'])
 
         if version != 1:
             raise ValueError(f"Error: unknown version {version} in file {filename}")
 
-        rec = Recmat(target_device_idx=target_device_idx)
+        rec = Recmat(device_idx=device_idx)
         rec.im_tag = str(hdr['IM_TAG']).strip()
         rec.read(filename, hdr)
 

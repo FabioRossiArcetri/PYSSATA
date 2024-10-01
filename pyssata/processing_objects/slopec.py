@@ -16,10 +16,10 @@ class Slopec(BaseProcessingObj):
                  store_c=None, sn_scale_fact=None, command_list=None, intmat=None, 
                  recmat=None, filt_recmat=None, filt_intmat=None, accumulation_dt=0, 
                  accumulated_pixels=(0,0),
-                 target_device_idx=None, 
+                 device_idx=None, 
                  precision=None
                 ):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+        super().__init__(device_idx=device_idx, precision=precision)
 
         self._slopes = Slopes(2)  # TODO resized in derived class
         self._slopes_ave = BaseValue()
@@ -245,19 +245,19 @@ class Slopec(BaseProcessingObj):
         if errmsg != '':
             print(errmsg)
 
-        in_pixels = self.inputs['in_pixels'].get(self._target_device_idx)
+        in_pixels = self.inputs['in_pixels'].get(self._device_idx)
         return not (self._weight_from_accumulated and self._accumulate) and in_pixels and self._slopes and ((not self._use_sn) or (self._use_sn and self._sn))
 
     def calc_slopes(self, t, accumulated=False):
         raise NotImplementedError(f'{self.repr()} Please implement calc_slopes in your derived class!')
 
     def do_accumulation(self, t):
-        in_pixels = self.inputs['in_pixels'].get(self._target_device_idx)
+        in_pixels = self.inputs['in_pixels'].get(self._device_idx)
         factor = float(self._loop_dt) / float(self._accumulation_dt)
 
         # TODO not sure what is going on here
         if not self._accumulated_pixels:
-            self._accumulated_pixels = Pixels(in_pixels.size[0], in_pixels.size[1], target_device_idx=self._target_device_idx, precision=self.precision)
+            self._accumulated_pixels = Pixels(in_pixels.size[0], in_pixels.size[1], device_idx=self._device_idx, precision=self.precision)
         if (t % self._accumulation_dt) == 0:
             self._accumulated_pixels.pixels = in_pixels.pixels * factor
         else:
@@ -278,7 +278,7 @@ class Slopec(BaseProcessingObj):
 
     @show_in_profiler('slopec.trigger')
     def trigger(self, t):
-        in_pixels = self.inputs['in_pixels'].get(self._target_device_idx)
+        in_pixels = self.inputs['in_pixels'].get(self._device_idx)
         if in_pixels.generation_time == t:
             self.calc_slopes(t)
             
@@ -288,7 +288,7 @@ class Slopec(BaseProcessingObj):
     
     def old_trigger(self, t):
 
-        in_pixels = self.inputs['in_pixels'].get(self._target_device_idx)
+        in_pixels = self.inputs['in_pixels'].get(self._device_idx)
 
         # TO BE MOVED to SH
         if self._weight_from_accumulated:
