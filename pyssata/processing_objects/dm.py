@@ -35,7 +35,8 @@ class DM(BaseProcessingObj):
         if not ifunc:
             ifunc = IFunc(type_str=type_str, mask=mask, npixels=npixels,
                            obsratio=obsratio, diaratio=diaratio, nzern=nzern,
-                           nmodes=nmodes, start_mode=start_mode, idx_modes=idx_modes)
+                           nmodes=nmodes, start_mode=start_mode, idx_modes=idx_modes,
+                           target_device_idx=target_device_idx, precision=precision)
         self._ifunc = ifunc
         
         s = self._ifunc.mask_inf_func.shape

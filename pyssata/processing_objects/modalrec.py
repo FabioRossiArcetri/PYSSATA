@@ -79,9 +79,9 @@ class Modalrec(BaseProcessingObj):
         self._control_list = []
         self._past_step_list = []
 
-        self._modes = BaseValue('output modes from modal reconstructor')
-        self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor')
-        self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor')
+        self._modes = BaseValue('output modes from modal reconstructor', target_device_idx=target_device_idx)
+        self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor', target_device_idx=target_device_idx)
+        self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor', target_device_idx=target_device_idx)
 
         self.inputs['in_slopes'] = InputValue(type=Slopes)
         self.outputs['out_modes'] = self.out_modes
