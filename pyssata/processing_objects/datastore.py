@@ -6,6 +6,7 @@ from collections import OrderedDict
 import pickle
 import time
 
+from pyssata import cpuArray
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.data_objects.ef import ElectricField
@@ -202,13 +203,13 @@ class Datastore(BaseProcessingObj):
             for k, item in self._items.items():
                 if item is not None and item.generation_time == t:
                     if isinstance(item, BaseValue):
-                        v = item.value
+                        v = cpuArray(item.value)
                     elif isinstance(item, Slopes):
-                        v = item.slopes
+                        v = cpuArray(item.slopes)
                     elif isinstance(item, Pixels):
-                        v = item.pixels
+                        v = cpuArray(item.pixels)
                     elif isinstance(item, ElectricField):
-                        v = item.phaseInNm
+                        v = cpuArray(item.phaseInNm)
                     else:
                         raise TypeError(f"Error: don't know how to save an object of type {type(item)}")
                     self._storage[k][t] = v

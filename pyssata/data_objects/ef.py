@@ -61,10 +61,10 @@ class ElectricField(BaseDataObj):
             raise ValueError(f'{ef2} is not an ElectricField instance')
         if subrect is None:
             subrect = [0, 0]
-        sz1 = self.xp.array(self.size) - self.xp.array(subrect)
-        sz2 = self.xp.array(ef2.size)
-        if any(sz1 != sz2):
-            raise ValueError(f'{ef2} has size {sz2} instead of the required {sz1}')
+        diff0 = self.size[0] - subrect[0]
+        diff1 = self.size[1] - subrect[1]
+        if ef2.size[0] != diff0 or ef2.size[1] != diff1:
+            raise ValueError(f'{ef2} has size {sz2} instead of the required ({diff0}, {diff1})')
         return subrect
         
     def phi_at_lambda(self, wavelengthInNm):

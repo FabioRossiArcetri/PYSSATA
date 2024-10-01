@@ -3,19 +3,19 @@ from pyssata import cpuArray
 from pyssata.processing_objects.slopec import Slopec
 from pyssata.data_objects.slopes import Slopes
 from pyssata.lib.pyr_compute_slopes import pyr_compute_slopes
-from pyssata.base_value import BaseValue
+from  pyssata.base_value import BaseValue
 from pyssata.data_objects.pupdata import PupData
 
     
 class PyrSlopec(Slopec):
-    def __init__(self, pupdata: PupData=None, shlike=False, norm_factor=None, thr_value=0.0, slopes_from_intensity=False, filtmat_tag='', 
+    def __init__(self, pupdata: PupData=None, shlike=False, norm_factor=None, thr_value=0, slopes_from_intensity=False, filtmat_tag='', 
                  target_device_idx=None, 
                  precision=None,
                 **kwargs):
         super().__init__(target_device_idx=target_device_idx, precision=precision, **kwargs)
         self._shlike = shlike
         self._norm_factor = norm_factor
-        self._thr_value = thr_value
+        self._thr_value = int(thr_value)
         self._slopes_from_intensity = slopes_from_intensity
         if pupdata is not None:
             self.pupdata = pupdata  # Property set
@@ -47,7 +47,7 @@ class PyrSlopec(Slopec):
 
     @thr_value.setter
     def thr_value(self, value):
-        self._thr_value = value
+        self._thr_value = int(value)
 
     @property
     def slopes_from_intensity(self):
@@ -72,11 +72,11 @@ class PyrSlopec(Slopec):
                 self._slopes.resize(len(self._pupdata.ind_pup) * 2)
             self._accumulated_slopes.resize(len(self._pupdata.ind_pup) * 2)
 
-    def calc_slopes(self, t, accumulated=False):
+    def calc_slopes(self, t):
         if not self._pupdata:
             return
 
-        pixels = self._accumulated_pixels.pixels if accumulated else self.inputs['in_pixels'].get(self._target_device_idx).pixels
+        pixels = self.inputs['in_pixels'].get(self._target_device_idx).pixels
 
         if self._verbose:
             print('Average pixel counts:', self.xp.sum(pixels) / len(self._pupdata.ind_pup))
@@ -84,31 +84,23 @@ class PyrSlopec(Slopec):
         threshold = self._thr_value if self._thr_value != -1 else None
         sx, sy, flux = pyr_compute_slopes(pixels, self._pupdata.ind_pup, self._shlike, self._slopes_from_intensity, self._norm_factor, threshold, xp=self.xp)
 
-        if accumulated:
-            if self._slopes_from_intensity:
-                self._accumulated_slopes.slopes = [sx, sy]
-            else:
-                self._accumulated_slopes.xslopes = sx
-                self._accumulated_slopes.yslopes = sy
-            self._accumulated_slopes.generation_time = t
+        self._flux_per_subaperture_vector.value = flux
+        self._flux_per_subaperture_vector.generation_time = t
+
+        idx  = self._pupdata.ind_pup.flatten().astype(self.xp.int64)
+        v = pixels.flatten()
+        px = v[idx].ravel()
+        self._total_counts.value = self.xp.sum(px)
+        self._subap_counts.value = self.xp.sum(px) / self._pupdata.n_subap
+
+        if self._slopes_from_intensity:
+            self._slopes.slopes = [sx, sy]
         else:
-            self._flux_per_subaperture_vector.value = flux
-            self._flux_per_subaperture_vector.generation_time = t
-
-            idx  = self._pupdata.ind_pup.flatten().astype(self.xp.int64)
-            v = pixels.flatten()
-            px = v[idx].ravel()
-            self._total_counts.value = self.xp.sum(px)
-            self._subap_counts.value = self.xp.sum(px) / self._pupdata.n_subap
-
-            if self._slopes_from_intensity:
-                self._slopes.slopes = [sx, sy]
-            else:
-                self._slopes.xslopes = sx
-                self._slopes.yslopes = sy
-            self._slopes.generation_time = t
-            self._total_counts.generation_time = t
-            self._subap_counts.generation_time = t
+            self._slopes.xslopes = sx
+            self._slopes.yslopes = sy
+        self._slopes.generation_time = t
+        self._total_counts.generation_time = t
+        self._subap_counts.generation_time = t
 
 #        if 1:#if self._verbose:  # Verbose?
 #            print(f'Slopes min, max and rms: {self.xp.min(self.xp.array([sx, sy]))}, {self.xp.max(self.xp.array([sx, sy]))}  //  {self.xp.sqrt(self.xp.mean(self.xp.array([sx**2, sy**2])))}')
@@ -130,5 +122,4 @@ class PyrSlopec(Slopec):
             return False
 
         return super().run_check(time_step, errmsg=errmsg)
-
 

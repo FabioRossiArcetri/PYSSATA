@@ -35,7 +35,7 @@ class Modalrec(BaseProcessingObj):
         else:
             if recmat is None:
                 if identity:
-                    recmat = Recmat()
+                    recmat = Recmat(target_device_idx=target_device_idx, precision=precision)
                     if nmodes is None:
                         raise ValueError('modalrec nmodes key must be set!')
                     recmat.recmat = self.xp.identity(nmodes)
@@ -45,7 +45,7 @@ class Modalrec(BaseProcessingObj):
                         intmat.reduce_size(nmodes_intmat - nmodes)
                     if nSlopesToBeDiscarded:
                         intmat.reduce_slopes(nSlopesToBeDiscarded)
-                    recmat = Recmat()
+                    recmat = Recmat(target_device_idx=target_device_idx, precision=precision)
                     recmat.recmat = intmat.intmat
 
             if ncutmodes:
@@ -69,7 +69,7 @@ class Modalrec(BaseProcessingObj):
             recmat.recmat = recmat.recmat @ filtmat
             print('recmat updated with filmat!')
 
-        self._recmat = recmat if recmat is not None else Recmat()
+        self._recmat = recmat if recmat is not None else Recmat(target_device_idx=target_device_idx, precision=precision)
         self._projmat = projmat
         self._intmat = intmat
         self._polc = polc
@@ -79,9 +79,9 @@ class Modalrec(BaseProcessingObj):
         self._control_list = []
         self._past_step_list = []
 
-        self._modes = BaseValue('output modes from modal reconstructor')
-        self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor')
-        self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor')
+        self._modes = BaseValue('output modes from modal reconstructor', target_device_idx=target_device_idx)
+        self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor', target_device_idx=target_device_idx)
+        self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor', target_device_idx=target_device_idx)
 
         self.inputs['in_slopes'] = InputValue(type=Slopes)
         self.outputs['out_modes'] = self.out_modes

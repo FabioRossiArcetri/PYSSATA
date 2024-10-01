@@ -133,3 +133,7 @@ dmypy.json
 .vscode/settings.json
 *.code-workspace
 
+# Profiler output
+*.nsys-rep
+*.sqlite
+

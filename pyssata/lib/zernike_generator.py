@@ -1,6 +1,6 @@
+import numbers
 import numpy as np
 
-from pyssata import xp
 from pyssata import cpuArray
 from pyssata import float_dtype
 
@@ -71,20 +71,26 @@ class ZernikeGenerator(object):
 
     '''
 
-    def __init__(self, pupil):
+    def __init__(self, pupil, xp, dtype):
+
+        self.xp = xp
+        self.dtype = dtype
+
         if isinstance(pupil, CircularMask):
             self._radius = pupil.radius()
             self._shape = pupil.shape()
             self._center = pupil.center()
             self._boolean_mask = pupil.mask()
-        else:
+        elif isinstance(pupil, numbers.Number):
             self._radius = pupil / 2
-            sz = xp.ceil(pupil)
+            sz = np.ceil(pupil)
             self._shape = (sz, sz)
-            self._center = xp.ones(2, dtype=float_dtype) * (sz / 2)
+            self._center = np.ones(2, dtype=self.dtype) * (sz / 2)
             cm = CircularMask(
                 self._shape, maskCenter=self._center, maskRadius=self._radius)
             self._boolean_mask = cm.mask()
+        else:
+            raise ValueError('<pupil> must be either a number or a CircularMask instance')
 
         self._rhoMap, self._thetaMap = self._polar_array()
         self._dx = None
@@ -156,9 +162,9 @@ class ZernikeGenerator(object):
                             (n, m))
 
         if(n == 0 and m == 0):
-            return xp.ones(rho.shape)
-        rho = xp.where(rho < 0, 0, rho)
-        Rnm = xp.zeros(rho.shape, dtype=float_dtype)
+            return self.xp.ones(rho.shape, dtype=self.dtype)
+        rho = self.xp.where(rho < 0, 0, rho)
+        Rnm = self.xp.zeros(rho.shape, dtype=self.dtype)
         S = (n - abs(m)) // 2
         S = int(cpuArray(S))        
         n = int(cpuArray(n))        
@@ -176,13 +182,13 @@ class ZernikeGenerator(object):
         theta = thetaArray
 
         Rnm = self._rnm(n, m, rho)
-        NC = xp.sqrt(2 * (n + 1))
+        NC = np.sqrt(2 * (n + 1))
         if m == 0:
-            return xp.sqrt(0.5) * NC * Rnm
+            return np.sqrt(0.5) * NC * Rnm
         if index % 2 == 0:
-            return NC * Rnm * xp.cos(m * theta)
+            return NC * Rnm * np.cos(m * theta)
         else:
-            return NC * Rnm * xp.sin(m * theta)
+            return NC * Rnm * np.sin(m * theta)
 
     def cartesian_coordinates(self):
         '''
@@ -216,7 +222,7 @@ class ZernikeGenerator(object):
         >>> x[0]
         array([-0.666, 0,  0.666])
 
-        In case of non-integer diameter, the array size is xp.arounded up to the
+        In case of non-integer diameter, the array size is self.xp.arounded up to the
         next integer
 
         >>> zg = ZernikeGenerator(2.5)
@@ -227,17 +233,17 @@ class ZernikeGenerator(object):
         '''
         nPxY = self._shape[0]
         nPxX = self._shape[1]
-        c = xp.array(self.center(), dtype=float_dtype)
-        cc = xp.expand_dims(c, axis=(1, 2))
-        Y, X = (xp.mgrid[0.5: nPxY + 0.5: 1,
+        c = self.xp.array(self.center(), dtype=self.dtype)
+        cc = self.xp.expand_dims(c, axis=(1, 2))
+        Y, X = (self.xp.mgrid[0.5: nPxY + 0.5: 1,
                          0.5: nPxX + 0.5: 1] - cc) / self.radius()
 
         return X, Y
 
     def _polar_array(self):
         X, Y = self.cartesian_coordinates()
-        r = xp.sqrt(X ** 2 + Y ** 2)
-        th = xp.arctan2(Y, X)
+        r = self.xp.sqrt(X ** 2 + Y ** 2)
+        th = self.xp.arctan2(Y, X)
         return r, th
 
     def getZernikeDict(self, indexVector):
@@ -258,12 +264,12 @@ class ZernikeGenerator(object):
             res = self._polar(index, self._rhoMap,
                               self._thetaMap)
             tmp = np.ma.masked_array(data=cpuArray(res), mask=cpuArray(self._boolean_mask))
-            self._dictCache[index] = xp.array(tmp, dtype=float_dtype)
+            self._dictCache[index] = self.xp.array(tmp, dtype=self.dtype)
         return self._dictCache[index]
 
     @staticmethod
     def _is_integer_num(n):
-        if isinstance(n, (int, xp.integer)):
+        if isinstance(n, (int, np.integer)):
             return True
         if isinstance(n, float):
             return n.is_integer()
@@ -274,7 +280,7 @@ class ZernikeGenerator(object):
 
     def _computeDerivativeCoeffX(self, index):
         jmax = index
-        G_mat = xp.zeros((jmax, jmax), dtype=float_dtype)
+        G_mat = self.xp.zeros((jmax, jmax), dtype=self.dtype)
         for i in range(1, jmax + 1):
             for j in range(1, jmax + 1):
                 ni, mi = ZernikeGenerator.degree(i)
@@ -304,14 +310,14 @@ class ZernikeGenerator(object):
                         j < i
                     )
                 ):
-                    G_mat[i - 1, j - 1] = xp.sqrt((ni + 1) * (nj + 1))
+                    G_mat[i - 1, j - 1] = np.sqrt((ni + 1) * (nj + 1))
                     if ((mi == 0) or (mj == 0)):
-                        G_mat[i - 1, j - 1] *= xp.sqrt(2)
+                        G_mat[i - 1, j - 1] *= np.sqrt(2)
         return G_mat
 
     def _computeDerivativeCoeffY(self, index):
         jmax = index
-        G_mat = xp.zeros((jmax, jmax), dtype=float_dtype)
+        G_mat = self.xp.zeros((jmax, jmax), dtype=self.dtype)
         for i in range(1, jmax + 1):
             for j in range(1, jmax + 1):
                 ni, mi = ZernikeGenerator.degree(i)
@@ -341,9 +347,9 @@ class ZernikeGenerator(object):
                         j < i
                     )
                 ):
-                    G_mat[i - 1, j - 1] = xp.sqrt((ni + 1) * (nj + 1))
+                    G_mat[i - 1, j - 1] = np.sqrt((ni + 1) * (nj + 1))
                     if ((mi == 0) or (mj == 0)):
-                        G_mat[i - 1, j - 1] *= xp.sqrt(2)
+                        G_mat[i - 1, j - 1] *= np.sqrt(2)
                     if (
                         (
                             (
@@ -411,7 +417,7 @@ class ZernikeGenerator(object):
             radial order of the specified indexes
 
         '''
-        return xp.ceil(0.5 * (xp.sqrt(8 * xp.array(j) + 1) - 3)).astype(int)
+        return np.ceil(0.5 * (np.sqrt(8 * np.array(j) + 1) - 3)).astype(int)
 
     @classmethod
     @cache
