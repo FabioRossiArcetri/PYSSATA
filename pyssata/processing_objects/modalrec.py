@@ -1,3 +1,6 @@
+
+from pyssata import show_in_profiler
+
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
@@ -173,6 +176,7 @@ class Modalrec(BaseProcessingObj):
             raise Exception("Control can be added only if POLC is set to 1.")
         self._control_list.append(control)
 
+    @show_in_profiler('modalrec.trigger')
     def trigger(self, t, slope_ptr=None):
         if self._recmat._recmat is None:
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
