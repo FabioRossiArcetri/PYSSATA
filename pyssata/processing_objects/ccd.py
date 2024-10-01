@@ -4,6 +4,7 @@ import numpy as np
 from scipy.stats import gamma
 from scipy.ndimage import convolve
 
+from pyssata import show_in_profiler
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue
 from pyssata.data_objects.pixels import Pixels
@@ -286,8 +287,9 @@ class CCD(BaseProcessingObj):
             ccd_frame = ccd_frame * self._binning ** 2 * (tot_ccd_frame / self.xp.sum(ccd_frame))
             self._pixels.pixels = ccd_frame
         else:
-            self._pixels.pixels = self._integrated_i.i.copy()
+            self._pixels.pixels = ccd_frame
 
+    @show_in_profiler()
     def apply_qe(self):
         if self._qe != 1:
             self._pixels.multiply(self._qe)
