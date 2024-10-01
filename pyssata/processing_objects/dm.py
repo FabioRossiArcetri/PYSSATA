@@ -2,6 +2,7 @@ import numpy as np
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
 
+from pyssata import show_in_profiler
 from pyssata.data_objects.ifunc import IFunc
 from pyssata.data_objects.layer import Layer
 from pyssata.data_objects.pupilstop import Pupilstop
@@ -45,7 +46,7 @@ class DM(BaseProcessingObj):
         self._if_commands = self.xp.zeros(nmodes_if, dtype=self._ifunc.dtype)
         self._layer = Layer(s[0], s[1], pixel_pitch, height, target_device_idx=target_device_idx, precision=precision)
         self._layer.A = self._ifunc.mask_inf_func
-        
+
         # sign is -1 to take into account the reflection in the propagation
         self._sign = -1
         self.inputs['in_command'] = InputValue(type=BaseValue)
@@ -56,6 +57,7 @@ class DM(BaseProcessingObj):
         self._delay = 2
         self._gain = 0.5
     
+    @show_in_profiler()
     def compute_shape(self):
         commands_input = self.inputs['in_command'].get(self._target_device_idx)
         commands = commands_input.value
@@ -68,8 +70,6 @@ class DM(BaseProcessingObj):
         self._integrated_commands += self._history[-(self._delay+1)]
 
         commands = self._integrated_commands * self._gain
-
-        temp_matrix = self.xp.zeros(self._layer.size, dtype=self.dtype)
         
         # Compute phase only if commands vector is not zero
         #if self.xp.sum(self.xp.abs(commands)) != 0:
@@ -78,10 +78,9 @@ class DM(BaseProcessingObj):
         
         self._if_commands[:len(commands)] = self._sign * commands
         
-        temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
+        self._layer.phaseInNm[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
 
-        self._layer.phaseInNm = temp_matrix
-
+    @show_in_profiler('dm.trigger')
     def trigger(self, t):
         command = self.inputs['in_command'].get(self._target_device_idx)
         if self._verbose:
