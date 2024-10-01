@@ -4,6 +4,7 @@ import numpy as np
 from scipy.stats import gamma
 from scipy.ndimage import convolve
 
+from pyssata import show_in_profiler
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue
 from pyssata.data_objects.pixels import Pixels
@@ -198,6 +199,7 @@ class CCD(BaseProcessingObj):
         self._pixels.size = (s[0] // value, s[1] // value)
         self._binning = value
 
+    @show_in_profiler('ccd.trigger')
     def trigger(self, t):
         if self._start_time <= 0 or t >= self._start_time:
             in_i = self.inputs['in_i'].get(self._target_device_idx)

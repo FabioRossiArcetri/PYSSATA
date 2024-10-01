@@ -1,5 +1,6 @@
 from astropy.io import fits
 
+from pyssata import show_in_profiler
 from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class ElectricField(BaseDataObj):
@@ -70,6 +71,7 @@ class ElectricField(BaseDataObj):
     def phi_at_lambda(self, wavelengthInNm):
         return self._phaseInNm * ((2 * self.xp.pi) / wavelengthInNm)
 
+    @show_in_profiler('ef_at_lambda')
     def ef_at_lambda(self, wavelengthInNm):
         phi = self.phi_at_lambda(wavelengthInNm)
         return self._A * self.xp.exp(1j * phi, dtype=self.complex_dtype)

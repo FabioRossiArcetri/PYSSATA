@@ -2,13 +2,13 @@ import numpy as np
 
 from astropy.io import fits
 
+from pyssata import show_in_profiler
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.base_list import BaseList
 from pyssata.data_objects.layer import Layer
 from pyssata.lib.cv_coord import cv_coord
 from pyssata.lib.phasescreen_manager import phasescreens_manager
-#from pyssata.lib.phasescreens_shift import phasescreens_shift
 from pyssata.connections import InputValue
 
 from scipy.ndimage import rotate
@@ -311,7 +311,8 @@ class AtmoEvolution(BaseProcessingObj):
         # Update position output
         return new_position
 
-
+        
+    @show_in_profiler('atmo_evolution.shift_screens')
     def shift_screens(self, t):
         seeing = self.inputs['seeing'].get(self._target_device_idx).value
         wind_speed = self.inputs['wind_speed'].get(self._target_device_idx).value

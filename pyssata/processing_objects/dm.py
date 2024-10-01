@@ -2,6 +2,7 @@ import numpy as np
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
 
+from pyssata import show_in_profiler
 from pyssata.data_objects.ifunc import IFunc
 from pyssata.data_objects.layer import Layer
 from pyssata.data_objects.pupilstop import Pupilstop
@@ -82,6 +83,7 @@ class DM(BaseProcessingObj):
 
         self._layer.phaseInNm = temp_matrix
 
+    @show_in_profiler('dm.trigger')
     def trigger(self, t):
         command = self.inputs['in_command'].get(self._target_device_idx)
         if self._verbose:

@@ -1,6 +1,7 @@
 import numpy as np
 from pyssata import cp, cpuArray, fuse
 
+from pyssata import show_in_profiler
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
@@ -412,6 +413,7 @@ class ModulatedPyramid(BaseProcessingObj):
 
             self._flux_factor_vector = self.xp.ones(self._mod_steps, dtype=self.dtype)
 
+    @show_in_profiler('pyramid.trigger')
     def trigger(self, t):
         in_ef = self.inputs['in_ef'].get(self._target_device_idx)
         if in_ef.generation_time != t:

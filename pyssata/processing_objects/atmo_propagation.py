@@ -1,14 +1,15 @@
 from astropy.io import fits
 
+from pyssata import show_in_profiler
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.ef import ElectricField
-#from pyssata.lib.layers2pupil_ef import layers2pupil_ef
 from pyssata.connections import InputList
 from pyssata.data_objects.layer import Layer
 
 from scipy.ndimage import rotate
 import warnings
 from scipy.interpolate import RegularGridInterpolator
+
 
 class AtmoPropagation(BaseProcessingObj):
     '''Atmospheric propagation'''
@@ -97,6 +98,7 @@ class AtmoPropagation(BaseProcessingObj):
                 
                 self._propagators.append(H)
 
+    @show_in_profiler('atmo_propagation.propagate')
     def propagate(self, t):
         if self._doFresnel:
             self.doFresnel_setup()

@@ -1,4 +1,5 @@
 
+from pyssata import show_in_profiler
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.data_objects.ef import ElectricField
@@ -103,6 +104,7 @@ class PSF(BaseProcessingObj):
             self._int_psf.value *= 0
         self._intsr = 0
 
+    @show_in_profiler('psf.trigger')
     def trigger(self, t):
         in_ef = self.inputs['in_ef'].get(self._target_device_idx)
         

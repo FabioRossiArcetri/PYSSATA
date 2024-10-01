@@ -1,6 +1,7 @@
 import numpy as np
 
 from pyssata import cp
+from pyssata import show_in_profiler
 
 try:
     import cupy as cp
@@ -28,6 +29,7 @@ def clamp_generic_more_cpu(x, c, y):
     y[:] = np.where(y > x, c, y)
 
 
+@show_in_profiler('pyr_compute_slopes')
 def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm_fact=None, threshold=None, xp=None, float_dtype=None):
     """
     Computes the pyramid signals from a CCD frame.

@@ -1,4 +1,5 @@
 
+from pyssata import show_in_profiler
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
@@ -275,6 +276,7 @@ class Slopec(BaseProcessingObj):
         if self._verbose:
             print(f'accumulation factor is: {factor}')
 
+    @show_in_profiler('slopec.trigger')
     def trigger(self, t):
         in_pixels = self.inputs['in_pixels'].get(self._target_device_idx)
         if in_pixels.generation_time == t:

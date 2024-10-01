@@ -1,4 +1,6 @@
 import numpy as np
+
+from pyssata import show_in_profiler
 from pyssata import cpuArray
 from pyssata.processing_objects.slopec import Slopec
 from pyssata.data_objects.slopes import Slopes
@@ -72,6 +74,7 @@ class PyrSlopec(Slopec):
                 self._slopes.resize(len(self._pupdata.ind_pup) * 2)
             self._accumulated_slopes.resize(len(self._pupdata.ind_pup) * 2)
 
+    @show_in_profiler('pyr_slopec.trigger')
     def calc_slopes(self, t):
         if not self._pupdata:
             return
