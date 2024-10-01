@@ -1795,14 +1795,6 @@ class Factory:
 
         return sc
 
-    def get_loop_control(self):
-        """
-        Create a loop_control object.
-
-        Returns:
-        LoopControl: loop_control object
-        """
-        return LoopControl(run_time=self._main['total_time'], dt=self._main['time_step'])
 
     def get_m2crec(self, params):
         """
