@@ -140,10 +140,6 @@ class IIRControl(BaseProcessingObj):
         ost = self._ost
         in_delta_comm = self.inputs['delta_comm'].get(self._target_device_idx)
 
-        print('in_delta_comm',in_delta_comm)
-        print('in_delta_comm.value',in_delta_comm.value)
-        print('in_delta_comm.generation_time',in_delta_comm.generation_time)
-
         if in_delta_comm.generation_time == t:
             if self._opticalgain is not None:
                 if self._opticalgain.value > 0:
