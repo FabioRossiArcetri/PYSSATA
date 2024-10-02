@@ -10,10 +10,10 @@ class IntControl(IIRControl):
                 target_device_idx=None, 
                 precision=None
                 ):        
-        iirfilter = int2iirfilter(np.array(int_gain, dtype=float_dtype), ff=ff, xp=np)
+        iirfilter = int2iirfilter(int_gain, ff=ff, target_device_idx=target_device_idx, precision=precision)
 
         # Initialize IIRControl object
-        super().__init__(iirfilter, delay=delay,target_device_idx=target_device_idx, precision=precision)
+        super().__init__(iirfilter, delay=delay, target_device_idx=target_device_idx, precision=precision)
         
         if offset is not None:
             self._offset = offset
