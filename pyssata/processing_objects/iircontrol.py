@@ -195,7 +195,7 @@ class IIRControl(BaseProcessingObj):
                 n_delta_comm = self.xp.size(delta_comm)
                 if n_delta_comm < self._iirfilter.nfilter:
                     delta_comm = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
-                    delta_comm[:n_delta_comm] = self._delta_comm.value
+                    delta_comm[:n_delta_comm] = in_delta_comm.value
 
                 if self._offset is not None:
                     n_offset = self.xp.size(self._offset)
@@ -213,7 +213,7 @@ class IIRControl(BaseProcessingObj):
                     print(f"first {min(6, n_newc)} comm values: {newc[:min(6, n_newc)]}")
         else:
             if self._verbose:
-                print(f"delta comm generation time: {self._delta_comm.generation_time} is not equal to {t}")
+                print(f"delta comm generation time: {in_delta_comm.generation_time} is not equal to {t}")
             newc = self.last_state
 
         self.state_update(newc)
