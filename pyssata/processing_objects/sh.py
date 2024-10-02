@@ -1,7 +1,4 @@
 import numpy as np
-from scipy.ndimage import convolve, shift
-from scipy.fftpack import fft2, ifft2
-import math
 
 from pyssata.lib.toccd import toccd
 from pyssata.lib.make_mask import make_mask
@@ -10,8 +7,10 @@ from pyssata.data_objects.ef import ElectricField
 from pyssata.data_objects.intensity import Intensity
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.lenslet import Lenslet
-from pyssata.data_objects.subapdata import SubapData
+from pyssata.data_objects.subap_data import SubapData
 
+
+# TODO
 if 0:
         convolGaussSpotSize = self.extract(params, 'convolGaussSpotSize', default=None)        
         
@@ -30,15 +29,18 @@ class SH(BaseProcessingObj):
                  sensor_pxscale: float,
                  subap_on_diameter: int,
                  subap_npx: int,
+                 FoVres30mas: bool = False,
+                 squaremask: bool = True,
                  gauss_kern = None, 
-                 FoVres30mas = False,
-                 fov_ovs_coeff: float =0,
+                 fov_ovs_coeff: float = 0,
                  xShiftPhInPixel: float = 0,
                  yShiftPhInPixel: float = 0,
                  aXShiftPhInPixel: float = 0,
                  aYShiftPhInPixel: float = 0,
                  rotAnglePhInDeg: float = 0,
                  aRotAnglePhInDeg: float = 0,
+                 do_not_double_fov_ovs: bool = False,
+                 set_fov_res_to_turbpxsc: bool = False,
                  target_device_idx: int = None, 
                  precision: int = None,
         ):
@@ -59,11 +61,9 @@ class SH(BaseProcessingObj):
             self._gkern = False
             self._gkern_size = 0
 
-        self._ccd_side = self._subap_npx * self._lenslet.n_lenses
-        self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self._target_device_idx)
         self._kernel_fov_scale = 1.0
         self._fov_ovs_coeff = fov_ovs_coeff
-        self._squaremask = True
+        self._squaremask = squaremask
         self._fov_resolution_arcsec = 0.03 if FoVres30mas else 0
         self._kernel_application = ''
         self._kernel_precalc_fft = False
@@ -80,12 +80,15 @@ class SH(BaseProcessingObj):
         self._aXShiftPhInPixel = aXShiftPhInPixel
         self._aYShiftPhInPixel = aYShiftPhInPixel
         self._fov_ovs = 1
-        self._set_fov_res_to_turbpxsc = False
-        self._do_not_double_fov_ovs = False
+        self._set_fov_res_to_turbpxsc = set_fov_res_to_turbpxsc
+        self._do_not_double_fov_ovs = do_not_double_fov_ovs
         self._np_sub = 0
         self._fft_size = 0
         self._input_ef_set = False
         
+        self._ccd_side = self._subap_npx * self._lenslet.n_lenses
+        self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self._target_device_idx)
+
         self.inputs['in_ef'] = InputValue(type=ElectricField)
         self.outputs['out_i'] = self._out_i
 
@@ -334,7 +337,6 @@ class SH(BaseProcessingObj):
         s = in_ef.size
 
         fov_oversample = self._fov_ovs
-        scale_oversample = self._scale_ovs
 
         subap_wanted_fov = self._subap_wanted_fov
         sensor_pxscale = self._sensor_pxscale
@@ -357,7 +359,7 @@ class SH(BaseProcessingObj):
             tempA = congrid(in_ef.a, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
             tempW = congrid(phaseInNmNew, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
 
-            if np.sum(np.abs([rotAnglePhInDeg, xyShiftPhInPixel])) != 0:
+            if rotAnglePhInDeg != 0 or np.sum(np.abs([xyShiftPhInPixel])) != 0:
                 wf1.A = (rot_and_shift_image(tempA, rotAnglePhInDeg, xyShiftPhInPixel, 1.0, use_interpolate=True) >= 0.5).astype(np.uint8)
                 wf1.phaseInNm = rot_and_shift_image(tempW, rotAnglePhInDeg, xyShiftPhInPixel, 1.0, use_interpolate=True)
             else:
@@ -367,7 +369,7 @@ class SH(BaseProcessingObj):
             wf1 = in_ef
 
         wf1_np = wf1.size[0]
-        f = np.zeros((wf1_np, wf1_np), dtype=float)
+        f = self.xp.zeros((wf1_np, wf1_np), dtype=float)
 
         # Reuse geometry calculated in set_in_ef
         np_sub = self._congrid_np_sub
@@ -376,7 +378,7 @@ class SH(BaseProcessingObj):
 
         # Subaperture extracted from full pupil
         wf2 = ElectricField(np_sub, np_sub, wf1.pixel_pitch)
-        wf3 = np.zeros((fft_size, fft_size), dtype=complex)
+        wf3 = self.xp.zeros((fft_size, fft_size), dtype=complex)
 
         # Focal plane result from FFT
         fp4 = ElectricField(fft_size, fft_size, self._wavelengthInNm / 1e9 / (wf1.pixel_pitch * fft_size))
@@ -388,7 +390,7 @@ class SH(BaseProcessingObj):
         tltf = self.get_tlt_f(np_sub, fft_size - np_sub)
 
         if self._subap_idx is None:
-            self._subap_idx = np.zeros((self._lenslet.dimx, self._lenslet.dimy, np_sub * np_sub), dtype=int)
+            self._subap_idx = self.xp.zeros((self._lenslet.dimx, self._lenslet.dimy, np_sub * np_sub), dtype=int)
 
         # Update for GPU, accounting for flux loss
         psfTotalAtFft = 0
@@ -409,7 +411,7 @@ class SH(BaseProcessingObj):
                     f.fill(0)
                     f[int(np.round(x - np_sub / 2.)):int(np.round(x + np_sub / 2.)),
                       int(np.round(y - np_sub / 2.)):int(np.round(y + np_sub / 2.))] = 1
-                    idx = np.where(f.flat == 1)[0]
+                    idx = self.xp.ravel_multi_index(f.nonzero(), f.shape)
                     self._subap_idx[i, j, :] = idx
                     if i == self._lenslet.dimx - 1 and j == self._lenslet.dimy - 1:
                         self._idx_valid = True
@@ -420,7 +422,9 @@ class SH(BaseProcessingObj):
                 wf2 = wf1.sub_ef(idx=idx)
 
                 # Small subapertures set into larger FFT array
-                wf3[0, 0] = wf2.ef_at_lambda(self._wavelengthInNm) * tltf
+                ss = wf2.size
+
+                wf3[:ss[0], :ss[1]] = wf2.ef_at_lambda(self._wavelengthInNm) * tltf
 
                 if self._debugOutput:
                     tempefcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = wf3
@@ -430,22 +434,22 @@ class SH(BaseProcessingObj):
                     self._kernelobj.trigger(t)
 
                 # PSF generation
-                tmp_fp4 = np.fft.fft2(wf3)
-                psfTotalAtFft += np.sum(np.abs(tmp_fp4) ** 2)
+                tmp_fp4 = self.xp.fft.fft2(wf3)
+                psfTotalAtFft += self.xp.sum(self.xp.abs(tmp_fp4) ** 2)
 
                 # Full resolution kernel
                 if self._kernelobj is not None and self.kernel_at_fft():
                     if not self._kernelobj.returnFft:
-                        subap_kern = np.fft.fftshift(self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i])
-                        subap_kern /= np.sum(subap_kern)
-                        subap_kern_fft = np.fft.fft2(subap_kern)
+                        subap_kern = self.xp.fft.fftshift(self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i])
+                        subap_kern /= self.xp.sum(subap_kern)
+                        subap_kern_fft = self.xp.fft.fft2(subap_kern)
                     else:
                         subap_kern_fft = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
 
-                    psf_before_convolution = np.abs(tmp_fp4) ** 2
-                    psf_fft = np.fft.fft2(psf_before_convolution)
-                    psf = np.fft.ifft2(psf_fft * subap_kern_fft).real
-                    psf = np.fft.fftshift(psf)
+                    psf_before_convolution = self.xp.abs(tmp_fp4) ** 2
+                    psf_fft = self.xp.fft.fft2(psf_before_convolution)
+                    psf = self.xp.fft.ifft2(psf_fft * subap_kern_fft).real
+                    psf = self.xp.fft.fftshift(psf)
 
                     if self._debugOutput:
                         temppsfcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf_before_convolution
@@ -453,32 +457,30 @@ class SH(BaseProcessingObj):
                         tempconvcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf
 
                     psf *= fp_mask
-                    psfHasBeenComputed = True
                 else:
-                    tmp_fp4 = np.fft.fftshift(tmp_fp4)
+                    tmp_fp4 = self.xp.fft.fftshift(tmp_fp4)
                     tmp_fp4 *= fp_mask
-                    psf = np.abs(tmp_fp4) ** 2
+                    psf = self.xp.abs(tmp_fp4) ** 2
 
                 if i == 0 and j == 0:
                     sensor_subap_fov = sensor_pxscale * subap_npx
                     fov_cut = fov_complete - sensor_subap_fov
                     cutpixels = int(np.round(fov_cut / fp4.pixel_pitch) / 2 * 2)
                     cutsize = (fp4.size[0] - cutpixels)
-                    effective_fov = fp4.pixel_pitch * cutsize
 
-                    psfimage = np.zeros((cutsize * int(nsubap_diam), cutsize * int(nsubap_diam)))
+                    psfimage = self.xp.zeros((cutsize * int(nsubap_diam), cutsize * int(nsubap_diam)))
 
                 psf_cut = psf[cutpixels // 2: -cutpixels // 2, cutpixels // 2: -cutpixels // 2]
 
                 # FoV kernel
                 if self._kernelobj is not None and self.kernel_at_fov():
                     subap_kern = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
-                    subap_kern /= np.sum(subap_kern)
+                    subap_kern /= self.xp.sum(subap_kern)
                     sKernel = subap_kern.shape[0]
                     if sKernel == cutsize:
-                        psf_cut = np.fft.fftshift(np.convolve(psf_cut, subap_kern, mode='same'))
+                        psf_cut = self.xp.fft.fftshift(self.xp.convolve(psf_cut, subap_kern, mode='same'))
                     else:
-                        psf_cut = np.fft.fftshift(np.convolve(psf_cut, np.fft.fftshift(subap_kern, axes=(-2, -1)), mode='same'))
+                        psf_cut = self.xp.fft.fftshift(self.xp.convolve(psf_cut, self.xp.fft.fftshift(subap_kern, axes=(-2, -1)), mode='same'))
 
                 psfimage[i * cutsize:(i + 1) * cutsize, j * cutsize:(j + 1) * cutsize] = psf_cut
 
@@ -492,8 +494,6 @@ class SH(BaseProcessingObj):
             subap_gkern = gaussian_function(kern_pixsize / (2.0 * np.sqrt(2 * np.log(2))), width=psf_size, maximum=1.0)
             subap_gkern /= np.sum(subap_gkern)
 
-            xcoord = np.arange(psf_size)
-            ycoord = np.transpose(xcoord)
             for i in range(self._lenslet.dimx):
                 for j in range(self._lenslet.dimy):
                     x1 = i * psf_size
@@ -501,10 +501,10 @@ class SH(BaseProcessingObj):
                     y1 = j * psf_size
                     y2 = y1 + psf_size
                     subap = psfimage[x1:x2, y1:y2]
-                    subap_tmp = np.convolve(subap, subap_gkern, mode='same')
-                    psfimage[x1:x2, y1:y2] = np.abs(np.fft.fftshift(np.fft.fft2(subap_tmp)))
+                    subap_tmp = self.xp.convolve(subap, subap_gkern, mode='same')
+                    psfimage[x1:x2, y1:y2] = self.xp.abs(self.xp.fft.fftshift(self.xp.fft.fft2(subap_tmp)))
 
-        ccd = toccd(psfimage, self._ccd_side)
+        ccd = toccd(psfimage, (self._ccd_side, self._ccd_side), xp=self.xp)
 
         # Apply kernel at subaperture level if necessary
         if self._kernelobj is not None and self.kernel_at_subap():
@@ -516,8 +516,8 @@ class SH(BaseProcessingObj):
                     y2 = y1 + subap_npx
                     subap = ccd[x1:x2, y1:y2]
                     subap_kern = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
-                    subap_kern /= np.sum(subap_kern)
-                    ccd[x1:x2, y1:y2] = np.fft.fftshift(np.convolve(subap, subap_kern, mode='same'))
+                    subap_kern /= self.xp.sum(subap_kern)
+                    ccd[x1:x2, y1:y2] = self.xp.fft.fftshift(self.xp.convolve(subap, subap_kern, mode='same'))
 
         phot = in_ef.S0 * in_ef.masked_area()
         ccd *= phot
@@ -525,15 +525,16 @@ class SH(BaseProcessingObj):
         if phot == 0:
             print('WARNING: total intensity at SH entrance is zero')
 
-        if not np.isfinite(ccd).all():
+        if not self.xp.isfinite(ccd).all():
             raise ValueError('Intensity has non-finite elements')
 
         self._out_i.i = ccd
+        print(type(ccd))
         self._out_i.generation_time = t
 
     def get_tlt_f(self, p, c):
         iu = complex(0, 1)
         xx, yy = self.xp.meshgrid(self.xp.arange(-p // 2, p // 2), self.xp.arange(-p // 2, p // 2))
         tlt_g = xx + yy
-        tlt_f = self.xp.exp(-2 * self.xp.pi * iu * tlt_g / (2 * (p + c)), dtype=self.dtype)
+        tlt_f = self.xp.exp(-2 * self.xp.pi * iu * tlt_g / (2 * (p + c)), dtype=self.complex_dtype)
         return tlt_f
