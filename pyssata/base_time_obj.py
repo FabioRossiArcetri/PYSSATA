@@ -112,10 +112,13 @@ class BaseTimeObj:
             self.xp = np
 
     def trigger(self, t):
-        # if the device is not the CPU and it is different from the default one, 
+        # if the device is not the CPU and it is different from the current one, 
         # then put in in use
-        if not self.target_device_idx==-1 and not self.target_device_idx==default_target_device:           
-            self._device.use()
+        
+        # TODO this is not called by base classes
+        if not self.target_device_idx==-1 and self.target_device_idx != cp.cuda.runtime.getDevice():
+            print('Using device', self._target_device_idx)
+            self._target_device.use()
 
     def t_to_seconds(self, t):
         return float(t) / float(self._time_resolution)

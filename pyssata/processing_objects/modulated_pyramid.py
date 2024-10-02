@@ -466,6 +466,12 @@ class ModulatedPyramid(BaseProcessingObj):
         ss = tmp.shape
         u_tlt[0:ss[0], 0:ss[1], :] = tmp
         #with plan1:
+
+        # Does not work: slower than single GPU
+        #import cupy
+        #cupy.fft.config.use_multi_gpus = True
+        #cupy.fft.config.set_cufft_gpus([0,1])
+
         u_fp = self.xp.fft.fftshift(self.xp.fft.fft2(u_tlt, axes=(0, 1)), axes=(0, 1))                                       
         if self._target_device_idx>-1:
             u_fp_pyr, fpsf = pyr1_fused(u_fp, ffv, my_exp, fp_mask)
