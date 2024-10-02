@@ -92,7 +92,7 @@ class ElectricField(BaseDataObj):
         ef = self.ef_at_lambda(wavelengthInNm)
         return self.xp.abs(ef) ** 2
 
-    def sub_ef(self, xfrom, xto, yfrom, yto, idx=None):
+    def sub_ef(self, xfrom=None, xto=None, yfrom=None, yto=None, idx=None):
         if idx is not None:
             idx = self.xp.unravel_index(idx, self._A.shape)
             xfrom, xto = self.xp.min(idx[0]), self.xp.max(idx[0])
@@ -100,7 +100,7 @@ class ElectricField(BaseDataObj):
         sub_ef = ElectricField(xto - xfrom + 1, yto - yfrom + 1, self.pixel_pitch)
         sub_ef.A = self._A[xfrom:xto+1, yfrom:yto+1]
         sub_ef.phaseInNm = self._phaseInNm[xfrom:xto+1, yfrom:yto+1]
-        sub_ef.S0 = self._s0
+        sub_ef.S0 = self._S0
         return sub_ef
 
     def compare(self, ef2):
