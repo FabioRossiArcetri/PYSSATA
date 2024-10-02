@@ -24,6 +24,8 @@ class PyrSlopec(Slopec):
 
         self._total_counts = BaseValue()
         self._subap_counts = BaseValue()
+        self.outputs['total_counts'] = self._total_counts
+        self.outputs['subap_counts'] = self._subap_counts
 
     @property
     def shlike(self):
@@ -84,14 +86,8 @@ class PyrSlopec(Slopec):
         threshold = self._thr_value if self._thr_value != -1 else None
         sx, sy, flux = pyr_compute_slopes(pixels, self._pupdata.ind_pup, self._shlike, self._slopes_from_intensity, self._norm_factor, threshold, xp=self.xp)
 
-        self._flux_per_subaperture_vector.value = flux
-        self._flux_per_subaperture_vector.generation_time = t
-
-        idx  = self._pupdata.ind_pup.flatten().astype(self.xp.int64)
-        v = pixels.flatten()
-        px = v[idx].ravel()
-        self._total_counts.value = self.xp.sum(px)
-        self._subap_counts.value = self.xp.sum(px) / self._pupdata.n_subap
+        self._total_counts.value = flux
+        self._subap_counts.value = flux / self._pupdata.n_subap
 
         if self._slopes_from_intensity:
             self._slopes.slopes = [sx, sy]
@@ -104,9 +100,6 @@ class PyrSlopec(Slopec):
 
 #        if 1:#if self._verbose:  # Verbose?
 #            print(f'Slopes min, max and rms: {self.xp.min(self.xp.array([sx, sy]))}, {self.xp.max(self.xp.array([sx, sy]))}  //  {self.xp.sqrt(self.xp.mean(self.xp.array([sx**2, sy**2])))}')
-
-    def _compute_flux_per_subaperture(self):
-        return self._flux_per_subaperture_vector
 
     def run_check(self, time_step, errmsg=''):
         if self._shlike and self._slopes_from_intensity:
