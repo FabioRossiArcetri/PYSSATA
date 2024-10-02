@@ -58,45 +58,59 @@ class IIRFilter:
         }
 
     def set_num(self, num):
+        snum1 = num.shape[1]
+        for i in range(self._nfilter):
+            if self._ordnum[i] < snum1:
+                if np.sum(xp.abs(num[i, self._ordnum[i]:])) == 0:
+                    num[i, :] = xp.roll(num[i, :], snum1 - self._ordnum[i])
+
         self._num = xp.array(num, dtype=float_dtype)
-        zeros = xp.zeros((self._nfilter, self._num.shape[1] - 1), dtype=float_dtype)
+        zeros = xp.zeros((self._nfilter, snum1 - 1), dtype=float_dtype)
         gain = xp.zeros(self._nfilter, dtype=float_dtype)
         for i in range(self._nfilter):
             if self._ordnum[i] > 1:
-                zeros[i, :self._ordnum[i] - 1] = xp.roots(self._num[i, :self._ordnum[i]])
-            gain[i] = self._num[i, self._ordnum[i] - 1]
+                zeros[i, :self._ordnum[i] - 1] = xp.roots(self._num[i, snum1 - self._ordnum[i]:])
+            gain[i] = self._num[i, - 1]
         self._zeros = zeros
         self._gain = gain
 
     def set_den(self, den):
+        sden1 = den.shape[1]
+        for i in range(self._nfilter):
+            if self._ordden[i] < sden1:
+                if np.sum(xp.abs(den[i, self._ordden[i]:])) == 0:
+                    den[i, :] = xp.roll(den[i, :], sden1 - self._ordden[i])
+
         self._den = xp.array(den, dtype=float_dtype)
-        poles = xp.zeros((self._nfilter, self._den.shape[1] - 1), dtype=float_dtype)
+        poles = xp.zeros((self._nfilter, sden1 - 1), dtype=float_dtype)
         for i in range(self._nfilter):
             if self._ordden[i] > 1:
-                poles[i, :self._ordden[i] - 1] = xp.roots(self._den[i, :self._ordden[i]])
+                poles[i, :self._ordden[i] - 1] = xp.roots(self._den[i, sden1 - self._ordden[i]:])
         self._poles = poles
 
     def set_zeros(self, zeros):
         self._zeros = xp.array(zeros, dtype=float_dtype)
         num = xp.zeros((self._nfilter, self._zeros.shape[1] + 1), dtype=float_dtype)
+        snum1 = num.shape[1]
         for i in range(self._nfilter):
             if self._ordnum[i] > 1:
-                num[i, :self._ordnum[i]] = xp.poly(self._zeros[i, :self._ordnum[i] - 1])
+                num[i, snum1 - self._ordnum[i]:] = xp.poly(self._zeros[i, :self._ordnum[i] - 1])
         self._num = num
 
     def set_poles(self, poles):
         self._poles = xp.array(poles, dtype=float_dtype)
         den = xp.zeros((self._nfilter, self._poles.shape[1] + 1), dtype=float_dtype)
+        sden1 = den.shape[1]
         for i in range(self._nfilter):
             if self._ordden[i] > 1:
-                den[i, :self._ordden[i]] = xp.poly(self._poles[i, :self._ordden[i] - 1])
+                den[i, sden1 - self._ordden[i]:] = xp.poly(self._poles[i, :self._ordden[i] - 1])
         self._den = den
 
     def set_gain(self, gain, verbose=False):
         if verbose:
             print('original gain:', self._gain)
-        if len(gain) < self._nfilter:
-            nfilter = len(gain)
+        if xp.size(gain) < self._nfilter:
+            nfilter = np.size(gain)
         else:
             nfilter = self._nfilter
         if self._gain is None:
@@ -105,16 +119,16 @@ class IIRFilter:
                     if self._ordnum[i] > 1:
                         self._num[i, :] *= gain[i]
                     else:
-                        self._num[i, self._ordden - 1] = gain[i]
+                        self._num[i, - 1] = gain[i]
                 else:
-                    gain[i] = self._num[i, self._ordden - 1]
+                    gain[i] = self._num[i, - 1]
         else:
             for i in range(nfilter):
                 if xp.isfinite(gain[i]):
                     if self._ordnum[i] > 1:
                         self._num[i, :] *= (gain[i] / self._gain[i])
                     else:
-                        self._num[i, self._ordden - 1] = gain[i] / self._gain[i]
+                        self._num[i, - 1] = gain[i] / self._gain[i]
                 else:
                     gain[i] = self._gain[i]
         self._gain = xp.array(gain, dtype=float_dtype)
