@@ -62,7 +62,7 @@ class DM(BaseProcessingObj):
         #    if len(commands) > len(self._if_commands):
         #        raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
         
-        self._if_commands[:len(commands)] = self._sign * commands
+        self._if_commands[:self.xp.size(commands)] = self._sign * commands
         
         temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
 
