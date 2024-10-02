@@ -178,14 +178,14 @@ class Simul():
         # Build loop
         for name, obj in self.objs.items():
             if isinstance(obj, BaseProcessingObj):
-                if name not in ['control']:
-                    loop.add(obj)
+                loop.add(obj)
         loop.add(store)
 
         # Run simulation loop
         loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'], speed_report=True)
 
-        print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']])) * 100.}")
+        if store.has_key('sr'):
+            print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']])) * 100.}")
 
         # Saving method with a single sav file
         store.save('save_file.pickle')

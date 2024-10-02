@@ -2,31 +2,34 @@ import numpy as np
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue
-from pyssata.processing_objects.timecontrol import TimeControl
 from pyssata.base_value import BaseValue
-from pyssata.lib.compute_comm import compute_comm
+from pyssata.lib.calc_loop_delay import calc_loop_delay
 
-class IIRControl(TimeControl):
+class IIRControl(BaseProcessingObj):
     '''Infinite Impulse Response filter based Time Control'''
     def __init__(self, iirfilter, delay=0,
                 target_device_idx=None, 
                 precision=None
                 ):
 
+        self._verbose = True
         self._iirfilter = iirfilter
-        typeIIR = iirfilter.num.dtype
-        nIIR = iirfilter.nfilter
+        
+        super().__init__(target_device_idx=target_device_idx, precision=precision)        
 
-        TimeControl.__init__(self, delay=delay, n=nIIR, type=typeIIR, target_device_idx=target_device_idx, precision=precision)
-
+        self._delay = delay if delay is not None else 0
+        self._n = iirfilter.nfilter
+        self._type = iirfilter.num.dtype
+        self.set_state_buffer_length(int(self.xp.ceil(self._delay)) + 1)
+        
+        # Initialize state vectors
         self._ist = self.xp.zeros_like(iirfilter.num)
         self._ost = self.xp.zeros_like(iirfilter.den)
 
-        self._out_comm = BaseValue()
-        self._delta_comm = None
-
-        self.inputs['in_delta_comm'] = self.in_delta_comm
-     #   self.outputs['out_comm'] = OutputValue(object=self._out_comm, type=BaseValue)
+        self._out_comm = BaseValue(target_device_idx=target_device_idx)
+   
+        self.inputs['delta_comm'] = InputValue(type=BaseValue)
+        self.outputs['out_comm'] = self._out_comm
 
         self._opticalgain = None
         self._og_shaper = None
@@ -35,19 +38,68 @@ class IIRControl(TimeControl):
         self._modal_start_time = None
         self._time_gmt_imm = None
         self._gain_gmt_imm = None
-        self._deltaCommHistEx = None
-        self._commHistEx = None
-        self._deltaCommFutureHistEx = None
-        self._ostMatEx = None
-        self._istMatEx = None
-        self._doExtraPol = False
         self._do_gmt_init_mod_manager = False
-        self._nPastStepsEx = 0
-        self._gainEx = 0.0
-        self._extraPolMinMax = [0, 0]
         self._skipOneStep = False
         self._StepIsNotGood = False
         self._start_time = 0
+
+    def set_state_buffer_length(self, total_length):
+        self._total_length = total_length
+        if self._n is not None and self._type is not None:
+            self._state = self.xp.zeros((self._n, self._total_length), dtype=self.dtype)
+            self._comm = self.xp.zeros((self._n, 1), dtype=self.dtype)
+
+    def auto_params_management(self, main_params, control_params, detector_params, dm_params, slopec_params):
+        result = control_params.copy()
+
+        if str(result['delay']) == 'auto':
+            binning = detector_params.get('binning', 1)
+            computation_time = slopec_params.get('computation_time', 0) if slopec_params else 0
+            delay = calc_loop_delay(1.0 / detector_params['dt'], dm_set=dm_params['settling_time'],
+                                    type=detector_params['name'], bin=binning, comp_tim=computation_time)
+            if delay == float('inf'):
+                raise ValueError("Delay calculation resulted in infinity")
+            result['delay'] = delay * (1.0 / main_params['time_step']) - 1
+
+        return result
+
+    def state_update(self, comm):
+        finite_mask = self.xp.isfinite(comm)
+        if self.xp.any(finite_mask):
+            if self._delay > 0:
+                self._state[:, 1:self._total_length] = self._state[:, 0:self._total_length-1]
+
+            self._state[finite_mask, 0] = comm[finite_mask]
+
+        self._comm = self.get_past_state(self._delay)
+
+    @property
+    def delay(self):
+        return self._delay
+
+    @property
+    def last_state(self):
+        return self._state[:, 0]
+
+    @property
+    def state(self):
+        return self._state
+
+    def get_past_state(self, past_step):
+        remainder_delay = past_step % 1
+        if remainder_delay == 0:
+            return self._state[:, int(past_step)]
+        else:
+            return (remainder_delay * self._state[:, int(self.xp.ceil(past_step))] +
+                    (1 - remainder_delay) * self._state[:, int(self.xp.ceil(past_step))-1])
+
+    @property
+    def comm(self):
+        return self._comm
+
+    @state.setter
+    def state(self, state):
+        self._state = state
 
     @property
     def in_delta_comm(self):
@@ -86,27 +138,28 @@ class IIRControl(TimeControl):
     def trigger(self, t):
         ist = self._ist
         ost = self._ost
+        in_delta_comm = self.inputs['delta_comm'].get(self._target_device_idx)
 
-        if self._delta_comm.generation_time == t:
+        if in_delta_comm.generation_time == t:
             if self._opticalgain is not None:
                 if self._opticalgain.value > 0:
-                    delta_comm = self._delta_comm.value * 1.0 / self._opticalgain.value
+                    delta_comm = in_delta_comm.value * 1.0 / self._opticalgain.value
                     if self._og_shaper is not None:
                         delta_comm *= self._og_shaper
-                    self._delta_comm.value = delta_comm
+                    in_delta_comm.value = delta_comm
                     print(f"WARNING: optical gain compensation has been applied (g_opt = {self._opticalgain.value:.5f}).")
 
             if self._start_time > 0 and self._start_time > t:
-                newc = self.xp.zeros_like(self._delta_comm.value)
-                print(f"delta comm generation time: {self._delta_comm.generation_time} is not greater than {self._start_time}")
+                newc = self.xp.zeros_like(in_delta_comm.value)
+                print(f"delta comm generation time: {in_delta_comm.generation_time} is not greater than {self._start_time}")
             else:
-                delta_comm = self._delta_comm.value
+                delta_comm = in_delta_comm.value
 
                 if self._modal_start_time is not None:
                     for i in range(len(self._modal_start_time)):
                         if self._modal_start_time[i] > t:
                             delta_comm[i] = 0
-                            print(f"delta comm generation time: {self._delta_comm.generation_time} is not greater than {self._modal_start_time[i]}")
+                            print(f"delta comm generation time: {in_delta_comm.generation_time} is not greater than {self._modal_start_time[i]}")
                             print(f" -> value of mode no. {i} is set to 0.")
 
                 if self._skipOneStep:
@@ -135,66 +188,30 @@ class IIRControl(TimeControl):
                     gain_idx = self._gain_gmt_imm if self._gain_gmt_imm is not None else self.xp.zeros(0, dtype=self.dtype)
                     delta_comm *= gmt_init_mod_manager(self.t_to_seconds(t), len(delta_comm), time_idx=time_idx, gain_idx=gain_idx)
 
-                if len(delta_comm) < self._iirfilter.nfilter:
-                    n_delta_comm = len(delta_comm)
+                n_delta_comm = self.xp.size(delta_comm)
+                if n_delta_comm < self._iirfilter.nfilter:
                     delta_comm = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
-                    delta_comm[:n_delta_comm] = self._delta_comm.value
+                    delta_comm[:n_delta_comm] = in_delta_comm.value
 
                 if self._offset is not None:
-                    delta_comm[:len(self._offset)] += self._offset
+                    n_offset = self.xp.size(self._offset)
+                    delta_comm[:n_offset] += self._offset
 
-                if self._doExtraPol:
-                    if self._nPastStepsEx == 0:
-                        self._nPastStepsEx = 8
-
-                if self._deltaCommFutureHistEx is not None:
-                    if abs(round(self._delay) - self._delay) <= 1e-3:
-                        delta_temp = self._deltaCommFutureHistEx[:, self._nPastStepsEx - self.xp.around(self._delay)]
-                    else:
-                        delta_temp = (self._delay - self.xp.floor(self._delay)) * self._deltaCommFutureHistEx[:, self._nPastStepsEx - self.xp.ceil(self._delay)] + \
-                                     (self.xp.ceil(self._delay) - self._delay) * self._deltaCommFutureHistEx[:, self._nPastStepsEx - self.xp.floor(self._delay)]
-                    delta_comm += delta_temp
-
-                newc = compute_comm(self._iirfilter, delta_comm, ist=ist, ost=ost)                
+                newc = self.compute_comm(delta_comm)                
 
                 if self.xp.all(newc == 0) and self._offset is not None:
-                    newc[:len(self._offset)] += self._offset
+                    newc[:n_offset] += self._offset
                     print("WARNING (IIRCONTROL): newc is a null vector, applying offset.")
 
-                if self._doExtraPol:
-                    print("doing extrapolation")
-                    thr_chisqr = 0.9
-                    LPF = True
-                    if self.xp.all(self._extraPolMinMax == 0):
-                        self._extraPolMinMax = [0, self._iirfilter.nfilter]
-                    deltaCommHist = self._deltaCommHistEx if self._deltaCommHistEx is not None else self.xp.zeros((0, 0), dtype=self.dtype)
-                    commHist = self._commHistEx if self._commHistEx is not None else self.xp.zeros((0, 0), dtype=self.dtype)
-                    deltaCommFutureHist = self._deltaCommFutureHistEx if self._deltaCommFutureHistEx is not None else self.xp.zeros((0, 0), dtype=self.dtype)
-                    if LPF:
-                        ostMat = self._ostMatEx if self._ostMatEx is not None else self.xp.zeros((0, 0), dtype=self.dtype)
-                        istMat = self._istMatEx if self._istMatEx is not None else self.xp.zeros((0, 0), dtype=self.dtype)
-                    newcExtrapol = compute_extrapol_comm(newc, self._delay + 1, self._nPastStepsEx, thr_chisqr, 
-                                                         deltaCommHist=deltaCommHist, commHist=commHist, 
-                                                         deltaCommFutureHist=deltaCommFutureHist, gainFuture=None, 
-                                                         nMinMaxMode=self._extraPolMinMax, LPF=LPF, filterGain=self._gainEx, 
-                                                         ostMat=ostMat, istMat=istMat)
-                    self._deltaCommHistEx = deltaCommHist
-                    self._commHistEx = commHist
-                    self._deltaCommFutureHistEx = deltaCommFutureHist
-                    if LPF:
-                        self._ostMatEx = ostMat
-                        self._istMatEx = istMat
-
                 if self._verbose:
-                    print(f"first {min(6, len(delta_comm))} delta_comm values: {delta_comm[:min(6, len(delta_comm))]}")
-                    print(f"first {min(6, len(newc))} comm values: {newc[:min(6, len(newc))]}")
+                    n_newc = self.xp.size(newc)
+                    print(f"first {min(6, n_delta_comm)} delta_comm values: {delta_comm[:min(6, n_delta_comm)]}")
+                    print(f"first {min(6, n_newc)} comm values: {newc[:min(6, n_newc)]}")
         else:
             if self._verbose:
-                print(f"delta comm generation time: {self._delta_comm.generation_time} is not equal to {t}")
-            newc = self.get_last_state()
+                print(f"delta comm generation time: {in_delta_comm.generation_time} is not equal to {t}")
+            newc = self.last_state
 
-        self._ist = ist
-        self._ost = ost
         self.state_update(newc)
 
         self._out_comm.value = self.comm
@@ -202,6 +219,73 @@ class IIRControl(TimeControl):
 
         if self._verbose:
             print(f"first {min(6, len(self._out_comm.value))} output comm values: {self._out_comm.value[:min(6, len(self._out_comm.value))]}")
+
+    def compute_comm(self, input):
+        nfilter = self._iirfilter.num.shape[0]
+        ninput = self.xp.size(input)
+        output = input*0
+
+        if nfilter < ninput:
+            raise ValueError(f"Error: IIR filter needs no more than {nfilter} coefficients ({ninput} given)")
+
+        if ninput == 1:
+            if self.xp.isfinite(input):
+                temp_input = input
+                temp_ist = self._ist
+                temp_ost = self._ost
+                temp_num = self._iirfilter.num
+                temp_den = self._iirfilter.den
+            else:
+                return output
+        else:
+            idx_finite = self.xp.where(self.xp.isfinite(input))[0]
+            temp_input = input[idx_finite]
+            temp_ist = self._ist[idx_finite]
+            temp_ost = self._ost[idx_finite]
+            temp_num = self._iirfilter.num[idx_finite, :]
+            temp_den = self._iirfilter.den[idx_finite, :]
+   
+        temp_output, temp_ost, temp_ist = self.online_filter(
+            temp_num,
+            temp_den,
+            temp_input,
+            temp_ost,
+            temp_ist
+        )
+        if ninput == 1:
+            output = temp_output
+            self._ost = temp_ost
+            self._ist = temp_ist
+        else:
+            output[idx_finite] = temp_output
+            self._ost[idx_finite] = temp_ost
+            self._ist[idx_finite] = temp_ist
+
+        return output
+    
+    def online_filter(self, num, den, input, ost, ist):
+        sden = self.xp.shape(den)
+        snum = self.xp.shape(num)
+        n_input = self.xp.size(input)
+        
+        no = sden[1]
+        ni = snum[1]
+
+        # Delay the vectors
+        ost = self.xp.concatenate((ost[:, 1:], self.xp.zeros((sden[0], 1), dtype=self.dtype)), axis=1)
+        ist = self.xp.concatenate((ist[:, 1:], self.xp.zeros((sden[0], 1), dtype=self.dtype)), axis=1)
+
+        # New input
+        ist[:n_input, ni - 1] = input
+
+        # New output
+        factor = 1/den[:, no - 1]
+        ost[:, no - 1] = factor * self.xp.sum(num * ist, axis=1)
+        ost[:, no - 1] -= factor * self.xp.sum(den[:, :no - 1] * ost[:, :no - 1], axis=1)
+
+        output = ost[:n_input, no - 1]
+
+        return output, ost, ist
 
     def run_check(self, time_step, errmsg=""):
         return True

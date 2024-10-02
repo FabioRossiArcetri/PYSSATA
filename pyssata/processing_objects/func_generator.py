@@ -42,19 +42,19 @@ class FuncGenerator(BaseProcessingObj):
 
         # Initialize attributes based on the type
         if self._type == 'SIN':
-            self.constant = constant or 0.0
-            self.amp = amp or 0.0
-            self.freq = freq or 0.0
-            self.offset = offset or 0.0
+            self.constant = self.xp.array(constant) if constant is not None else 0.0
+            self.amp = self.xp.array(amp) if amp is not None else 0.0
+            self.freq = self.xp.array(freq) if freq is not None else 0.0
+            self.offset = self.xp.array(offset) if offset is not None else 0.0
 
         elif self._type == 'LINEAR':
-            self.constant = constant or 0.0
+            self.constant = self.xp.array(constant) if constant is not None else 0.0
             self.slope = 0.0
 
         elif self._type == 'RANDOM':
-            self.amp = amp or 0.0
-            self.constant = constant or 0.0
-            self.seed = seed or 0
+            self.amp = self.xp.array(amp) if amp is not None else 0.0
+            self.constant = self.xp.array(constant) if constant is not None else 0.0
+            self.seed = self.xp.array(seed) if seed is not None else 0.0
 
         elif self._type == 'VIB_HIST':
             if nmodes is None:
@@ -78,22 +78,22 @@ class FuncGenerator(BaseProcessingObj):
             if amp is None and vect_amplitude is None:
                 raise ValueError('AMP or VECT_AMPLITUDE keyword is mandatory for type PUSH')
             self._time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, only_push=True, ncycles=ncycles)
-            self.amp = amp
-            self.vect_amplitude = vect_amplitude
+            self._amp = self.xp.array(amp)
+            self._vect_amplitude = self.xp.array(ect_amplitude)
 
         elif self._type == 'PUSHPULL':
             if nmodes is None:
                 raise ValueError('NMODES keyword is mandatory for type PUSHPULL')
             if amp is None and vect_amplitude is None:
                 raise ValueError('AMP or VECT_AMPLITUDE keyword is mandatory for type PUSHPULL')
-            self.time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, ncycles=ncycles, repeat_ncycles=self._repeat_ncycles)
-            self.amp = amp
-            self.vect_amplitude = vect_amplitude
+            self._time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, ncycles=ncycles, repeat_ncycles=self._repeat_ncycles)
+            self._amp = self.xp.array(amp)
+            self._vect_amplitude = self.xp.array(vect_amplitude)
 
         elif self._type == 'TIME_HIST':
             if time_hist is None:
                 raise ValueError('TIME_HIST keyword is mandatory for type TIME_HIST')
-            self.time_hist = time_hist
+            self._time_hist = self.xp.array(time_hist)
 
         else:
             raise ValueError(f'Unknown function type: {self._type}')

@@ -51,26 +51,12 @@ class DM(BaseProcessingObj):
         self._sign = -1
         self.inputs['in_command'] = InputValue(type=BaseValue)
         self.outputs['out_layer'] = self._layer
-
-        # Integrator control workaround
-        self._history = None
-        self._delay = 2
-        self._gain = 0.5
     
     @show_in_profiler()
     def compute_shape(self):
         commands_input = self.inputs['in_command'].get(self._target_device_idx)
         commands = commands_input.value
 
-        if self._history is None:
-            self._history = [commands*0] * (self._delay+1)
-            self._integrated_commands = commands * 0
-
-        self._history.append(commands)
-        self._integrated_commands += self._history[-(self._delay+1)]
-
-        commands = self._integrated_commands * self._gain
-        
         # Compute phase only if commands vector is not zero
         #if self.xp.sum(self.xp.abs(commands)) != 0:
         #    if len(commands) > len(self._if_commands):

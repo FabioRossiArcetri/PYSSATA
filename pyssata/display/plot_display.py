@@ -129,7 +129,10 @@ class PlotDisplay(BaseProcessingObj):
                 self.line[0].set_xdata(x)
                 self.line[0].set_ydata(y)
                 self.ax.set_xlim(x.min(), x.max())
-                self.ax.set_ylim(y.min(), y.max())
+                if np.sum(np.abs(self._yrange)) > 0:
+                    self.ax.set_ylim(self._yrange[0], self._yrange[1])
+                else:
+                    self.ax.set_ylim(y.min(), y.max())
             self.fig.canvas.draw()
             plt.pause(0.001)
 

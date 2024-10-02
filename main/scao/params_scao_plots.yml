@@ -102,12 +102,14 @@ rec:
 control:
   class:             'IntControl'
   delay:             2                      # Total temporal delay in time steps
-  int_gain:          [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5, # Integrator gain (for 'INT' control)
-                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
-                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
-                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
-                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
-                      0.5,0.5,0.5,0.5]       
+  int_gain:          [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5, # Integrator gain (for 'INT' control)
+                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
+                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
+                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
+                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
+                      0.5,0.5,0.5,0.5]  
+  inputs:
+      delta_comm: 'rec.out_modes'      
 
 
 dm:
@@ -118,7 +120,7 @@ dm:
   obsratio:          0.1                    # obstruction dimension ratio w.r.t. diameter
   height:            0                      # DM height [m]
   inputs:
-      in_command: 'rec.out_modes'              # TODO skip control object for now
+      in_command: 'control.out_comm'
 
 
 psf:
