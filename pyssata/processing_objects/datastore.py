@@ -1,7 +1,8 @@
 import os
 import numpy as np
 
-from pyssata import xp
+from pyssata import xp, cp
+import cupyx
 from collections import OrderedDict
 import pickle
 import time
@@ -21,6 +22,7 @@ class Datastore(BaseProcessingObj):
         super().__init__()
         self._items = {}
         self._storage = {}
+        self._pinned_memory = {}
         self._decimation_t = 0
         self._data_filename = ''
         self._tn_dir = store_dir
@@ -32,6 +34,8 @@ class Datastore(BaseProcessingObj):
             raise ValueError(f'Storing already has an object with name {name}')
         self._items[name] = data_obj
         self._storage[name] = OrderedDict()
+        if isinstance(data_obj, ElectricField):
+            self._pinned_memory[name] = cupyx.empty_like_pinned(data_obj.phaseInNm)
 
     def add_array(self, data, name):
         if name in self._items:
@@ -209,7 +213,11 @@ class Datastore(BaseProcessingObj):
                     elif isinstance(item, Pixels):
                         v = cpuArray(item.pixels)
                     elif isinstance(item, ElectricField):
-                        v = cpuArray(item.phaseInNm)
+                        if not isinstance(item.phaseInNm, np.ndarray):
+                            item.phaseInNm.get(out=self._pinned_memory[k])
+                            v = self._pinned_memory[k].copy()
+                        else:
+                            v = cpuArray(item.phaseInNm)
                     else:
                         raise TypeError(f"Error: don't know how to save an object of type {type(item)}")
                     self._storage[k][t] = v
