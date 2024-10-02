@@ -73,15 +73,23 @@ class BaseOperation(BaseProcessingObj):
             self._out_value.generation_time = t
 
         if value1 and value2 and (value1.generation_time == t or value2.generation_time == t):
+            temp = 0
             if self._mult:
-                self._out_value.value = value1.value * value2.value
+                if value1.value is not None: temp = value1.value    
+                if value2.value is not None: temp *= value2.value
             if self._div:
-                self._out_value.value = value1.value / value2.value
+                if value1.value is not None: temp = value1.value    
+                if value2.value is not None: temp /= value2.value
             if self._sum:
-                self._out_value.value = value1.value + value2.value
+                if value1.value is not None: temp = value1.value    
+                if value2.value is not None: temp += value2.value
             if self._sub:
-                self._out_value.value = value1.value - value2.value
+                if value1.value is not None: temp = value1.value    
+                if value2.value is not None: temp -= value2.value
+            self._out_value.value = temp
             self._out_value.generation_time = t
+        print('self._out_value.value',self._out_value.value)
+        print('self._out_value.generation_time',self._out_value.generation_time)
 
     def run_check(self, time_step, errmsg=None):
         """
