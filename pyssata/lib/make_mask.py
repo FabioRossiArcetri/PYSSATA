@@ -1,6 +1,6 @@
 from pyssata.lib.make_xy import make_xy
 
-def closest(value, array):
+def closest(value, array, xp):
     """Find the closest value in the array and return its index."""
     return (xp.abs(array - value)).argmin()
 
@@ -35,13 +35,13 @@ def make_mask(np_size, obsratio=0.0, diaratio=1.0, xc=0.0, yc=0.0,
 
     # Adjust center if centeronpixel is set
     if centeronpixel:
-        idx_x = closest(xc, x[:, 0])
+        idx_x = closest(xc, x[:, 0], xp=xp)
         neighbours_x = [abs(x[idx_x-1, 0] - xc), abs(x[idx_x+1, 0] - xc)]
         idxneigh_x = xp.argmin(neighbours_x)
         kx = -0.5 if idxneigh_x == 0 else 0.5
         xc = x[idx_x, 0] + kx * (x[1, 0] - x[0, 0])
 
-        idx_y = closest(yc, y[0, :])
+        idx_y = closest(yc, y[0, :], xp=xp)
         neighbours_y = [abs(y[0, idx_y-1] - yc), abs(y[0, idx_y+1] - yc)]
         idxneigh_y = xp.argmin(neighbours_y)
         ky = -0.5 if idxneigh_y == 0 else 0.5

@@ -1,5 +1,7 @@
+
 import math
 from pyssata.data_objects.base_data_obj import BaseDataObj
+
 
 class SubapData(BaseDataObj):
     def __init__(self, np_sub=None, n_subaps=None, target_device_idx=None, precision=None):

@@ -1,24 +1,35 @@
+
+from pyssata.data_objects.slopes import Slopes
+from pyssata.data_objects.subapdata import Subapdata
+from pyssata.base_value import BaseValue
+
 from pyssata.processing_objects.slopec import Slopec
 
+    
 class ShSlopec(Slopec):
-    def __init__(self                 
+    def __init__(self,
+                 thr_value: float = -1,
+                 exp_weight: float = 1.0,
+                 subapdata: Subapdata = None,
+                 intmat = None,
+                 recmat: Recmat = None,
+                 filtmat = None,
+                 corr_template = None,                
                  target_device_idx: int = None, 
                  precision: int = None ):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
-        self._thr_value = -1
-        self._exp_weight = 1.0
+        self._thr_value = thr_value
         self._thr_mask_cube = BaseValue()  
         self._total_counts = BaseValue()
         self._subap_counts = BaseValue()
         self._detailed_debug = -1
-        self._subapdata = None
         self._subap_idx = None
         self._xweights = None
         self._yweights = None
         self._xcweights = None
         self._ycweights = None
         self._mask_weighted = None
-        self._corr_template = None
+        self._corr_template = corr_template
         self._winMatWindowed = None
         self._vecWeiPixRadT = None
         self._weightedPixRad = 0.0
@@ -36,6 +47,10 @@ class ShSlopec(Slopec):
         self._window = 0
         self._wsize = self.xp.zeros(2, dtype=int)
         self._display2s = False
+
+        # Property settings
+        self.subapdata = subapdata
+        self.exp_weight = exp_weight
 
     @property
     def thr_value(self):
@@ -113,8 +128,12 @@ class ShSlopec(Slopec):
         return {"x": x, "y": y, "xc": xc, "yc": yc, "mask_weighted": mask_weighted}
 
     
-    def load_subapdata(self, subapdata_tag):
-        p = self._cm.read_subaps(subapdata_tag)
+    @property
+    def subapdata(self):
+        return self._subapdata
+    
+    @subapdata.setter
+    def subapdata(self, p):
         if p is not None:
             self._subapdata = p
             self._slopes = Slopes(self._subapdata.n_subap * 2)
@@ -128,15 +147,6 @@ class ShSlopec(Slopec):
             self.set_xy_weights()
         else:
             print(f'subapdata_tag: {subapdata_tag} is not valid')
-
-    # Method to handle property settings, replacing setproperty from IDL
-    def set_property(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-            if key == 'exp_weight':
-                self.set_xy_weights()
-            if key == 'subapdata_tag':
-                self.load_subapdata(value)
 
     def calc_slopes(self, t, accumulated=False):
         if self._vecWeiPixRadT is not None:
@@ -447,24 +457,7 @@ class ShSlopec(Slopec):
         if self._verbose:
             print(f"Slopes min, max and rms : {np.min(sx)}, {np.max(sx)}, {np.sqrt(np.mean(sx ** 2))}")
 
-    # Cleanup method, analogous to IDL cleanup
-    def cleanup(self):
-        if self._subapdata:
-            self._subapdata.cleanup()
-        self._thr_mask_cube = None
-        self._subap_idx = None
-        self._xweights = None
-        self._yweights = None
-        self._xcweights = None
-        self._ycweights = None
-        self._mask_weighted = None
-        self._corr_template = None
-        self._winMatWindowed = None
-        self._vecWeiPixRadT = None
-        super().cleanup()
-
-    @staticmethod
-    def psf_gaussian(np_sub, fwhm):
+    def psf_gaussian(self, np_sub, fwhm):
         x = self.xp.linspace(-1, 1, np_sub)
         y = self.xp.linspace(-1, 1, np_sub)
         x, y = self.xp.meshgrid(x, y)

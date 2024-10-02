@@ -3,32 +3,68 @@ from scipy.ndimage import convolve, shift
 from scipy.fftpack import fft2, ifft2
 import math
 
+from pyssata.lib.toccd import toccd
+from pyssata.lib.make_mask import make_mask
+from pyssata.connections import InputValue
+from pyssata.data_objects.ef import ElectricField
+from pyssata.data_objects.intensity import Intensity
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.data_objects.lenslet import Lenslet
+from pyssata.data_objects.subapdata import SubapData
 
+if 0:
+        convolGaussSpotSize = self.extract(params, 'convolGaussSpotSize', default=None)        
+        
+        if convolGaussSpotSize is not None:
+            kernelobj = KernelGauss()
+            kernelobj.spotsize = convolGaussSpotSize
+            kernelobj.lenslet = sh.lenslet
+            kernelobj.cm = self._cm
+            sh.kernelobj = kernelobj
+        
+    
 class SH(BaseProcessingObj):
-    def __init__(self, wavelength_in_nm, lenslet, subap_wanted_fov, sensor_pxscale, subap_npx, FoVres30mas=None, gkern=None, 
+    def __init__(self,
+                 wavelengthInNm: float,
+                 subap_wanted_fov: float,
+                 sensor_pxscale: float,
+                 subap_on_diameter: int,
+                 subap_npx: int,
+                 gauss_kern = None, 
+                 FoVres30mas = False,
+                 fov_ovs_coeff: float =0,
+                 xShiftPhInPixel: float = 0,
+                 yShiftPhInPixel: float = 0,
+                 aXShiftPhInPixel: float = 0,
+                 aYShiftPhInPixel: float = 0,
+                 rotAnglePhInDeg: float = 0,
+                 aRotAnglePhInDeg: float = 0,
                  target_device_idx: int = None, 
-                 precision: int = None):
+                 precision: int = None,
+        ):
 
         super().__init__(target_device_idx=target_device_idx, precision=precision)        
 
+        self._kernelobj = None   # TODO
         rad2arcsec = 180 / self.xp.pi * 3600
-        self._wavelength_in_nm = wavelength_in_nm
-        self._lenslet = lenslet
+        self._wavelengthInNm = wavelengthInNm
+        self._lenslet = Lenslet(subap_on_diameter)
         self._subap_wanted_fov = subap_wanted_fov / rad2arcsec
         self._sensor_pxscale = sensor_pxscale / rad2arcsec
         self._subap_npx = subap_npx
-        self._gkern = False
-        self._gkern_size = 0
-        if gkern is not None:
+        if gauss_kern is not None:
             self._gkern = True
-            self._gkern_size = gkern / rad2arcsec
+            self._gkern_size = gauss_kern / rad2arcsec
+        else:
+            self._gkern = False
+            self._gkern_size = 0
 
         self._ccd_side = self._subap_npx * self._lenslet.n_lenses
-        self._out_i = None  # Image output placeholder, to be filled later
+        self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self._target_device_idx)
         self._kernel_fov_scale = 1.0
+        self._fov_ovs_coeff = fov_ovs_coeff
         self._squaremask = True
-        self._fov_resolution_arcsec = 0.03 if FoVres30mas is not None else 0
+        self._fov_resolution_arcsec = 0.03 if FoVres30mas else 0
         self._kernel_application = ''
         self._kernel_precalc_fft = False
         self._debugOutput = False
@@ -37,22 +73,29 @@ class SH(BaseProcessingObj):
         self._idx_valid = False
         self._scale_ovs = 1.0
         self._floatShifts = False
-        self._rotAnglePhInDeg = 0
-        self._xShiftPhInPixel = 0
-        self._yShiftPhInPixel = 0
+        self._rotAnglePhInDeg = rotAnglePhInDeg
+        self._aRotAnglePhInDeg = aRotAnglePhInDeg
+        self._xShiftPhInPixel = xShiftPhInPixel
+        self._yShiftPhInPixel = yShiftPhInPixel
+        self._aXShiftPhInPixel = aXShiftPhInPixel
+        self._aYShiftPhInPixel = aYShiftPhInPixel
         self._fov_ovs = 1
         self._set_fov_res_to_turbpxsc = False
         self._do_not_double_fov_ovs = False
         self._np_sub = 0
         self._fft_size = 0
+        self._input_ef_set = False
+        
+        self.inputs['in_ef'] = InputValue(type=ElectricField)
+        self.outputs['out_i'] = self._out_i
 
     @property
-    def wavelength_in_nm(self):
-        return self._wavelength_in_nm
+    def wavelengthInNm(self):
+        return self._wavelengthInNm
 
-    @wavelength_in_nm.setter
-    def wavelength_in_nm(self, value):
-        self._wavelength_in_nm = value
+    @wavelengthInNm.setter
+    def wavelengthInNm(self, value):
+        self._wavelengthInNm = value
 
     @property
     def sensor_pxscale(self):
@@ -85,11 +128,9 @@ class SH(BaseProcessingObj):
         rad2arcsec = 180 / np.pi * 3600
         arcsec2rad = 1.0 / rad2arcsec
 
-        self._in_ef = in_ef
-
         lens = self._lenslet.get(0, 0)
         n_lenses = self._lenslet.n_lenses
-        ef_size = self._in_ef.size[0]
+        ef_size = in_ef.size[0]
 
         self._np_sub = max([1, round((ef_size * lens[2]) / 2.0)])
         if self._np_sub * n_lenses > ef_size:
@@ -133,9 +174,9 @@ class SH(BaseProcessingObj):
                 for i in range(nTry):
                     resTry[i] = turbulence_pxscale / (iMin + i + 2)
                     scaleTry[i] = round(turbulence_pxscale / resTry[i])
-                    fftScaleTry[i] = self._wavelengthInNm / 1e9 * self._lenslet.dimx / (ef_size * self._in_ef.pixel_pitch * scaleTry[i]) * rad2arcsec
+                    fftScaleTry[i] = self._wavelengthInNm / 1e9 * self._lenslet.dimx / (ef_size * in_ef.pixel_pitch * scaleTry[i]) * rad2arcsec
                     subapRealTry[i] = round(subap_wanted_fov_arcsec / fftScaleTry[i] / 2.0) * 2
-                    mcmxTry[i] = np.lcm(long(self._subap_npx), long(subapRealTry[i]))
+                    mcmxTry[i] = np.lcm(int(self._subap_npx), int(subapRealTry[i]))
 
                 # Search for resolution factor with FoV error < 1%
                 FoV = subapRealTry * fftScaleTry
@@ -160,16 +201,16 @@ class SH(BaseProcessingObj):
         # Compute FFT FoV resolution element in arcsec
         self._scale_ovs = round(turbulence_pxscale / self._fov_resolution_arcsec)
 
-        dTelPaddedInM = ef_size * self._in_ef.pixel_pitch * self._scale_ovs
+        dTelPaddedInM = ef_size * in_ef.pixel_pitch * self._scale_ovs
         dSubApPaddedInM = dTelPaddedInM / self._lenslet.dimx
         fft_pxscale_arcsec = self._wavelengthInNm * 1e-9 / dSubApPaddedInM * rad2arcsec
 
         # Compute real FoV
         subap_real_fov_pix = round(subap_real_fov_arcsec / fft_pxscale_arcsec / 2.0) * 2.0
         subap_real_fov_arcsec = subap_real_fov_pix * fft_pxscale_arcsec
-        mcmx = np.lcm(long(self._subap_npx), long(subap_real_fov_pix))
+        mcmx = np.lcm(int(self._subap_npx), int(subap_real_fov_pix))
 
-        turbulence_fov_pix = long(self._scale_ovs * np_sub)
+        turbulence_fov_pix = int(self._scale_ovs * np_sub)
 
         # Avoid increasing the FoV if it's already more than twice the requested one
         if turbulence_fov_pix > 2 * subap_real_fov_pix:
@@ -178,7 +219,7 @@ class SH(BaseProcessingObj):
                 self._fov_ovs = self._fov_ovs_coeff
         else:
             ratio = float(subap_real_fov_pix) / float(turbulence_fov_pix)
-            np_factor = 1 if abs(np_sub - long(np_sub)) < 1e-3 else long(np_sub)
+            np_factor = 1 if abs(np_sub - int(np_sub)) < 1e-3 else int(np_sub)
             if self._do_not_double_fov_ovs and self._fov_ovs_coeff == 0.0:
                 self._fov_ovs_coeff = 1.0
                 self._fov_ovs = np.ceil(np_factor * ratio / 2.0) * 2.0 / float(np_factor)
@@ -191,7 +232,7 @@ class SH(BaseProcessingObj):
                     self._fov_ovs = np.ceil(np_factor * ratio * self._fov_ovs_coeff) / float(np_factor)
 
         self._sensor_pxscale = subap_real_fov_arcsec / self._subap_npx / rad2arcsec
-        self._congrid_np_sub = long(ef_size * self._fov_ovs * lens[2] * 0.5)
+        self._congrid_np_sub = int(ef_size * self._fov_ovs * lens[2] * 0.5)
         self._fft_size = self._congrid_np_sub * self._scale_ovs
 
         if self._verbose:
@@ -206,7 +247,7 @@ class SH(BaseProcessingObj):
 
         # Kernel object initialization
         if self._kernelobj is not None:
-            self._kernelobj.ef = self._in_ef
+            self._kernelobj.ef = in_ef
 
             if self.kernel_at_fft():
                 self._kernelobj.pxscale = pixel_pitch_fft * rad2arcsec
@@ -280,39 +321,17 @@ class SH(BaseProcessingObj):
         subaps.ny = self._lenslet.dimy
         return subaps
 
-import numpy as np
-
-class SH:
-    def __init__(self, in_ef, lenslet, kernelobj=None, debugOutput=False):
-        self._in_ef = in_ef
-        self._lenslet = lenslet
-        self._kernelobj = kernelobj
-        self._debugOutput = debugOutput
-        self._idx_valid = False
-        self._subap_idx = None
-        self._out_i = None
-        self._scale_ovs = 1.0
-        self._fov_ovs = 1.0
-        self._squaremask = False
-        self._gkern = False
-        self._gkern_size = 0.0
-        self._sensor_pxscale = 0.0
-        self._subap_npx = 0
-        self._congrid_np_sub = 0
-        self._fft_size = 0
-        self._rotAnglePhInDeg = 0
-        self._xShiftPhInPixel = 0
-        self._yShiftPhInPixel = 0
-        self._floatShifts = False
-        self._ccd_side = 0
-        self._wavelengthInNm = 0
-        self._subap_wanted_fov = 0
-
     def trigger(self, t):
-        if self._in_ef.generation_time != t:
+        
+        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
+        if in_ef.generation_time != t:
             return
 
-        s = self._in_ef.size
+        if not self._input_ef_set:
+            self.set_in_ef(in_ef)
+            self._input_ef_set = True
+
+        s = in_ef.size
 
         fov_oversample = self._fov_ovs
         scale_oversample = self._scale_ovs
@@ -321,21 +340,21 @@ class SH:
         sensor_pxscale = self._sensor_pxscale
         subap_npx = self._subap_npx
 
-        rotAnglePhInDeg = self._rotAnglePhInDeg
-        xyShiftPhInPixel = np.array([self._xShiftPhInPixel, self._yShiftPhInPixel]) * fov_oversample
+        rotAnglePhInDeg = self._rotAnglePhInDeg + self._aRotAnglePhInDeg
+        xyShiftPhInPixel = np.array([self._xShiftPhInPixel + self._aXShiftPhInPixel, self._yShiftPhInPixel + self._aYShiftPhInPixel]) * fov_oversample
         if not self._floatShifts:
             xyShiftPhInPixel = np.round(xyShiftPhInPixel).astype(int)
 
         # Interpolation of input array if needed
         M = s[0] * fov_oversample
 
-        if fov_oversample != 1 or np.sum(np.abs([rotAnglePhInDeg, xyShiftPhInPixel])) != 0:
-            wf1 = EF(M, M, self._in_ef.pixel_pitch / fov_oversample)
+        if fov_oversample != 1 or rotAnglePhInDeg != 0 or np.sum(np.abs([xyShiftPhInPixel])) != 0:
+            wf1 = ElectricField(M, M, in_ef.pixel_pitch / fov_oversample)
             if self._extrapol_mat is None:
-                self._extrapol_mat = extrapolate_edge_pixel_mat_define(self._in_ef.a, do_ext_2_pix=True)
+                self._extrapol_mat = extrapolate_edge_pixel_mat_define(in_ef.a, do_ext_2_pix=True)
 
-            phaseInNmNew = extrapolate_edge_pixel(self._in_ef.phaseInNm, self._extrapol_mat)
-            tempA = congrid(self._in_ef.a, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
+            phaseInNmNew = extrapolate_edge_pixel(in_ef.phaseInNm, self._extrapol_mat)
+            tempA = congrid(in_ef.a, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
             tempW = congrid(phaseInNmNew, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
 
             if np.sum(np.abs([rotAnglePhInDeg, xyShiftPhInPixel])) != 0:
@@ -345,7 +364,7 @@ class SH:
                 wf1.A = tempA
                 wf1.phaseInNm = tempW
         else:
-            wf1 = self._in_ef
+            wf1 = in_ef
 
         wf1_np = wf1.size[0]
         f = np.zeros((wf1_np, wf1_np), dtype=float)
@@ -356,14 +375,14 @@ class SH:
         nsubap_diam = self._lenslet.dimx
 
         # Subaperture extracted from full pupil
-        wf2 = EF(np_sub, np_sub, wf1.pixel_pitch)
+        wf2 = ElectricField(np_sub, np_sub, wf1.pixel_pitch)
         wf3 = np.zeros((fft_size, fft_size), dtype=complex)
 
         # Focal plane result from FFT
-        fp4 = EF(fft_size, fft_size, self._wavelengthInNm / 1e9 / (wf1.pixel_pitch * fft_size))
+        fp4 = ElectricField(fft_size, fft_size, self._wavelengthInNm / 1e9 / (wf1.pixel_pitch * fft_size))
 
         fov_complete = fp4.size[0] * fp4.pixel_pitch
-        fp_mask = make_mask(fft_size, diaratio=subap_wanted_fov / fov_complete, square=self._squaremask)
+        fp_mask = make_mask(fft_size, diaratio=subap_wanted_fov / fov_complete, square=self._squaremask, xp=self.xp)
 
         # 1/2 Px tilt
         tltf = self.get_tlt_f(np_sub, fft_size - np_sub)
@@ -390,7 +409,7 @@ class SH:
                     f.fill(0)
                     f[int(np.round(x - np_sub / 2.)):int(np.round(x + np_sub / 2.)),
                       int(np.round(y - np_sub / 2.)):int(np.round(y + np_sub / 2.))] = 1
-                    idx = np.where(f == 1)
+                    idx = np.where(f.flat == 1)[0]
                     self._subap_idx[i, j, :] = idx
                     if i == self._lenslet.dimx - 1 and j == self._lenslet.dimy - 1:
                         self._idx_valid = True
@@ -398,7 +417,7 @@ class SH:
                     idx = self._subap_idx[i, j, :]
 
                 # Subaperture extracted from full pupil
-                wf2 = wf1.subef(idx=idx)
+                wf2 = wf1.sub_ef(idx=idx)
 
                 # Small subapertures set into larger FFT array
                 wf3[0, 0] = wf2.ef_at_lambda(self._wavelengthInNm) * tltf
@@ -500,7 +519,7 @@ class SH:
                     subap_kern /= np.sum(subap_kern)
                     ccd[x1:x2, y1:y2] = np.fft.fftshift(np.convolve(subap, subap_kern, mode='same'))
 
-        phot = self._in_ef.S0 * self._in_ef.masked_area()
+        phot = in_ef.S0 * in_ef.masked_area()
         ccd *= phot
 
         if phot == 0:
@@ -512,16 +531,9 @@ class SH:
         self._out_i.i = ccd
         self._out_i.generation_time = t
 
-    def cleanup(self):
-        # Clean up references and memory
-        self._in_ef = None
-        self._out_i = None
-        self._lenslet = None
-        self._kernelobj = None
-
     def get_tlt_f(self, p, c):
         iu = complex(0, 1)
         xx, yy = self.xp.meshgrid(self.xp.arange(-p // 2, p // 2), self.xp.arange(-p // 2, p // 2))
         tlt_g = xx + yy
-        tlt_f = self.xp.exp(-2 * self.xp.pi * iu * tlt_g / (2 * (p + c)))
+        tlt_f = self.xp.exp(-2 * self.xp.pi * iu * tlt_g / (2 * (p + c)), dtype=self.dtype)
         return tlt_f

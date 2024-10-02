@@ -10,7 +10,7 @@ class Lenslet(BaseDataObj):
         self._lenses = []
 
         if n_lenses > 1:
-            x, y = make_xy(n_lenses, 1.0)
+            x, y = make_xy(n_lenses, 1.0, xp=self.xp)
         else:
             x = [0.0]
             y = [0.0]
