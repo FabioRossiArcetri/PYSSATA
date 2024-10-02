@@ -75,21 +75,19 @@ class BaseOperation(BaseProcessingObj):
         if value1 and value2 and (value1.generation_time == t or value2.generation_time == t):
             temp = 0
             if self._mult:
-                if value1.value is not None: temp = value1.value    
-                if value2.value is not None: temp *= value2.value
+                if value1.value is not None: temp = value1.value.copy()
+                if value2.value is not None: temp *= value2.value.copy()
             if self._div:
-                if value1.value is not None: temp = value1.value    
-                if value2.value is not None: temp /= value2.value
+                if value1.value is not None: temp = value1.value.copy()
+                if value2.value is not None: temp /= value2.value.copy()
             if self._sum:
-                if value1.value is not None: temp = value1.value    
-                if value2.value is not None: temp += value2.value
+                if value1.value is not None: temp = value1.value.copy()
+                if value2.value is not None: temp += value2.value.copy()
             if self._sub:
-                if value1.value is not None: temp = value1.value    
-                if value2.value is not None: temp -= value2.value
+                if value1.value is not None: temp = value1.value.copy()
+                if value2.value is not None: temp -= value2.value.copy()
             self._out_value.value = temp
             self._out_value.generation_time = t
-        print('self._out_value.value',self._out_value.value)
-        print('self._out_value.generation_time',self._out_value.generation_time)
 
     def run_check(self, time_step, errmsg=None):
         """
