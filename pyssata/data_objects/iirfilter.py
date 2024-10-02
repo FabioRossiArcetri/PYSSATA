@@ -85,15 +85,17 @@ class IIRFilter(BaseDataObj):
         snum1 = num.shape[1]
         for i in range(self._nfilter):
             if self._ordnum[i] < snum1:
-                if np.sum(self.xp.abs(num[i, self._ordnum[i]:])) == 0:
-                    num[i, :] = self.xp.roll(num[i, :], snum1 - self._ordnum[i])
+                if np.sum(self.xp.abs(num[i, int(self._ordnum[i]):])) == 0:
+                    num[i, :] = self.xp.roll(num[i, :], snum1 - int(self._ordnum[i]))
 
         self._num = self.xp.array(num, dtype=float_dtype)
         zeros = self.xp.zeros((self._nfilter, snum1 - 1), dtype=float_dtype)
         gain = self.xp.zeros(self._nfilter, dtype=float_dtype)
         for i in range(self._nfilter):
             if self._ordnum[i] > 1:
-                zeros[i, :self._ordnum[i] - 1] = self.xp.roots(self._num[i, snum1 - self._ordnum[i]:])
+                roots = self.xp.roots(self._num[i, snum1 - int(self._ordnum[i]):])
+                if np.sum(np.abs(roots)) > 0:
+                    zeros[i, :int(self._ordnum[i]) - 1] = roots
             gain[i] = self._num[i, - 1]
         self._zeros = zeros
         self._gain = gain
@@ -102,14 +104,14 @@ class IIRFilter(BaseDataObj):
         sden1 = den.shape[1]
         for i in range(self._nfilter):
             if self._ordden[i] < sden1:
-                if np.sum(self.xp.abs(den[i, self._ordden[i]:])) == 0:
-                    den[i, :] = self.xp.roll(den[i, :], sden1 - self._ordden[i])
+                if np.sum(self.xp.abs(den[i, int(self._ordden[i]):])) == 0:
+                    den[i, :] = self.xp.roll(den[i, :], sden1 - int(self._ordden[i]))
 
         self._den = self.xp.array(den, dtype=float_dtype)
         poles = self.xp.zeros((self._nfilter, sden1 - 1), dtype=float_dtype)
         for i in range(self._nfilter):
             if self._ordden[i] > 1:
-                poles[i, :self._ordden[i] - 1] = self.xp.roots(self._den[i, sden1 - self._ordden[i]:])
+                poles[i, :int(self._ordden[i]) - 1] = self.xp.roots(self._den[i, sden1 - int(self._ordden[i]):])
         self._poles = poles
 
     def set_zeros(self, zeros):
@@ -118,7 +120,7 @@ class IIRFilter(BaseDataObj):
         snum1 = num.shape[1]
         for i in range(self._nfilter):
             if self._ordnum[i] > 1:
-                num[i, snum1 - self._ordnum[i]:] = self.xp.poly(self._zeros[i, :self._ordnum[i] - 1])
+                num[i, snum1 - int(self._ordnum[i]):] = self.xp.poly(self._zeros[i, :int(self._ordnum[i]) - 1])
         self._num = num
 
     def set_poles(self, poles):
@@ -127,7 +129,7 @@ class IIRFilter(BaseDataObj):
         sden1 = den.shape[1]
         for i in range(self._nfilter):
             if self._ordden[i] > 1:
-                den[i, sden1 - self._ordden[i]:] = self.xp.poly(self._poles[i, :self._ordden[i] - 1])
+                den[i, sden1 - int(self._ordden[i]):] = self.xp.poly(self._poles[i, :int(self._ordden[i]) - 1])
         self._den = den
 
     def set_gain(self, gain, verbose=False):
@@ -245,13 +247,16 @@ class IIRFilter(BaseDataObj):
         hdul.writeto(filename, overwrite=True)
 
     def read(self, filename, hdr=None, exten=0):
-        hdul = fits.open(filename)
-        hdr = hdul[0].header
-        self._ordnum = hdul['ORDNUM'].data
-        self._ordden = hdul['ORDDEN'].data
-        self._nfilter = len(self._ordnum)
-        self.set_num(hdul['NUM'].data)
-        self.set_den(hdul['DEN'].data)
+        self._ordnum = fits.getdata(filename, ext=exten + 1)
+        self._ordden = fits.getdata(filename, ext=exten + 2)
+        self._nfilter = np.size(self._ordnum)
+        temp_num = fits.getdata(filename, ext=exten + 3)
+        temp_den = fits.getdata(filename, ext=exten + 4)
+        if temp_num.shape[1] == self._nfilter:
+            temp_num = np.transpose(temp_num)
+            temp_den = np.transpose(temp_den)
+        self.set_num(temp_num)
+        self.set_den(temp_den)
 
     def restore(self, filename):
         obj = IIRFilter()
