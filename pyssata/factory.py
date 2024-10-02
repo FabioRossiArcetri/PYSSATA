@@ -1795,14 +1795,6 @@ class Factory:
 
         return sc
 
-    def get_loop_control(self):
-        """
-        Create a loop_control object.
-
-        Returns:
-        LoopControl: loop_control object
-        """
-        return LoopControl(run_time=self._main['total_time'], dt=self._main['time_step'])
 
     def get_m2crec(self, params):
         """
@@ -2169,76 +2161,6 @@ class Factory:
 
         return container
 
-    def get_sh(self, params):
-        """
-        Builds a `sh` processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters        
-
-        Returns:
-        Sh: A new `sh` processing object
-        """
-        
-        params = self.ensure_dictionary(params)
-
-        convolGaussSpotSize = self.extract(params, 'convolGaussSpotSize', default=None)        
-        
-        if 'xyshift' in params:
-            sh = self.get_sh_shift(params)
-            return sh
-        if 'xytilt' in params:
-            sh = self.get_sh_tilt(params)
-            return sh
-
-        wavelengthInNm = params.pop('wavelengthInNm')
-        sensor_fov = params.pop('sensor_fov')
-        sensor_pxscale = params.pop('sensor_pxscale')
-        sensor_npx = params.pop('sensor_npx')
-        n_subap_on_diameter = params.pop('subap_on_diameter')
-        FoVres30mas = self.extract(params, 'FoVres30mas', default=None)
-        gkern = self.extract(params, 'gauss_kern', default=None)
-
-        subapdata_tag = self.extract(params, 'subapdata_tag', default=None)
-        energy_th = params.pop('energy_th')
-
-        lenslet = Lenslet(n_subap_on_diameter)
-
-        sh = Sh(wavelengthInNm, lenslet, sensor_fov, sensor_pxscale, sensor_npx, FoVres30mas=FoVres30mas, gkern=gkern)
-
-        self.apply_global_params(sh)
-
-        xShiftPhInPixel = self.extract(params, 'xShiftPhInPixel', default=None)
-        yShiftPhInPixel = self.extract(params, 'yShiftPhInPixel', default=None)
-        aXShiftPhInPixel = self.extract(params, 'aXShiftPhInPixel', default=None)
-        aYShiftPhInPixel = self.extract(params, 'aYShiftPhInPixel', default=None)
-        rotAnglePhInDeg = self.extract(params, 'rotAnglePhInDeg', default=None)
-        aRotAnglePhInDeg = self.extract(params, 'aRotAnglePhInDeg', default=None)
-
-        if xShiftPhInPixel is not None:
-            sh.xShiftPhInPixel = xShiftPhInPixel
-        if yShiftPhInPixel is not None:
-            sh.yShiftPhInPixel = yShiftPhInPixel
-        if aXShiftPhInPixel is not None:
-            sh.aXShiftPhInPixel = aXShiftPhInPixel
-        if aYShiftPhInPixel is not None:
-            sh.aYShiftPhInPixel = aYShiftPhInPixel
-        if rotAnglePhInDeg is not None:
-            sh.rotAnglePhInDeg = rotAnglePhInDeg
-        if aRotAnglePhInDeg is not None:
-            sh.aRotAnglePhInDeg = aRotAnglePhInDeg
-
-        sh.apply_properties(params)
-
-        if convolGaussSpotSize is not None:
-            kernelobj = KernelGauss()
-            kernelobj.spotsize = convolGaussSpotSize
-            kernelobj.lenslet = sh.lenslet
-            kernelobj.cm = self._cm
-            sh.kernelobj = kernelobj
-
-        return sh
-
     def get_sh_shift(self, params):
         """
         Builds a `sh_shift` processing object.
@@ -2365,63 +2287,6 @@ class Factory:
         self.apply_global_params(disp)
         return disp
 
-    def get_sh_slopec(self, params, recmat=None, device=None, mode_basis=None, pup_mask=None):
-        """
-        Builds a `sh_slopec`  processing object.
-
-        Parameters:
-        params (dict): Dictionary of parameters
-        recmat (objref, optional): Reconstruction matrix
-        mode_basis (objref, optional): Mode basis
-        pup_mask (objref, optional): Pupil mask
-
-        Returns:
-        ShSlopec: A new `sh_slopec` or `sh_slopec` processing object
-        """
-        params = self.ensure_dictionary(params)
-        lifted_sh = self.extract(params, 'lifted_sh', default=False)
-        
-        if lifted_sh:
-            sc = self.get_lift_sh_slopec(params, mode_basis=mode_basis, pup_mask=pup_mask)
-            return sc
-
-        computation_time = self.extract(params, 'computation_time', default=None)
-        template_tag = self.extract(params, 'template_tag', default=None)
-        intmat_tag = self.extract(params, 'intmat_tag', default='')
-        recmat_tag = self.extract(params, 'recmat_tag', default='')
-        filtmat_tag = self.extract(params, 'filtmat_tag', default='')
-        matched_tag = self.extract(params, 'matched_tag', default='')
-
-        filtName = self.extract(params, 'filtName', default='')
-
-        if matched_tag:
-            sc = ShMatchedSlopec()
-            sc.matched_filter = self._cm.read_data(matched_tag)
-        else:
-            sc = ShSlopec()
-
-        if intmat_tag:
-            intmat = self._cm.read_data(intmat_tag)
-            sc.intmat = intmat
-
-        if recmat is None and recmat_tag:
-            recmat = self._cm.read_rec(recmat_tag)
-            sc.recmat = recmat
-
-        if filtmat_tag:
-            filtmat = self._cm.read_data(filtmat_tag)
-            sc.filtmat = filtmat
-
-        sc.setproperty(cm=self._cm)
-        self.apply_global_params(sc)
-        if 'windowing' in params:
-            print('ATTENTION: SH SLOPEC windowing keyword is set!')
-        sc.apply_properties(params)
-
-        if template_tag:
-            sc.corr_template = self._cm.read_data(template_tag)
-
-        return sc
 
     def get_source_field(self, params):
         """
