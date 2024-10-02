@@ -2,7 +2,6 @@ import numpy as np
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue
-from pyssata.processing_objects.timecontrol import TimeControl
 from pyssata.base_value import BaseValue
 from pyssata.lib.calc_loop_delay import calc_loop_delay
 
