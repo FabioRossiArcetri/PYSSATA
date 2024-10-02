@@ -1,5 +1,6 @@
 import numpy as np
 
+from pyssata import show_in_profiler
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue
 from pyssata.base_value import BaseValue
@@ -51,7 +52,7 @@ class IIRControl(BaseProcessingObj):
 
     def auto_params_management(self, main_params, control_params, detector_params, dm_params, slopec_params):
         result = control_params.copy()
-
+        # TODO this must be moved somewhere (same issue as the wfs instance in the CCD constructor)
         if str(result['delay']) == 'auto':
             binning = detector_params.get('binning', 1)
             computation_time = slopec_params.get('computation_time', 0) if slopec_params else 0
@@ -135,6 +136,7 @@ class IIRControl(BaseProcessingObj):
             modal_start_time_[i] = self.seconds_to_t(modal_start_time[i])
         self._modal_start_time = modal_start_time_
 
+    @show_in_profiler('iircontrol.trigger')
     def trigger(self, t):
         ist = self._ist
         ost = self._ost
