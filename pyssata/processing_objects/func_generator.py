@@ -28,19 +28,19 @@ class FuncGenerator(BaseProcessingObj):
 
         # Initialize attributes based on the type
         if self._type == 'SIN':
-            self._constant = constant or 0.0
-            self._amp = amp or 0.0
-            self._freq = freq or 0.0
-            self._offset = offset or 0.0
+            self.constant = constant if constant is not None else 0.0
+            self.amp = amp if amp is not None else 0.0
+            self.freq = freq if freq is not None else 0.0
+            self.offset = offset if offset is not None else 0.0
 
         elif self._type == 'LINEAR':
-            self._constant = constant or 0.0
-            self._slope = 0.0
+            self.constant = constant if constant is not None else 0.0
+            self.slope = 0.0
 
         elif self._type == 'RANDOM':
-            self._amp = amp or 0.0
-            self._constant = constant or 0.0
-            self._seed = seed or 0
+            self.amp = amp if amp is not None else 0.0
+            self.constant = constant if constant is not None else 0.0
+            self.seed = seed if seed is not None else 0.0
 
         elif self._type == 'VIB_HIST':
             if nmodes is None:
