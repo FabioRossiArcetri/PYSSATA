@@ -11,9 +11,9 @@ from pyssata.processing_objects.slopec import Slopec
     
 class ShSlopec(Slopec):
     def __init__(self,
+                 subapdata: SubapData,
                  thr_value: float = -1,
                  exp_weight: float = 1.0,
-                 subapdata: SubapData = None,
                  corr_template = None,                
                  target_device_idx: int = None, 
                  precision: int = None ):
