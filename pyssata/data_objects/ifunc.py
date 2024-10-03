@@ -88,10 +88,6 @@ class IFunc(BaseDataObj):
         return self._idx_inf_func
 
     @property
-    def ptr_ifunc(self):
-        return self._influence_function
-
-    @property
     def size(self):
         return self._influence_function.shape
 

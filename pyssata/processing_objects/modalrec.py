@@ -192,7 +192,7 @@ class Modalrec(BaseProcessingObj):
             if self._modes_first_step.generation_time != t:
                 if self._polc:
                     self.compute_pseudo_ol_slopes(t)
-                    m = self.compute_modes(self._recmat, self._pseudo_ol_slopes.ptr_slopes)
+                    m = self.compute_modes(self._recmat, self._pseudo_ol_slopes.slopes)
                     self._pseudo_ol_modes.value = m
                     self._pseudo_ol_modes.generation_time = t
 
@@ -218,7 +218,7 @@ class Modalrec(BaseProcessingObj):
                 self._modes.value = self._modes_first_step.value
                 self._modes.generation_time = self._modes_first_step.generation_time
             else:
-                mp = self.compute_modes(self._projmat, self._modes_first_step.ptr_value)
+                mp = self.compute_modes(self._projmat, self._modes_first_step.value)
                 if self._verbose:
                     print(f"first {min(6, len(mp))} residual values after projection: {mp[:min(5, len(mp))]}")
                 self._modes.value = mp
@@ -254,12 +254,12 @@ class Modalrec(BaseProcessingObj):
 
         if slope_ptr is None:
             if isinstance(self._slopes, Slopes):
-                slope_ptr = self._slopes.ptr_slopes
+                slope_ptr = self._slopes.slopes
                 if self._verbose:
                     print('Slopes')
                     print(f"modalrec.compute_modes slope RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
             elif isinstance(self._slopes, BaseValue):
-                slope_ptr = self._slopes.ptr_value
+                slope_ptr = self._slopes.slopes
                 if self._verbose:
                     print(f"modalrec.compute_modes base_value RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
             elif isinstance(self._slopes, Cheat):

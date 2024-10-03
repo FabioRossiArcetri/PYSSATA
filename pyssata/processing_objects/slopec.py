@@ -283,7 +283,7 @@ class Slopec(BaseProcessingObj):
             self.calc_slopes(t)
             
         if self._do_rec:
-            m = self.xp.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
+            m = self.xp.dot(self._slopes.slopes, self._recmat.recmat)
             self._slopes.slopes = m
     
     def old_trigger(self, t):
@@ -352,7 +352,7 @@ class Slopec(BaseProcessingObj):
                     self._slopes.generation_time = t
 
         if self._do_filter_modes:
-            m = self.xp.dot(self._slopes.ptr_slopes, self._filt_recmat)
+            m = self.xp.dot(self._slopes.slopes, self._filt_recmat)
             sl0 = self.xp.dot(m, self._filt_intmat)
             sl = self._slopes.slopes
             if len(sl) != len(sl0):
@@ -364,5 +364,5 @@ class Slopec(BaseProcessingObj):
                 raise ValueError('slopes have non-finite elements')
 
         if self._do_rec:
-            m = self.xp.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
+            m = self.xp.dot(self._slopes.slopes, self._recmat.recmat)
             self._slopes.slopes = m

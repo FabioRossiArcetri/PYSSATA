@@ -35,10 +35,6 @@ class Cheat(BaseProcessingObj):
             raise ValueError(f"Error in expression: {self._expr}") from e
 
     @property
-    def ptr_value(self):
-        return self.value
-
-    @property
     def generation_time(self):
         return self._timeobj.generation_time if self._timeobj else None
 
@@ -57,8 +53,6 @@ class Cheat(BaseProcessingObj):
         props = {}
         if 'value' in kwargs:
             props['value'] = self.value
-        if 'ptr_value' in kwargs:
-            props['ptr_value'] = self.ptr_value
         if 'generation_time' in kwargs:
             props['generation_time'] = self.generation_time
         return props

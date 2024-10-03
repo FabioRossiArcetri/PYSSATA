@@ -28,10 +28,6 @@ class Slopes(BaseDataObj):
         self._slopes = value
 
     @property
-    def ptr_slopes(self):
-        return self._slopes
-
-    @property
     def size(self):
         return self._slopes.size
 

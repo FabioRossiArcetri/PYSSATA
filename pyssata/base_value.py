@@ -23,14 +23,6 @@ class BaseValue(BaseDataObj):
     def value(self, val):
         self._value = val
 
-    @property
-    def ptr_value(self):
-        return self._value
-
-    @ptr_value.setter
-    def ptr_value(self, val):
-        self._value = val
-
     def save(self, filename):
         hdr = fits.Header()
         if self._value is not None:

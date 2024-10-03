@@ -19,19 +19,11 @@ class Intensity(BaseDataObj):
         self._i = value
 
     @property
-    def ptr_i(self):
-        return self._i
-
-    @property
     def size(self):
         return self._i.shape
 
     @property
     def value(self):
-        return self._i
-
-    @property
-    def ptr_value(self):
         return self._i
 
     def sum(self, i2, factor=1.0):

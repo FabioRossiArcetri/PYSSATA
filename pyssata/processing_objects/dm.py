@@ -79,7 +79,7 @@ class DM(BaseProcessingObj):
         
         self._if_commands[:len(commands)] = self._sign * commands
         
-        temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
+        temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.influence_function)
 
         self._layer.phaseInNm = temp_matrix
 
