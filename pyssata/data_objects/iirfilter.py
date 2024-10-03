@@ -247,16 +247,13 @@ class IIRFilter(BaseDataObj):
         hdul.writeto(filename, overwrite=True)
 
     def read(self, filename, hdr=None, exten=0):
-        self._ordnum = fits.getdata(filename, ext=exten + 1)
-        self._ordden = fits.getdata(filename, ext=exten + 2)
-        self._nfilter = np.size(self._ordnum)
-        temp_num = fits.getdata(filename, ext=exten + 3)
-        temp_den = fits.getdata(filename, ext=exten + 4)
-        if temp_num.shape[1] == self._nfilter:
-            temp_num = np.transpose(temp_num)
-            temp_den = np.transpose(temp_den)
-        self.set_num(temp_num)
-        self.set_den(temp_den)
+        hdul = fits.open(filename)
+        hdr = hdul[0].header
+        self._ordnum = hdul['ORDNUM'].data
+        self._ordden = hdul['ORDDEN'].data
+        self._nfilter = len(self._ordnum)
+        self.set_num(hdul['NUM'].data)
+        self.set_den(hdul['DEN'].data)
 
     def restore(self, filename):
         obj = IIRFilter()
@@ -264,8 +261,26 @@ class IIRFilter(BaseDataObj):
         return obj
 
     def discrete_delay_tf(self, delay):
-        # Placeholder for the actual discrete delay transfer function
-        pass
+        # If not-integer delay TF:
+        # DelayTF = z^(−l) * ( m * (1−z^(−1)) + z^(−1) )
+        # where delay = (l+1)*T − mT, T integration time, l integer, 0<m<1
+
+        if delay - np.fix(delay) != 0:
+            d_m = np.ceil(delay)
+            den = np.zeros(int(d_m)+1)
+            den[int(d_m)] = 1
+            num = den*0 
+            num[0] = delay - np.fix(delay) 
+            num[1] = 1. - num[0]
+        else:
+            d_m = delay
+            den = np.zeros(int(d_m)+1)
+            den[int(d_m)] = 1
+            num = den*0
+            num[0] = 1.
+
+        return num, den
+
 
     def plot_iirfilter_tf(self, num, den, fs, dm, nw, dw, freq, noplot, verbose):
         # Placeholder for the actual plotting of IIR filter transfer function
