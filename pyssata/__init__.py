@@ -54,12 +54,12 @@ def init(device_idx=-1, precision=0):
             cp = cp
         except:
             print("Cupy import failed. PYSSATA will fall back to CPU use.")
-            cp = np
+            cp = None
             xp = np
             default_target_device_idx=-1
     else:
         print("env variable PYSSATA_DISABLE_GPU prevents using the GPU.")
-        cp = np
+        cp = None
         xp = np
         default_target_device_idx=-1
 
