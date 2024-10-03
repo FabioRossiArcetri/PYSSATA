@@ -26,6 +26,7 @@
 
 from pyssata.data_objects.iirfilter import IIRFilter
 
+
 def int2iirfilter(gain, ff=None, target_device_idx=None, precision=None):
 
     # This routine is called before a parent object can be initialized,
@@ -61,14 +62,13 @@ def int2iirfilter(gain, ff=None, target_device_idx=None, precision=None):
         den[i, 1] = 1
         ord_den[i] = 2
     
-    # TODO property sets in IIRfilter do not work
     iirfilter.nfilter = n
-    iirfilter._ordnum = ord_num
-    iirfilter._ordden = ord_den
-    iirfilter._num = num
-    iirfilter._den = den
-    iirfilter._ost = ost
-    iirfilter._ist = ist
+    iirfilter.ordnum = ord_num
+    iirfilter.ordden = ord_den
+    iirfilter.num = num
+    iirfilter.den = den
+    iirfilter.ost = ost
+    iirfilter.ist = ist
 
     return iirfilter
 
