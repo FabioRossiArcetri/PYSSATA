@@ -85,15 +85,17 @@ class IIRFilter(BaseDataObj):
         snum1 = num.shape[1]
         for i in range(self._nfilter):
             if self._ordnum[i] < snum1:
-                if np.sum(self.xp.abs(num[i, self._ordnum[i]:])) == 0:
-                    num[i, :] = self.xp.roll(num[i, :], snum1 - self._ordnum[i])
+                if np.sum(self.xp.abs(num[i, int(self._ordnum[i]):])) == 0:
+                    num[i, :] = self.xp.roll(num[i, :], snum1 - int(self._ordnum[i]))
 
         self._num = self.xp.array(num, dtype=float_dtype)
         zeros = self.xp.zeros((self._nfilter, snum1 - 1), dtype=float_dtype)
         gain = self.xp.zeros(self._nfilter, dtype=float_dtype)
         for i in range(self._nfilter):
             if self._ordnum[i] > 1:
-                zeros[i, :self._ordnum[i] - 1] = self.xp.roots(self._num[i, snum1 - self._ordnum[i]:])
+                roots = self.xp.roots(self._num[i, snum1 - int(self._ordnum[i]):])
+                if np.sum(np.abs(roots)) > 0:
+                    zeros[i, :int(self._ordnum[i]) - 1] = roots
             gain[i] = self._num[i, - 1]
         self._zeros = zeros
         self._gain = gain
@@ -102,14 +104,14 @@ class IIRFilter(BaseDataObj):
         sden1 = den.shape[1]
         for i in range(self._nfilter):
             if self._ordden[i] < sden1:
-                if np.sum(self.xp.abs(den[i, self._ordden[i]:])) == 0:
-                    den[i, :] = self.xp.roll(den[i, :], sden1 - self._ordden[i])
+                if np.sum(self.xp.abs(den[i, int(self._ordden[i]):])) == 0:
+                    den[i, :] = self.xp.roll(den[i, :], sden1 - int(self._ordden[i]))
 
         self._den = self.xp.array(den, dtype=float_dtype)
         poles = self.xp.zeros((self._nfilter, sden1 - 1), dtype=float_dtype)
         for i in range(self._nfilter):
             if self._ordden[i] > 1:
-                poles[i, :self._ordden[i] - 1] = self.xp.roots(self._den[i, sden1 - self._ordden[i]:])
+                poles[i, :int(self._ordden[i]) - 1] = self.xp.roots(self._den[i, sden1 - int(self._ordden[i]):])
         self._poles = poles
 
     def set_zeros(self, zeros):
@@ -118,7 +120,7 @@ class IIRFilter(BaseDataObj):
         snum1 = num.shape[1]
         for i in range(self._nfilter):
             if self._ordnum[i] > 1:
-                num[i, snum1 - self._ordnum[i]:] = self.xp.poly(self._zeros[i, :self._ordnum[i] - 1])
+                num[i, snum1 - int(self._ordnum[i]):] = self.xp.poly(self._zeros[i, :int(self._ordnum[i]) - 1])
         self._num = num
 
     def set_poles(self, poles):
@@ -127,7 +129,7 @@ class IIRFilter(BaseDataObj):
         sden1 = den.shape[1]
         for i in range(self._nfilter):
             if self._ordden[i] > 1:
-                den[i, sden1 - self._ordden[i]:] = self.xp.poly(self._poles[i, :self._ordden[i] - 1])
+                den[i, sden1 - int(self._ordden[i]):] = self.xp.poly(self._poles[i, :int(self._ordden[i]) - 1])
         self._den = den
 
     def set_gain(self, gain, verbose=False):
@@ -259,8 +261,26 @@ class IIRFilter(BaseDataObj):
         return obj
 
     def discrete_delay_tf(self, delay):
-        # Placeholder for the actual discrete delay transfer function
-        pass
+        # If not-integer delay TF:
+        # DelayTF = z^(−l) * ( m * (1−z^(−1)) + z^(−1) )
+        # where delay = (l+1)*T − mT, T integration time, l integer, 0<m<1
+
+        if delay - np.fix(delay) != 0:
+            d_m = np.ceil(delay)
+            den = np.zeros(int(d_m)+1)
+            den[int(d_m)] = 1
+            num = den*0 
+            num[0] = delay - np.fix(delay) 
+            num[1] = 1. - num[0]
+        else:
+            d_m = delay
+            den = np.zeros(int(d_m)+1)
+            den[int(d_m)] = 1
+            num = den*0
+            num[0] = 1.
+
+        return num, den
+
 
     def plot_iirfilter_tf(self, num, den, fs, dm, nw, dw, freq, noplot, verbose):
         # Placeholder for the actual plotting of IIR filter transfer function
