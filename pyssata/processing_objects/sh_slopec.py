@@ -2,7 +2,6 @@
 import numbers
 import numpy as np
 
-from pyssata import cpuArray
 from pyssata.data_objects.slopes import Slopes
 from pyssata.data_objects.subap_data import SubapData
 from pyssata.base_value import BaseValue
@@ -47,9 +46,6 @@ class ShSlopec(Slopec):
         self._cog_2ndstep_size = 0
         self._dotemplate = False
         self._store_thr_mask_cube = False
-        self._window = 0
-        self._wsize = self.xp.zeros(2, dtype=int)
-        self._display2s = False
 
         # Property settings
         self.exp_weight = exp_weight
@@ -179,7 +175,7 @@ class ShSlopec(Slopec):
         
         n_subaps = self._subapdata.n_subaps
         np_sub = self._subapdata.np_sub
-        pixels = self._accumulatedPixels.pixels if accumulated else in_pixels
+        pixels = self._accumulated_pixels.pixels if accumulated else in_pixels
 
         sx = self.xp.zeros(n_subaps, dtype=float)
         sy = self.xp.zeros(n_subaps, dtype=float)
@@ -206,8 +202,8 @@ class ShSlopec(Slopec):
             idx = self.subap_idx[i, :]
             subap = pixels[idx].reshape(np_sub, np_sub)
 
-            if self._weight_from_accumulated and self._accumulatedPixelsPtr is not None and t >= self._accumulationDt:
-                accumulated_pixels_weight = self._accumulatedPixelsPtr[idx].reshape(np_sub, np_sub)
+            if self._weight_from_accumulated and self._accumulated_pixels is not None and t >= self._accumulation_dt:
+                accumulated_pixels_weight = self._accumulated_pixels[idx].reshape(np_sub, np_sub)
                 accumulated_pixels_weight -= self.xp.min(accumulated_pixels_weight)
                 max_temp = self.xp.max(accumulated_pixels_weight)
                 if max_temp > 0:
@@ -295,9 +291,9 @@ class ShSlopec(Slopec):
             print("WARNING: multiplication factor in the slope computer!")
 
         if accumulated:
-            self._accumulatedSlopes.xslopes = sx
-            self._accumulatedSlopes.yslopes = sy
-            self._accumulatedSlopes.generation_time = t
+            self._accumulated_slopes.xslopes = sx
+            self._accumulated_slopes.yslopes = sy
+            self._accumulated_slopes.generation_time = t
         else:
             if self._store_thr_mask_cube:
                 self._thr_mask_cube.value = thr_mask_cube
@@ -334,7 +330,7 @@ class ShSlopec(Slopec):
 
         n_subaps = self._subapdata.n_subaps
         np_sub = self._subapdata.np_sub
-        pixels = self._accumulatedPixels.pixels if accumulated else in_pixels
+        pixels = self._accumulated_pixels.pixels if accumulated else in_pixels
 
         if self._store_thr_mask_cube:
             thr_mask_cube = self.xp.zeros((np_sub, np_sub, n_subaps), dtype=int)
@@ -350,10 +346,6 @@ class ShSlopec(Slopec):
         idx2d = self.xp.unravel_index(self.subap_idx, pixels.shape)
         pixels = pixels[idx2d].T
         
-        import matplotlib.pyplot as plt
-        plt.imshow(cpuArray(orig_pixels))
-        plt.show()
-        
         print(self.subap_idx[0])
         print(self.xp.unravel_index(self.subap_idx[0], orig_pixels.shape))
         print(orig_pixels[self.xp.unravel_index(self.subap_idx[0], orig_pixels.shape)])
@@ -361,8 +353,8 @@ class ShSlopec(Slopec):
 
         if self._weight_from_accumulated:
             n_weight_applied = 0
-            if self._accumulatedPixelsPtr is not None and t >= self._accumulationDt:
-                accumulated_pixels_weight = self._accumulatedPixelsPtr[self.subap_idx].T
+            if self._accumulated_pixels is not None and t >= self._accumulation_dt:
+                accumulated_pixels_weight = self._accumulated_pixels[self.subap_idx].T
                 accumulated_pixels_weight -= self.xp.min(accumulated_pixels_weight, axis=1, keepdims=True)
                 max_temp = self.xp.max(accumulated_pixels_weight, axis=1)
                 idx0 = self.xp.where(max_temp <= 0)[0]
@@ -443,9 +435,9 @@ class ShSlopec(Slopec):
             print("WARNING: multiplication factor in the slope computer!")
 
         if accumulated:
-            self._accumlatedSlopes.xslopes = sx
-            self._accumlatedSlopes.yslopes = sy
-            self._accumlatedSlopes.generation_time = t
+            self._accumulated_slopes.xslopes = sx
+            self._accumulated_slopes.yslopes = sy
+            self._accumulated_slopes.generation_time = t
         else:
             if self._store_thr_mask_cube:
                 self._thr_mask_cube.value = thr_mask_cube
