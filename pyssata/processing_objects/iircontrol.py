@@ -139,7 +139,8 @@ class IIRControl(BaseProcessingObj):
         ist = self._ist
         ost = self._ost
         in_delta_comm = self.inputs['delta_comm'].get(self._target_device_idx)
-
+        self._outFinite = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
+        self._idx_finite = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
         if in_delta_comm.generation_time == t:
             if self._opticalgain is not None:
                 if self._opticalgain.value > 0:
@@ -238,12 +239,13 @@ class IIRControl(BaseProcessingObj):
             else:
                 return output
         else:
-            idx_finite = self.xp.where(self.xp.isfinite(input))[0]
-            temp_input = input[idx_finite]
-            temp_ist = self._ist[idx_finite]
-            temp_ost = self._ost[idx_finite]
-            temp_num = self._iirfilter.num[idx_finite, :]
-            temp_den = self._iirfilter.den[idx_finite, :]
+            self.xp.isfinite(input, self._outFinite)
+            self._idx_finite = self.xp.where(self._outFinite)[0]
+            temp_input = input[self._idx_finite]
+            temp_ist = self._ist[self._idx_finite]
+            temp_ost = self._ost[self._idx_finite]
+            temp_num = self._iirfilter.num[self._idx_finite, :]
+            temp_den = self._iirfilter.den[self._idx_finite, :]
    
         temp_output, temp_ost, temp_ist = self.online_filter(
             temp_num,
@@ -257,9 +259,9 @@ class IIRControl(BaseProcessingObj):
             self._ost = temp_ost
             self._ist = temp_ist
         else:
-            output[idx_finite] = temp_output
-            self._ost[idx_finite] = temp_ost
-            self._ist[idx_finite] = temp_ist
+            output[self._idx_finite] = temp_output
+            self._ost[self._idx_finite] = temp_ost
+            self._ist[self._idx_finite] = temp_ist
 
         return output
     
