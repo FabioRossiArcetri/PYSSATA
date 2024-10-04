@@ -1,8 +1,10 @@
 import math
+import numpy as np
 
 from scipy.stats import gamma
 from scipy.ndimage import convolve
 
+from pyssata import cp
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue
 from pyssata.data_objects.pixels import Pixels
@@ -10,12 +12,16 @@ from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.calc_detector_noise import calc_detector_noise
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 
-import cupy as cp
-clamp_generic = cp.ElementwiseKernel(
+
+if cp:
+    clamp_generic_gpu = cp.ElementwiseKernel(
         'T x, T c',
         'T y',
         'y = (y < x)?c:y',
         'clamp_generic')
+
+def clamp_generic_cpu(x, c, y):
+    y[:] = np.where(y < x, c, y)
 
 
 # TODO
@@ -40,6 +46,11 @@ class CCD(BaseProcessingObj):
                  ADU_gain=None, ADU_bias=400, emccd_gain=None,
                  target_device_idx=None, precision=None):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
+
+        if self.xp is cp:
+            self._clamp_generic = clamp_generic_gpu
+        else:
+            self._clamp_generic = clamp_generic_cpu
 
         if wfs:
             if not isinstance(wfs, ModalAnalysisWFS):
@@ -118,9 +129,9 @@ class CCD(BaseProcessingObj):
         self._cte_mat = cte_mat if cte_mat is not None else self.xp.zeros((size[0], size[1], 2), dtype=self.dtype)
         self._qe = quantum_eff
 
-        self._pixels = Pixels(size[0] // binning, size[1] // binning)
+        self._pixels = Pixels(size[0] // binning, size[1] // binning, target_device_idx=target_device_idx)
         s = self._pixels.size * self._binning
-        self._integrated_i = Intensity(s[0], s[1])
+        self._integrated_i = Intensity(s[0], s[1], target_device_idx=target_device_idx, precision=precision)
         self._photon_seed = photon_seed
         self._readout_seed = readout_seed
         self._excess_seed = excess_seed
@@ -240,7 +251,7 @@ class CCD(BaseProcessingObj):
 
         if self._photon_noise:
             ccd_frame = self.xp.round(ccd_frame * self._ADU_gain) + self._ADU_bias
-            clamp_generic(0, 0, ccd_frame)
+            self._clamp_generic(0, 0, ccd_frame)
             #ccd_frame = self.xp.where(ccd_frame > 0, ccd_frame, 0)
 
             if not self._keep_ADU_bias:

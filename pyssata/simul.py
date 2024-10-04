@@ -5,7 +5,7 @@ import inspect
 import importlib
 from pyssata.base_processing_obj import BaseProcessingObj
 
-from pyssata.factory import Factory
+from pyssata.loop_control import LoopControl
 from pyssata.lib.flatten import flatten
 from pyssata.calib_manager import CalibManager
 from pyssata.processing_objects.datastore import Datastore
@@ -29,13 +29,20 @@ class Simul():
     def _import_class(self, classname):
         modulename = self._camelcase_to_snakecase(classname)
         try:
-            mod = importlib.import_module(f'pyssata.processing_objects.{modulename}')
-        except ModuleNotFoundError:
             try:
-                mod = importlib.import_module(f'pyssata.data_objects.{modulename}')
+                mod = importlib.import_module(f'pyssata.processing_objects.{modulename}')
             except ModuleNotFoundError:
-                mod = importlib.import_module(f'pyssata.display.{modulename}')
-        return getattr(mod, classname)
+                try:
+                    mod = importlib.import_module(f'pyssata.data_objects.{modulename}')
+                except ModuleNotFoundError:
+                    mod = importlib.import_module(f'pyssata.display.{modulename}')
+        except ModuleNotFoundError:
+            raise ImportError(f'Class {classname} must be defined in a file called {modulename}.py but it cannot be found')
+
+        try:
+            return getattr(mod, classname)
+        except AttributeError:
+            raise AttributeError(f'Class {classname} not found in file {modulename}.py')
 
     def _get_type_hints(self, type):
         hints ={}
@@ -79,6 +86,8 @@ class Simul():
             args = inspect.getfullargspec(getattr(klass, '__init__')).args
             hints = self._get_type_hints(klass)
 
+            target_device_idx = pars.get('target_device_idx', None)
+                
             pars2 = {}
             for name, value in pars.items():
                 if name in skip_pars:
@@ -105,7 +114,7 @@ class Simul():
                     if parname in hints:
                         partype = hints[parname]
                         filename = cm.filename(parname, value)  # TODO use partype instead of parname?
-                        parobj = partype.restore(filename)
+                        parobj = partype.restore(filename, target_device_idx=target_device_idx)
                         pars2[parname] = parobj
                     else:
                         raise ValueError(f'No type hint for parameter {parname} of class {classname}')
@@ -153,8 +162,7 @@ class Simul():
             params = yaml.safe_load(stream)
 
         # Initialize housekeeping objects
-        factory = Factory(params['main'])
-        loop = factory.get_loop_control()
+        loop = LoopControl(run_time=params['main']['total_time'], dt=params['main']['time_step'])
         store = Datastore(params['main']['store_dir'])
 
         # Actual creation code
@@ -170,14 +178,14 @@ class Simul():
         # Build loop
         for name, obj in self.objs.items():
             if isinstance(obj, BaseProcessingObj):
-                if name not in ['control']:
-                    loop.add(obj)
+                loop.add(obj)
         loop.add(store)
 
         # Run simulation loop
         loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'], speed_report=True)
 
-        print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']]) * 100.)}")
+        if store.has_key('sr'):
+            print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']])) * 100.}")
 
         # Saving method with a single sav file
         store.save('save_file.pickle')

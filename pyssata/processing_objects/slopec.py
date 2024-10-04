@@ -275,16 +275,20 @@ class Slopec(BaseProcessingObj):
         if self._verbose:
             print(f'accumulation factor is: {factor}')
 
-  
     def trigger(self, t):
+        in_pixels = self.inputs['in_pixels'].get(self._target_device_idx)
+        if in_pixels.generation_time == t:
+            self.calc_slopes(t)
+            
+        if self._do_rec:
+            m = self.xp.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
+            self._slopes.slopes = m
+    
+    def old_trigger(self, t):
 
         in_pixels = self.inputs['in_pixels'].get(self._target_device_idx)
 
-        if self._accumulate:
-            self.do_accumulation(t)
-            if (t + self._loop_dt) % self._accumulation_dt == 0:
-                self.calc_slopes(t, accumulated=True)
-
+        # TO BE MOVED to SH
         if self._weight_from_accumulated:
             self.do_accumulation(t)
 
@@ -360,4 +364,3 @@ class Slopec(BaseProcessingObj):
         if self._do_rec:
             m = self.xp.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
             self._slopes.slopes = m
-

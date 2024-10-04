@@ -1,6 +1,5 @@
 from astropy.io import fits
 
-from pyssata import xp
 from pyssata.data_objects.base_data_obj import BaseDataObj
 
 class PupData(BaseDataObj):
@@ -8,13 +7,13 @@ class PupData(BaseDataObj):
     TODO change to have the pupil index in the second index
     (for compatibility with existing PASSATA data)
     '''
-    def __init__(self):
-        super().__init__()
-        self._radius = xp.zeros(4, dtype=self.dtype)
-        self._cx = xp.zeros(4, dtype=self.dtype)
-        self._cy = xp.zeros(4, dtype=self.dtype)
-        self._ind_pup = xp.empty((4, 0), dtype=int)
-        self._framesize = xp.zeros(2, dtype=int)
+    def __init__(self, target_device_idx=None, precision=None):
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
+        self._radius = self.xp.zeros(4, dtype=self.dtype)
+        self._cx = self.xp.zeros(4, dtype=self.dtype)
+        self._cy = self.xp.zeros(4, dtype=self.dtype)
+        self._ind_pup = self.xp.empty((4, 0), dtype=int)
+        self._framesize = self.xp.zeros(2, dtype=int)
         
     @property
     def radius(self):
@@ -68,12 +67,12 @@ class PupData(BaseDataObj):
         return tmp
 
     def single_mask(self):
-        f = xp.zeros(self._framesize, dtype=self.dtype)
+        f = self.xp.zeros(self._framesize, dtype=self.dtype)
         f[self._ind_pup[0, :]] = 1
         return f
 
     def complete_mask(self):
-        f = xp.zeros(self._framesize, dtype=self.dtype)
+        f = self.xp.zeros(self._framesize, dtype=self.dtype)
         for i in range(4):
             f[self._ind_pup[i, :]] = 1
         return f
@@ -95,21 +94,21 @@ class PupData(BaseDataObj):
     def read(self, filename, hdr=None, exten=0):
         hdr, exten = super().read(filename)
 
-        self._ind_pup = xp.array(fits.getdata(filename, ext=exten))
-        self._radius = xp.array(fits.getdata(filename, ext=exten + 1))
-        self._cx = xp.array(fits.getdata(filename, ext=exten + 2))
-        self._cy = xp.array(fits.getdata(filename, ext=exten + 3))
+        self._ind_pup = self.xp.array(fits.getdata(filename, ext=exten))
+        self._radius = self.xp.array(fits.getdata(filename, ext=exten + 1))
+        self._cx = self.xp.array(fits.getdata(filename, ext=exten + 2))
+        self._cy = self.xp.array(fits.getdata(filename, ext=exten + 3))
         exten += 4
 
     @staticmethod
-    def restore(filename):
+    def restore(filename, target_device_idx=None):
         hdr = fits.getheader(filename)
         version = int(hdr['VERSION'])
 
         if version > 2:
             raise ValueError(f"Error: unknown version {version} in file {filename}")
 
-        p = PupData()
+        p = PupData(target_device_idx=target_device_idx)
         if version >= 2:
             p.framesize = [int(hdr['FSIZEX']), int(hdr['FSIZEY'])]
 

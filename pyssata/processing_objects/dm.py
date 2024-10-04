@@ -35,49 +35,36 @@ class DM(BaseProcessingObj):
         if not ifunc:
             ifunc = IFunc(type_str=type_str, mask=mask, npixels=npixels,
                            obsratio=obsratio, diaratio=diaratio, nzern=nzern,
-                           nmodes=nmodes, start_mode=start_mode, idx_modes=idx_modes)
+                           nmodes=nmodes, start_mode=start_mode, idx_modes=idx_modes,
+                           target_device_idx=target_device_idx, precision=precision)
         self._ifunc = ifunc
         
         s = self._ifunc.mask_inf_func.shape
         nmodes_if = self._ifunc.size[0]
         
         self._if_commands = self.xp.zeros(nmodes_if, dtype=self._ifunc.dtype)
-        self._layer = Layer(s[0], s[1], pixel_pitch, height)
+        self._layer = Layer(s[0], s[1], pixel_pitch, height, target_device_idx=target_device_idx, precision=precision)
         self._layer.A = self._ifunc.mask_inf_func
         
         # sign is -1 to take into account the reflection in the propagation
         self._sign = -1
         self.inputs['in_command'] = InputValue(type=BaseValue)
         self.outputs['out_layer'] = self._layer
-
-        # Integrator control workaround
-        self._history = None
-        self._delay = 2
-        self._gain = 0.5
     
     def compute_shape(self):
         commands_input = self.inputs['in_command'].get(self._target_device_idx)
         commands = commands_input.value
 
-        if self._history is None:
-            self._history = [commands*0] * (self._delay+1)
-            self._integrated_commands = commands * 0
-
-        self._history.append(commands)
-        self._integrated_commands += self._history[-(self._delay+1)]
-
-        commands = self._integrated_commands * self._gain
-
         temp_matrix = self.xp.zeros(self._layer.size, dtype=self.dtype)
         
         # Compute phase only if commands vector is not zero
-        if self.xp.sum(self.xp.abs(commands)) != 0:
-            if len(commands) > len(self._if_commands):
-                raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
-            
-            self._if_commands[:len(commands)] = self._sign * commands
-            
-            temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
+        #if self.xp.sum(self.xp.abs(commands)) != 0:
+        #    if len(commands) > len(self._if_commands):
+        #        raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
+        
+        self._if_commands[:len(commands)] = self._sign * commands
+        
+        temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
 
         self._layer.phaseInNm = temp_matrix
 
@@ -154,4 +141,3 @@ class DM(BaseProcessingObj):
             errmsg += f"{self.repr()} No input command defined"
         
         return commands_input is not None and self._layer is not None and self._ifunc is not None
-
