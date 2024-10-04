@@ -1,21 +1,27 @@
-
 import math
+
+import numpy as np
+from astropy.io import fits
+
+from pyssata import cpuArray
 from pyssata.data_objects.base_data_obj import BaseDataObj
 
 
 class SubapData(BaseDataObj):
-    def __init__(self, np_sub=None, n_subaps=None, target_device_idx=None, precision=None):
+    def __init__(self,
+                 idxs,
+                 map,
+                 nx: int,
+                 ny: int,
+                 energy_th: float = 0,
+                 target_device_idx=None,
+                 precision=None):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
-        if np_sub is not None and n_subaps is not None:
-            self._idxs = self.xp.zeros((n_subaps, np_sub ** 2), dtype=int)
-            self._map = self.xp.zeros(n_subaps, dtype=int)
-        else:
-            self._idxs = None
-            self._map = None
-
-        self._energy_th = 0.0
-        self._nx = 0
-        self._ny = 0
+        self._idxs = idxs.astype(int)
+        self._map = map.astype(int)
+        self._nx = int(nx)
+        self._ny = int(ny)
+        self._energy_th = float(energy_th)
 
     @property
     def idxs(self):
@@ -27,43 +33,26 @@ class SubapData(BaseDataObj):
 
     @property
     def n_subaps(self):
-        return self._idxs.shape[0] if self._idxs is not None else 0
+        return self._idxs.shape[0]
 
     @property
     def np_sub(self):
-        return int(math.sqrt(self._idxs.shape[1])) if self._idxs is not None else 0
-
+        return int(math.sqrt(self._idxs.shape[1]))
     @property
     def map(self):
         return self._map
-
-    @map.setter
-    def map(self, value):
-        self._map = value
 
     @property
     def energy_th(self):
         return self._energy_th
 
-    @energy_th.setter
-    def energy_th(self, value):
-        self._energy_th = value
-
     @property
     def nx(self):
         return self._nx
 
-    @nx.setter
-    def nx(self, value):
-        self._nx = value
-
     @property
     def ny(self):
         return self._ny
-
-    @ny.setter
-    def ny(self, value):
-        self._ny = value
 
     def subap_idx(self, n):
         """Returns the indices of subaperture `n`."""
@@ -73,40 +62,30 @@ class SubapData(BaseDataObj):
         """Returns the position of subaperture `n`."""
         return self._map[n]
 
-    def set_subap_idx(self, n, idx):
-        """Sets the indices of subaperture `n`."""
-        self._idxs[n, :] = idx
-
-    def set_subap_map(self, n, pos):
-        """Sets the mapping position of subaperture `n`."""
-        self._map[n] = pos
-
-    def save(self, filename, hdr):
+    def save(self, filename):
         """Saves the subaperture data to a file."""
+        hdr = fits.Header()
         hdr['VERSION'] = 1
-        hdr['ENRGYTH'] = self._energy_th
-        hdr['NX'] = self._nx
-        hdr['NY'] = self._ny
-        super().save(filename, hdr)
-        self.xp.savez_compressed(filename, idxs=self._idxs, map=self._map)
-
-    def read(self, filename, hdr, exten=0):
-        """Reads subaperture data from a file."""
-        super().read(filename, hdr, exten)
-        data = self.xp.load(filename + ".npz")
-        self._idxs = data['idxs']
-        self._map = data['map']
+        hdr['ENRGYTH'] = self.energy_th
+        hdr['NP_SUB'] = self.np_sub
+        hdr['NX'] = self.nx
+        hdr['NY'] = self.ny
+        fits.writeto(filename, np.zeros(2), hdr)
+        fits.append(filename, cpuArray(self._idxs))
+        fits.append(filename, cpuArray(self._map))
 
     @classmethod
-    def restore(cls, filename):
+    def restore(cls, filename, target_device_idx=None):
         """Restores the subaperture data from a file."""
-        p = cls()
-        hdr = {}
-        data = self.xp.load(filename + ".npz")
-        version = int(hdr.get('VERSION', 1))
-        if version != 1:
-            raise ValueError(f"Unknown version {version} in file {filename}")
-        p._nx = int(hdr.get('NX', 0))
-        p._ny = int(hdr.get('NY', 0))
-        p.read(filename, hdr)
-        return p
+        with fits.open(filename) as hdul:
+            hdr = hdul[0].header
+            version = hdr.get('VERSION')
+            if version != 1:
+                raise ValueError(f"Unknown version {version} in file {filename}")
+            energy_th = hdr.get('ENRGYTH')
+            nx = hdr.get('NX')
+            ny = hdr.get('NY')
+            idxs = hdul[1].data
+            map = hdul[2].data
+        return SubapData(idxs=idxs, map=map, nx=nx, ny=ny, energy_th=energy_th,
+                         target_device_idx=target_device_idx)

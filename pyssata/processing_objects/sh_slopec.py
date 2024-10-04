@@ -1,6 +1,8 @@
 
+import numbers
 import numpy as np
 
+from pyssata import cpuArray
 from pyssata.data_objects.slopes import Slopes
 from pyssata.data_objects.subap_data import SubapData
 from pyssata.base_value import BaseValue
@@ -22,8 +24,9 @@ class ShSlopec(Slopec):
         self._thr_mask_cube = BaseValue()  
         self._total_counts = BaseValue()
         self._subap_counts = BaseValue()
+        self._exp_weight = None
+        self._subapdata = None
         self._detailed_debug = -1
-        self._subap_idx = None
         self._xweights = None
         self._yweights = None
         self._xcweights = None
@@ -49,9 +52,13 @@ class ShSlopec(Slopec):
         self._display2s = False
 
         # Property settings
-        self.subapdata = subapdata
         self.exp_weight = exp_weight
+        self.subapdata = subapdata
 
+    @property
+    def subap_idx(self):
+        return self._subapdata.idxs
+ 
     @property
     def thr_value(self):
         return self._thr_value
@@ -135,13 +142,9 @@ class ShSlopec(Slopec):
     @subapdata.setter
     def subapdata(self, p):
         self._subapdata = p
-        self._slopes = Slopes(self._subapdata.n_subap * 2)
-        self._accumulated_slopes = Slopes(self._subapdata.n_subap * 2)
-
-        n_subaps = self._subapdata.n_subaps
-        subap_idx = self.xp.array([self._subapdata.subap_idx(i) for i in range(n_subaps)])
-        self._subap_idx = self.xp.copy(subap_idx)
-
+        # TODO replace this resize with an earlier initialization
+        self._slopes.resize(p.n_subaps * 2)
+        self._accumulated_slopes = Slopes(p.n_subaps * 2)
         self.set_xy_weights()
 
     def calc_slopes(self, t, accumulated=False):
@@ -172,9 +175,11 @@ class ShSlopec(Slopec):
             print('subapdata is not valid.')
             return
 
+        in_pixels = self.inputs['in_pixels'].get(self._target_device_idx).pixels
+        
         n_subaps = self._subapdata.n_subaps
         np_sub = self._subapdata.np_sub
-        pixels = self._accumulatedPixels.pixels if accumulated else self._pixels.pixels
+        pixels = self._accumulatedPixels.pixels if accumulated else in_pixels
 
         sx = self.xp.zeros(n_subaps, dtype=float)
         sy = self.xp.zeros(n_subaps, dtype=float)
@@ -194,14 +199,14 @@ class ShSlopec(Slopec):
         if self._thr_value > 0 and self._thr_ratio_value > 0:
             raise ValueError('Only one between _thr_value and _thr_ratio_value can be set.')
 
-        if self._weightFromAccumulated:
+        if self._weight_from_accumulated:
             n_weight_applied = 0
 
         for i in range(n_subaps):
-            idx = self._subap_idx[i, :]
+            idx = self.subap_idx[i, :]
             subap = pixels[idx].reshape(np_sub, np_sub)
 
-            if self._weightFromAccumulated and self._accumulatedPixelsPtr is not None and t >= self._accumulationDt:
+            if self._weight_from_accumulated and self._accumulatedPixelsPtr is not None and t >= self._accumulationDt:
                 accumulated_pixels_weight = self._accumulatedPixelsPtr[idx].reshape(np_sub, np_sub)
                 accumulated_pixels_weight -= self.xp.min(accumulated_pixels_weight)
                 max_temp = self.xp.max(accumulated_pixels_weight)
@@ -278,7 +283,7 @@ class ShSlopec(Slopec):
             sx[i] = self.xp.sum(subap * self._xweights) * factor
             sy[i] = self.xp.sum(subap * self._yweights) * factor
 
-        if self._weightFromAccumulated:
+        if self._weight_from_accumulated:
             print(f"Weights mask has been applied to {n_weight_applied} sub-apertures")
 
         if self._dotemplate:
@@ -302,12 +307,11 @@ class ShSlopec(Slopec):
             self._slopes.yslopes = sy
             self._slopes.generation_time = t
 
-            self._fluxPerSubapertureVector.value = flux_per_subaperture
-            self._fluxPerSubapertureVector.generation_time = t
-            self._maxFluxPerSubapertureVector.value = max_flux_per_subaperture
-            self._total_counts.value = self.xp.sum(self._fluxPerSubapertureVector.value)
+            self._flux_per_subaperture_vector.value = flux_per_subaperture
+            self._flux_per_subaperture_vector.generation_time = t
+            self._total_counts.value = self.xp.sum(self._flux_per_subaperture_vector.value)
             self._total_counts.generation_time = t
-            self._subap_counts.value = self.xp.mean(self._fluxPerSubapertureVector.value)
+            self._subap_counts.value = self.xp.mean(self._flux_per_subaperture_vector.value)
             self._subap_counts.generation_time = t
 
         if self._verbose:
@@ -326,9 +330,11 @@ class ShSlopec(Slopec):
             print('subapdata is not valid.')
             return
 
+        in_pixels = self.inputs['in_pixels'].get(self._target_device_idx).pixels
+
         n_subaps = self._subapdata.n_subaps
         np_sub = self._subapdata.np_sub
-        pixels = self._accumulatedPixels.pixels if accumulated else self._pixels.pixels
+        pixels = self._accumulatedPixels.pixels if accumulated else in_pixels
 
         if self._store_thr_mask_cube:
             thr_mask_cube = self.xp.zeros((np_sub, np_sub, n_subaps), dtype=int)
@@ -340,12 +346,23 @@ class ShSlopec(Slopec):
             raise ValueError("Only one between _thr_value and _thr_ratio_value can be set.")
 
         # Reform pixels based on the subaperture index
-        pixels = pixels[self._subap_idx].T
+        orig_pixels = pixels
+        idx2d = self.xp.unravel_index(self.subap_idx, pixels.shape)
+        pixels = pixels[idx2d].T
+        
+        import matplotlib.pyplot as plt
+        plt.imshow(cpuArray(orig_pixels))
+        plt.show()
+        
+        print(self.subap_idx[0])
+        print(self.xp.unravel_index(self.subap_idx[0], orig_pixels.shape))
+        print(orig_pixels[self.xp.unravel_index(self.subap_idx[0], orig_pixels.shape)])
+        print(self._xweights)
 
-        if self._weightFromAccumulated:
+        if self._weight_from_accumulated:
             n_weight_applied = 0
             if self._accumulatedPixelsPtr is not None and t >= self._accumulationDt:
-                accumulated_pixels_weight = self._accumulatedPixelsPtr[self._subap_idx].T
+                accumulated_pixels_weight = self._accumulatedPixelsPtr[self.subap_idx].T
                 accumulated_pixels_weight -= self.xp.min(accumulated_pixels_weight, axis=1, keepdims=True)
                 max_temp = self.xp.max(accumulated_pixels_weight, axis=1)
                 idx0 = self.xp.where(max_temp <= 0)[0]
@@ -386,7 +403,7 @@ class ShSlopec(Slopec):
         else:
             thr = 0
 
-        if self.xp.size(thr) == 1:
+        if isinstance(thr, numbers.Number):
             thr = self.xp.tile(thr, (np_sub * np_sub, n_subaps))
         else:
             thr = thr[:, self.xp.newaxis] * self.xp.ones((1, np_sub * np_sub))
@@ -404,7 +421,7 @@ class ShSlopec(Slopec):
             thr_mask_cube = thr.reshape(np_sub, np_sub, n_subaps)
 
         # Compute denominator for slopes
-        subap_tot = self.xp.sum(pixels * self._mask_weighted.reshape(np_sub * np_sub, 1) * self.xp.ones((1, n_subaps)), axis=1)
+        subap_tot = self.xp.sum(pixels * self._mask_weighted.reshape(np_sub * np_sub, 1), axis=0)
         mean_subap_tot = self.xp.mean(subap_tot)
         idx_le_0 = self.xp.where(subap_tot <= mean_subap_tot * 1e-3)[0]
         if len(idx_le_0) > 0:
@@ -413,13 +430,11 @@ class ShSlopec(Slopec):
         if len(idx_le_0) > 0:
             factor[idx_le_0] = 0.0
 
-        factor = factor[:, self.xp.newaxis] * self.xp.ones((1, np_sub * np_sub))
-
         # Compute slopes
-        sx = self.xp.sum(pixels * self._xweights.reshape(np_sub * np_sub, 1) * self.xp.ones((1, n_subaps)) * factor, axis=1)
-        sy = self.xp.sum(pixels * self._yweights.reshape(np_sub * np_sub, 1) * self.xp.ones((1, n_subaps)) * factor, axis=1)
+        sx = self.xp.sum(pixels * self._xweights.reshape(np_sub * np_sub, 1) * factor[self.xp.newaxis, :], axis=0)
+        sy = self.xp.sum(pixels * self._yweights.reshape(np_sub * np_sub, 1) * factor[self.xp.newaxis, :], axis=0)
 
-        if self._weightFromAccumulated:
+        if self._weight_from_accumulated:
             print(f"Weights mask has been applied to {n_weight_applied} sub-apertures")
 
         if self._mult_factor != 0:
@@ -440,12 +455,11 @@ class ShSlopec(Slopec):
             self._slopes.yslopes = sy
             self._slopes.generation_time = t
 
-            self._fluxPerSubapertureVector.value = flux_per_subaperture_vector
-            self._fluxPerSubapertureVector.generation_time = t
-            self._maxFluxPerSubapertureVector.value = max_flux_per_subaperture_vector
-            self._total_counts.value = self.xp.sum(self._fluxPerSubapertureVector.value)
+            self._flux_per_subaperture_vector.value = flux_per_subaperture_vector
+            self._flux_per_subaperture_vector.generation_time = t
+            self._total_counts.value = self.xp.sum(self._flux_per_subaperture_vector.value)
             self._total_counts.generation_time = t
-            self._subap_counts.value = self.xp.mean(self._fluxPerSubapertureVector.value)
+            self._subap_counts.value = self.xp.mean(self._flux_per_subaperture_vector.value)
             self._subap_counts.generation_time = t
 
         if self._verbose:

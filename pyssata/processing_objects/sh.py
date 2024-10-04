@@ -127,6 +127,9 @@ class SH(BaseProcessingObj):
             raise ValueError("Kernel application string must be one of 'FFT', 'FOV', or 'SUBAP'")
         self._kernel_application = str_val
 
+    @property
+    def lenslet(self):
+        return self._lenslet
     
     def set_in_ef(self, in_ef, noprints=False):
         rad2arcsec = 180 / np.pi * 3600
@@ -295,8 +298,8 @@ class SH(BaseProcessingObj):
                 np_sub = round(np / 2.0 * lens[2])
 
                 mask_subap *= 0
-                mask_subap[round(x[i, j] - np_sub / 2):round(x[i, j] + np_sub / 2) - 1,
-                           round(y[i, j] - np_sub / 2):round(y[i, j] + np_sub / 2) - 1] = 1
+                mask_subap[self.xp.round(x[i, j] - np_sub / 2):self.xp.round(x[i, j] + np_sub / 2),
+                           self.xp.round(y[i, j] - np_sub / 2):self.xp.round(y[i, j] + np_sub / 2)] = 1
 
                 spot_intensity[i, j] = self.xp.sum(image * mask_subap)
 
@@ -304,26 +307,25 @@ class SH(BaseProcessingObj):
             for j in range(self._lenslet.dimy):
                 if spot_intensity[i, j] > energy_th * self.xp.max(spot_intensity):
                     mask_subap *= 0
-                    mask_subap[round(x[i, j] - np_sub / 2):round(x[i, j] + np_sub / 2) - 1,
-                               round(y[i, j] - np_sub / 2):round(y[i, j] + np_sub / 2) - 1] = 1
+                    mask_subap[self.xp.round(x[i, j] - np_sub / 2):self.xp.round(x[i, j] + np_sub / 2),
+                               self.xp.round(y[i, j] - np_sub / 2):self.xp.round(y[i, j] + np_sub / 2)] = 1
                     idxs[count] = self.xp.where(mask_subap == 1)
                     map[count] = j * self._lenslet.dimx + i
                     count += 1
 
         if count == 0:
             raise ValueError("Error: no subapertures selected")
-        print(f'Selected {count} subapertures')
 
-        subaps = SubapData(np_sub=np_sub, n_subaps=len(idxs))
+        v = self.xp.zeros((len(idxs), np_sub*np_sub), dtype=int)
+        m = self.xp.zeros(len(idxs), dtype=int)
         for k, idx in idxs.items():
-            subaps.set_subap_idx(k, idx)
-        for k, pos in map.items():
-            subaps.set_subap_map(k, pos)
-
-        subaps.energy_th = energy_th
-        subaps.nx = self._lenslet.dimx
-        subaps.ny = self._lenslet.dimy
-        return subaps
+            v[k] = self.xp.ravel_multi_index(idx, image.shape)
+            m[k] = map[k]
+        
+        subap_data = SubapData(idxs=v, map=m, nx=self._lenslet.dimx, ny=self._lenslet.dimy, energy_th=energy_th,
+                           target_device_idx=self._target_device_idx, precision=self._precision)
+      
+        return subap_data
     
     def calc_trigger_geometry(self):
         
