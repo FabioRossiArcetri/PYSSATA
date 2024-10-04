@@ -13,6 +13,18 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         target_device_idx (int, optional): if None will use the default_target_device_idx, otherwise pass -1 for cpu, i for GPU of index i
         """
         BaseTimeObj.__init__(self, target_device_idx=target_device_idx, precision=precision)
+
+        if self._target_device_idx<0:
+            from scipy.ndimage import rotate
+            from scipy.interpolate import RegularGridInterpolator
+        else:
+            from cupyx.scipy.ndimage import rotate
+            from cupyx.scipy.interpolate import RegularGridInterpolator
+
+
+        self.rotate = rotate        
+        self.RegularGridInterpolator = RegularGridInterpolator
+
         BaseParameterObj.__init__(self)
         self._verbose = 0
         self._loop_dt = int(0)

@@ -8,10 +8,8 @@ from pyssata.base_list import BaseList
 from pyssata.data_objects.layer import Layer
 from pyssata.lib.cv_coord import cv_coord
 from pyssata.lib.phasescreen_manager import phasescreens_manager
-#from pyssata.lib.phasescreens_shift import phasescreens_shift
 from pyssata.connections import InputValue
 
-from scipy.ndimage import rotate
 
 class AtmoEvolution(BaseProcessingObj):
     def __init__(self, L0, pixel_pitch, heights, Cn2, pixel_pupil, data_dir, source_list, wavelengthInNm: float=500.0,
@@ -55,10 +53,10 @@ class AtmoEvolution(BaseProcessingObj):
         rad_alpha_fov = alpha_fov * sec2rad
 
         # Compute layers dimension in pixels
-        pixel_layer = self.xp.ceil((pixel_pupil + 2 * self.xp.sqrt(self.xp.sum(self.xp.array(pupil_position, dtype=self.dtype) * 2)) / pixel_pitch + 
+        self._pixel_layer = self.xp.ceil((pixel_pupil + 2 * self.xp.sqrt(self.xp.sum(self.xp.array(pupil_position, dtype=self.dtype) * 2)) / pixel_pitch + 
                                2.0 * abs(heights) / pixel_pitch * rad_alpha_fov) / 2.0) * 2.0
         if fov_in_m is not None:
-            pixel_layer = self.xp.full_like(heights, long(fov_in_m / pixel_pitch / 2.0) * 2)
+            self._pixel_layer = self.xp.full_like(heights, long(fov_in_m / pixel_pitch / 2.0) * 2)
         
         self._L0 = L0
         self._wavelengthInNm = wavelengthInNm
@@ -67,7 +65,6 @@ class AtmoEvolution(BaseProcessingObj):
         self._heights = heights
         self._Cn2 = self.xp.array(Cn2, dtype=self.dtype)
         self._pixel_pupil = pixel_pupil
-        self._pixel_layer = pixel_layer
         self._data_dir = data_dir
         self._make_cycle = make_cycle
         self._seeing = None
@@ -80,7 +77,7 @@ class AtmoEvolution(BaseProcessingObj):
             self._pixel_square_phasescreens = pixel_phasescreens
 
         # Error if phase-screens dimension is smaller than maximum layer dimension
-        if self._pixel_square_phasescreens < max(pixel_layer):
+        if self._pixel_square_phasescreens < max(self._pixel_layer):
             raise ValueError('Error: phase-screens dimension must be greater than layer dimension!')
         
         self.verbose = verbose if verbose is not None else False
@@ -93,7 +90,7 @@ class AtmoEvolution(BaseProcessingObj):
         self._layer_list = BaseList(target_device_idx=self._target_device_idx)
 
         for i in range(self._n_phasescreens):
-            layer = Layer(pixel_layer[i], pixel_layer[i], pixel_pitch, heights[i], precision=self._precision, target_device_idx=self._target_device_idx)
+            layer = Layer(self._pixel_layer[i], self._pixel_layer[i], pixel_pitch, heights[i], precision=self._precision, target_device_idx=self._target_device_idx)
             self._layer_list.append(layer)
         
         if seed is not None:
@@ -103,6 +100,7 @@ class AtmoEvolution(BaseProcessingObj):
         self.inputs['wind_speed'] = InputValue(type=BaseValue)
         self.inputs['wind_direction'] = InputValue(type=BaseValue)
         self.outputs['layer_list'] = self.layer_list
+        self._last_position = self.xp.zeros(self._n_phasescreens, dtype=self.dtype)
 
     @property
     def seed(self):
@@ -256,87 +254,55 @@ class AtmoEvolution(BaseProcessingObj):
                     self._phasescreens.append(temp_screen)
 
 
-    def phasescreens_shift(self, phasescreens, pixel_layer, wind_speed, wind_direction, delta_time, pixel_pitch, scale_coeff, layer_list, position=None, cycle_screens=False):
-        # Compute the delta position in pixels
-        delta_position = wind_speed * delta_time / pixel_pitch  # [pixel]
-
-        # Update the position
-        if position is not None:
-            new_position = position + delta_position
-        else:
-            new_position = delta_position  # [pixel]
-        
-        # Get quotient and remainder
-        new_position_quo = self.xp.floor(new_position).astype(int)
-        new_position_rem = new_position - new_position_quo
-        
-        for ii, p in enumerate(phasescreens):
-            # Check if we need to cycle the screens
-            # print(ii, new_position[ii], pixel_layer[ii], p.shape[1]) # Verbose?
-            if cycle_screens:
-                if new_position[ii] + pixel_layer[ii] > p.shape[1]:
-                    new_position[ii] = 0.
-            
-            if new_position[ii] + pixel_layer[ii] > p.shape[1]:
-                print(f'phasescreens size: {self.xp.around(p.shape[0], 2)}')
-                print(f'requested position: {self.xp.around(new_position[ii], 2)}')
-                raise ValueError(f'phasescreens_shift cannot go out of the {ii}-th phasescreen!')
-            
-            pos = new_position_quo[ii]
-            # print(pos, pixel_layer) # Verbose?
-            ps_Shift1 = p[0: int(pixel_layer[ii]), pos: int(pos + pixel_layer[ii])]
-            ps_Shift2 = p[0: int(pixel_layer[ii]), pos + 1: int(pos + pixel_layer[ii]) + 1]
-            ps_ShiftInterp = (1 - new_position_rem[ii]) * ps_Shift1 + new_position_rem[ii] * ps_Shift2
-            
-            layer = ps_ShiftInterp[:, :]
-
-            # Meta-pupil rotation
-            if wind_direction[ii] != 0:
-                if wind_direction[ii] == 90:
-                    layer = self.xp.rot90(layer, 3)
-                elif wind_direction[ii] == 180:
-                    layer = self.xp.rot90(layer, 2)
-                elif wind_direction[ii] == 270 or wind_direction[ii] == -90:
-                    layer = self.xp.rot90(layer, 1)
-                elif wind_direction[ii] == -180:
-                    layer = self.xp.rot90(layer, 2)
-                elif wind_direction[ii] == -270:
-                    layer = self.xp.rot90(layer, 3)
-                else:
-                    layer = rotate(layer, wind_direction[ii], reshape=False, order=1)
-            
-            layer_list[ii].phaseInNm = layer * scale_coeff
-
-        # print(f'Phasescreen_shift: {new_position=}') # Verbose?
-        # Update position output
-        return new_position
-
-
     def shift_screens(self, t):
         seeing = self.inputs['seeing'].get(self._target_device_idx).value
         wind_speed = self.inputs['wind_speed'].get(self._target_device_idx).value
         wind_direction = self.inputs['wind_direction'].get(self._target_device_idx).value
-
-        if len(self._phasescreens) != len(wind_speed) or len(self._phasescreens) != len(wind_direction):
-            raise ValueError('Error: number of elements of wind speed and/or direction does not match the number of phasescreens')
-
-        last_position = self._last_position if self._last_position is not None else self.xp.zeros_like(wind_speed)
-        delta_time = self.t_to_seconds(t - self._last_t)
-        if self._extra_delta_time and not self._last_position:
-            delta_time += self._extra_delta_time        
-
+        # if len(self._phasescreens) != len(wind_speed) or len(self._phasescreens) != len(wind_direction):
+        #     raise ValueError('Error: number of elements of wind speed and/or direction does not match the number of phasescreens')
+        delta_time = self.t_to_seconds(t - self._last_t) + self._extra_delta_time        
         r0 = 0.9759 * 0.5 / (seeing * 4.848) * self._airmass**(-3./5.) # if seeing > 0 else 0.0
         r0wavelength = r0 * (self._wavelengthInNm / 500.0)**(6./5.)
         scale_coeff = (self._pixel_pitch / r0wavelength)**(5./6.) # if seeing > 0 else 0.0
 
-        last_position = self.phasescreens_shift(self._phasescreens, self._pixel_layer, wind_speed, wind_direction, delta_time,
-                                self._pixel_pitch, scale_coeff, self._layer_list, position=last_position, cycle_screens=self._cycle_screens)
+        # Compute the delta position in pixels
+        delta_position = wind_speed * delta_time / self._pixel_pitch  # [pixel]
+        new_position = self._last_position + delta_position
+        # Get quotient and remainder
+        new_position_quo = self.xp.floor(new_position).astype(int)
+        new_position_rem = new_position - new_position_quo
 
-        for element in self._layer_list:
-            element.generation_time = t
+        wdf, wdi = self.xp.modf(wind_direction/90.0)
+        wdf_full, wdi_full = self.xp.modf(wind_direction)
+
+        for ii, p in enumerate(self._phasescreens):
+            # Check if we need to cycle the screens
+            # print(ii, new_position[ii], self._pixel_layer[ii], p.shape[1]) # Verbose?
+            if self._cycle_screens:
+                if new_position[ii] + self._pixel_layer[ii] > p.shape[1]:
+                    new_position[ii] = 0.            
+            #if new_position[ii] + self._pixel_layer[ii] > p.shape[1]:
+            #    print(f'phasescreens size: {self.xp.around(p.shape[0], 2)}')
+            #    print(f'requested position: {self.xp.around(new_position[ii], 2)}')
+            #    raise ValueError(f'phasescreens_shift cannot go out of the {ii}-th phasescreen!')            
+            pos = new_position_quo[ii]
+            # print(pos, self._pixel_layer) # Verbose?
+            ipli = int(self._pixel_layer[ii])
+            ipli_p = int(pos + self._pixel_layer[ii])
+            layer = (1.0 - new_position_rem[ii]) * p[0: ipli, pos: ipli_p] + new_position_rem[ii] * p[0: ipli, pos + 1: ipli_p + 1]
+
+            layer = self.xp.rot90(layer, wdi[ii])
+            # is the rotate function is already checking for 0 angles? should we set very small rotations to 0?
+            # this looks fast on the default example
+            if not wdf_full[ii]==0:
+                layer = self.rotate(layer, wdf_full[ii], reshape=False, order=1)
+
+            self._layer_list[ii].phaseInNm = layer * scale_coeff
+            self._layer_list[ii].generation_time = t
+        # print(f'Phasescreen_shift: {new_position=}') # Verbose?
+        # Update position output
+        self._last_position = new_position
         self._layer_list.generation_time = t
-
-        self._last_position = last_position
         self._last_t = t
         
     def save(self, filename):
