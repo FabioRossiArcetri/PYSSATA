@@ -334,12 +334,11 @@ class SH(BaseProcessingObj):
         s = in_ef.size
 
         # Calculate subap chunks (all of equal x/y size)
-        # TODO for now we just split the rows
         # subap_chunks = [ (x slice, y slice), (x slice, y slice) ... ]
+        # As a test, we use chunks of 2 full rows each
         self._subap_chunks = []
-        for i in range(self._lenslet.dimx):
-            self._subap_chunks.append((slice(i, i+1), slice(0, self._lenslet.dimy)))
-        self._chunk_length = self._lenslet.dimy
+        for i in range(0, self._lenslet.dimx, 2):
+            self._subap_chunks.append((slice(i, i+2), slice(0, self._lenslet.dimy)))
         nx = self._subap_chunks[0][0].stop - self._subap_chunks[0][0].start
         ny = self._subap_chunks[0][1].stop - self._subap_chunks[0][1].start
         n = nx * ny
@@ -371,7 +370,6 @@ class SH(BaseProcessingObj):
         wf3 = self.xp.zeros((n, fft_size, fft_size), dtype=self.complex_dtype)
    
         # Focal plane result from FFT
-#        fp4 = ElectricField(n, fft_size, fft_size, self._wavelengthInNm / 1e9 / (wf1.pixel_pitch * fft_size))
         fp4_pixel_pitch = self._wavelengthInNm / 1e9 / (wf1.pixel_pitch * fft_size)
         fov_complete = fft_size * fp4_pixel_pitch
 
@@ -473,8 +471,14 @@ class SH(BaseProcessingObj):
             # Extract strip as a view into original array
             wf2 = self._wf1.sub_ef(x1, x2, y1, y2)
 
-            # Transform into a 3d array of subaps
-            ef = wf2.ef_at_lambda(self._wavelengthInNm).reshape(congrid_np_sub, n, congrid_np_sub).transpose(1,0,2)
+            # Calculate EF
+            ef = wf2.ef_at_lambda(self._wavelengthInNm)
+            
+            # Transform from 2d subap tiling into N x np x np
+            # For an explanation of how this works, ask ChatGPT
+            ef = ef.reshape(nx, congrid_np_sub, ny, congrid_np_sub)
+            ef = ef.transpose((2, 0, 1, 3))
+            ef = ef.reshape(n, congrid_np_sub, congrid_np_sub)
 
             # Insert into padded array
             self._wf3[:, :congrid_np_sub, :congrid_np_sub] = ef * self._tltf[self.xp.newaxis]
@@ -525,8 +529,13 @@ class SH(BaseProcessingObj):
                 else:
                     psf_cut = self.xp.fft.fftshift(self.xp.convolve(psf_cut, self.xp.fft.fftshift(subap_kern, axes=(-2, -1)), mode='same'))
 
-            # TODO this only works if the subap chunk is a strip, not multiple rows
-            psf_cut =  psf_cut.transpose(1, 0, 2).reshape(cutsize, cutsize*ny)
+            # Back-transform from N x np x np to 2d subap tiling
+            # For an explanation of how this works, ask ChatGPT
+            psf_cut = psf_cut.reshape(ny, nx, cutsize, cutsize)
+            psf_cut = psf_cut.transpose(1, 2, 0, 3)
+            psf_cut = psf_cut.reshape(nx * cutsize, ny * cutsize)
+            
+            # Insert subap strip into overall PSF image
             self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
         if psfTotalAtFft > 0:
