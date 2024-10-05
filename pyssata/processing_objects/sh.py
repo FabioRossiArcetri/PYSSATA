@@ -1,5 +1,5 @@
 import numpy as np
-
+import cupy as cp # TODO fuse
 from pyssata.lib.toccd import toccd
 from pyssata.lib.make_mask import make_mask
 from pyssata.connections import InputValue
@@ -21,7 +21,12 @@ if 0:
             kernelobj.cm = self._cm
             sh.kernelobj = kernelobj
         
-    
+
+@cp.fuse(kernel_name='abs2')
+def abs2(u_fp):
+     psf = cp.real(u_fp * cp.conj(u_fp))
+     return psf
+
 class SH(BaseProcessingObj):
     def __init__(self,
                  wavelengthInNm: float,
@@ -335,10 +340,16 @@ class SH(BaseProcessingObj):
 
         # Calculate subap chunks (all of equal x/y size)
         # subap_chunks = [ (x slice, y slice), (x slice, y slice) ... ]
-        # As a test, we use chunks of 2 full rows each
+        # All chunks must have the same size and shape
         self._subap_chunks = []
-        for i in range(0, self._lenslet.dimx, 2):
-            self._subap_chunks.append((slice(i, i+2), slice(0, self._lenslet.dimy)))
+
+        # Test: chunks of 2 full rows each
+#        for i in range(0, self._lenslet.dimx, 2):
+            #self._subap_chunks.append((slice(i, i+2), slice(0, self._lenslet.dimy)))
+            
+        # Whole SH in one go
+        self._subap_chunks.append((slice(0, self._lenslet.dimx), slice(0, self._lenslet.dimy)))
+
         nx = self._subap_chunks[0][0].stop - self._subap_chunks[0][0].start
         ny = self._subap_chunks[0][1].stop - self._subap_chunks[0][1].start
         n = nx * ny
@@ -444,8 +455,8 @@ class SH(BaseProcessingObj):
                 self._wf1.A = tempA
                 self._wf1.phaseInNm = tempW
         else:
+            # wf1 already set to in_ef
             pass
-            #wf1 = in_ef
 
         fft_size = self._fft_size
         psfTotalAtFft = 0
@@ -458,6 +469,8 @@ class SH(BaseProcessingObj):
 
         congrid_np_sub = self._congrid_np_sub
 
+        ef_whole = self._wf1.ef_at_lambda(self._wavelengthInNm)
+
         for chunk in self._subap_chunks:
             xslice, yslice = chunk
             nx = xslice.stop - xslice.start
@@ -468,12 +481,8 @@ class SH(BaseProcessingObj):
             y2 = yslice.stop * congrid_np_sub
             n = nx * ny
 
-            # Extract strip as a view into original array
-            wf2 = self._wf1.sub_ef(x1, x2, y1, y2)
+            ef = ef_whole[x1:x2, y1:y2]
 
-            # Calculate EF
-            ef = wf2.ef_at_lambda(self._wavelengthInNm)
-            
             # Transform from 2d subap tiling into N x np x np
             # For an explanation of how this works, ask ChatGPT
             ef = ef.reshape(nx, congrid_np_sub, ny, congrid_np_sub)
@@ -481,14 +490,15 @@ class SH(BaseProcessingObj):
             ef = ef.reshape(n, congrid_np_sub, congrid_np_sub)
 
             # Insert into padded array
-            self._wf3[:, :congrid_np_sub, :congrid_np_sub] = ef * self._tltf[self.xp.newaxis]
+            self._wf3[:, :congrid_np_sub, :congrid_np_sub] = ef * self._tltf[self.xp.newaxis, :, :]
 
             if self._debugOutput:
                 tempefcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = self._wf3
 
             # PSF generation
-            tmp_fp4 = self.xp.fft.fft2(self._wf3, axes=(1, 2))
-            psfTotalAtFft += self.xp.sum(self.xp.abs(tmp_fp4) ** 2)
+            fp4 = self.xp.fft.fft2(self._wf3, axes=(1, 2))
+            psf_shifted = abs2(fp4)
+            psfTotalAtFft += self.xp.sum(psf_shifted)
 
             # Full resolution kernel
             if self._kernelobj is not None and self.kernel_at_fft():
@@ -499,21 +509,19 @@ class SH(BaseProcessingObj):
                 else:
                     subap_kern_fft = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
 
-                psf_before_convolution = self.xp.abs(tmp_fp4) ** 2
-                psf_fft = self.xp.fft.fft2(psf_before_convolution)
+                psf_fft = self.xp.fft.fft2(psf_shifted)
                 psf = self.xp.fft.ifft2(psf_fft * subap_kern_fft).real
                 psf = self.xp.fft.fftshift(psf)
 
                 if self._debugOutput:
-                    temppsfcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf_before_convolution
+                    temppsfcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf_shifted
                     tempfftcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf_fft
                     tempconvcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf
 
                 psf *= self._fp_mask
             else:
-                tmp_fp4 = self.xp.fft.fftshift(tmp_fp4, axes=(1, 2))
-                tmp_fp4 *= self._fp_mask[self.xp.newaxis, :, :]
-                psf = self.xp.abs(tmp_fp4) ** 2
+                psf = self.xp.fft.fftshift(psf_shifted, axes=(1, 2))
+                psf *= self._fp_mask[self.xp.newaxis, :, :]
 
             cutsize = self._cutsize
             cutpixels = self._cutpixels
@@ -538,8 +546,7 @@ class SH(BaseProcessingObj):
             # Insert subap strip into overall PSF image
             self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
-        if psfTotalAtFft > 0:
-            self._psfimage /= psfTotalAtFft
+        self._psfimage /= psfTotalAtFft + 1e-6 # Avoid dividing by zero
 
         # Post-processing kernel (Gaussian convolution)
         if self._gkern:
@@ -575,12 +582,6 @@ class SH(BaseProcessingObj):
 
         phot = in_ef.S0 * in_ef.masked_area()
         ccd *= phot
-
-        if phot == 0:
-            print('WARNING: total intensity at SH entrance is zero')
-
-        if not self.xp.isfinite(ccd).all():
-            raise ValueError('Intensity has non-finite elements')
 
         self._out_i.i = ccd
         self._out_i.generation_time = t
