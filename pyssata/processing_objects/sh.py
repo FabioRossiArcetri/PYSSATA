@@ -333,6 +333,17 @@ class SH(BaseProcessingObj):
         in_ef = self.inputs['in_ef'].get(self._target_device_idx)
         s = in_ef.size
 
+        # Calculate subap chunks (all of equal x/y size)
+        # TODO for now we just split the rows
+        # subap_chunks = [ (x slice, y slice), (x slice, y slice) ... ]
+        self._subap_chunks = []
+        for i in range(self._lenslet.dimx):
+            self._subap_chunks.append((slice(i, i+1), slice(0, self._lenslet.dimy)))
+        self._chunk_length = self._lenslet.dimy
+        nx = self._subap_chunks[0][0].stop - self._subap_chunks[0][0].start
+        ny = self._subap_chunks[0][1].stop - self._subap_chunks[0][1].start
+        n = nx * ny
+
         fov_oversample = self._fov_ovs
 
         subap_wanted_fov = self._subap_wanted_fov
@@ -351,19 +362,18 @@ class SH(BaseProcessingObj):
             wf1 = ElectricField(M0, M1, in_ef.pixel_pitch / fov_oversample)
         else:
             wf1 = in_ef            
-            
-        f = self.xp.zeros(wf1.size, dtype=int)
         
         # Reuse geometry calculated in set_in_ef
         np_sub = self._congrid_np_sub
         fft_size = self._fft_size
 
         # Subaperture extracted from full pupil
-        wf3 = self.xp.zeros((fft_size, fft_size), dtype=complex)
+        wf3 = self.xp.zeros((n, fft_size, fft_size), dtype=self.complex_dtype)
    
         # Focal plane result from FFT
-        fp4 = ElectricField(fft_size, fft_size, self._wavelengthInNm / 1e9 / (wf1.pixel_pitch * fft_size))
-        fov_complete = fp4.size[0] * fp4.pixel_pitch
+#        fp4 = ElectricField(n, fft_size, fft_size, self._wavelengthInNm / 1e9 / (wf1.pixel_pitch * fft_size))
+        fp4_pixel_pitch = self._wavelengthInNm / 1e9 / (wf1.pixel_pitch * fft_size)
+        fov_complete = fft_size * fp4_pixel_pitch
 
         # Calculate subaperture indexes
         self._subap_idx = self.xp.zeros((self._lenslet.dimx, self._lenslet.dimy, np_sub * np_sub), dtype=int)
@@ -373,7 +383,7 @@ class SH(BaseProcessingObj):
                 x = wf1.size[0] / 2.0 * (1 + lens[0])
                 y = wf1.size[1] / 2.0 * (1 + lens[1])
 
-                f.fill(0)
+                f = self.xp.zeros(wf1.size, dtype=int)
                 f[int(np.round(x - np_sub / 2.)):int(np.round(x + np_sub / 2.)),
                   int(np.round(y - np_sub / 2.)):int(np.round(y + np_sub / 2.))] = 1
                 idx = self.xp.ravel_multi_index(f.nonzero(), f.shape)
@@ -382,18 +392,19 @@ class SH(BaseProcessingObj):
         sensor_subap_fov = sensor_pxscale * subap_npx
         fov_cut = fov_complete - sensor_subap_fov
         
-        self._cutpixels = int(np.round(fov_cut / fp4.pixel_pitch) / 2 * 2)
-        self._cutsize = fp4.size[0] - self._cutpixels
+        print(f'{fft_size=} {fp4_pixel_pitch=} {fov_cut=} {fov_complete=} {sensor_subap_fov=} {sensor_pxscale=} {subap_npx=}')
+        self._cutpixels = int(np.round(fov_cut / fp4_pixel_pitch) / 2 * 2)
+        self._cutsize = fft_size - self._cutpixels
         self._psfimage = self.xp.zeros((self._cutsize * self._lenslet.dimx, self._cutsize * self._lenslet.dimy))
         
         # 1/2 Px tilt
         self._tltf = self.get_tlt_f(np_sub, fft_size - np_sub)
+
         self._fp_mask = make_mask(fft_size, diaratio=subap_wanted_fov / fov_complete, square=self._squaremask, xp=self.xp)
 
         # Remember a few things
         self._wf1 = wf1
         self._wf3 = wf3
-        self._fp4 = fp4
 
     def trigger(self, t):
         
@@ -408,6 +419,9 @@ class SH(BaseProcessingObj):
         if not self._trigger_geometry_calculated:
             self.calc_trigger_geometry()
             self._trigger_geometry_calculated = True
+
+        if self._kernelobj is not None:
+            self._kernelobj.trigger(t)
 
         s = in_ef.size
 
@@ -444,70 +458,76 @@ class SH(BaseProcessingObj):
             tempconvcpu = np.zeros_like(tempefcpu)
             temppsfcpu = np.zeros_like(tempefcpu, dtype=float)
 
-        for i in range(self._lenslet.dimx):
-            for j in range(self._lenslet.dimy):
+        congrid_np_sub = self._congrid_np_sub
 
-                idx = self._subap_idx[i, j, :]
+        for chunk in self._subap_chunks:
+            xslice, yslice = chunk
+            nx = xslice.stop - xslice.start
+            ny = yslice.stop - yslice.start
+            x1 = xslice.start * congrid_np_sub
+            x2 = xslice.stop * congrid_np_sub
+            y1 = yslice.start * congrid_np_sub
+            y2 = yslice.stop * congrid_np_sub
+            n = nx * ny
 
-                # Subaperture extracted from full pupil
-                wf2 = self._wf1.sub_ef(idx=idx)
+            # Extract strip as a view into original array
+            wf2 = self._wf1.sub_ef(x1, x2, y1, y2)
 
-                # Small subapertures set into larger FFT array
-                ss = wf2.size
+            # Transform into a 3d array of subaps
+            ef = wf2.ef_at_lambda(self._wavelengthInNm).reshape(congrid_np_sub, n, congrid_np_sub).transpose(1,0,2)
 
-                self._wf3[:ss[0], :ss[1]] = wf2.ef_at_lambda(self._wavelengthInNm) * self._tltf
+            # Insert into padded array
+            self._wf3[:, :congrid_np_sub, :congrid_np_sub] = ef * self._tltf[self.xp.newaxis]
+
+            if self._debugOutput:
+                tempefcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = self._wf3
+
+            # PSF generation
+            tmp_fp4 = self.xp.fft.fft2(self._wf3, axes=(1, 2))
+            psfTotalAtFft += self.xp.sum(self.xp.abs(tmp_fp4) ** 2)
+
+            # Full resolution kernel
+            if self._kernelobj is not None and self.kernel_at_fft():
+                if not self._kernelobj.returnFft:
+                    subap_kern = self.xp.fft.fftshift(self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i])
+                    subap_kern /= self.xp.sum(subap_kern)
+                    subap_kern_fft = self.xp.fft.fft2(subap_kern)
+                else:
+                    subap_kern_fft = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
+
+                psf_before_convolution = self.xp.abs(tmp_fp4) ** 2
+                psf_fft = self.xp.fft.fft2(psf_before_convolution)
+                psf = self.xp.fft.ifft2(psf_fft * subap_kern_fft).real
+                psf = self.xp.fft.fftshift(psf)
 
                 if self._debugOutput:
-                    tempefcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = self._wf3
+                    temppsfcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf_before_convolution
+                    tempfftcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf_fft
+                    tempconvcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf
 
-                # Kernel triggering
-                if i == 0 and j == 0 and self._kernelobj is not None:
-                    self._kernelobj.trigger(t)
+                psf *= self._fp_mask
+            else:
+                tmp_fp4 = self.xp.fft.fftshift(tmp_fp4, axes=(1, 2))
+                tmp_fp4 *= self._fp_mask[self.xp.newaxis, :, :]
+                psf = self.xp.abs(tmp_fp4) ** 2
 
-                # PSF generation
-                tmp_fp4 = self.xp.fft.fft2(self._wf3)
-                psfTotalAtFft += self.xp.sum(self.xp.abs(tmp_fp4) ** 2)
+            cutsize = self._cutsize
+            cutpixels = self._cutpixels
+            psf_cut = psf[:, cutpixels // 2: -cutpixels // 2, cutpixels // 2: -cutpixels // 2]
 
-                # Full resolution kernel
-                if self._kernelobj is not None and self.kernel_at_fft():
-                    if not self._kernelobj.returnFft:
-                        subap_kern = self.xp.fft.fftshift(self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i])
-                        subap_kern /= self.xp.sum(subap_kern)
-                        subap_kern_fft = self.xp.fft.fft2(subap_kern)
-                    else:
-                        subap_kern_fft = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
-
-                    psf_before_convolution = self.xp.abs(tmp_fp4) ** 2
-                    psf_fft = self.xp.fft.fft2(psf_before_convolution)
-                    psf = self.xp.fft.ifft2(psf_fft * subap_kern_fft).real
-                    psf = self.xp.fft.fftshift(psf)
-
-                    if self._debugOutput:
-                        temppsfcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf_before_convolution
-                        tempfftcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf_fft
-                        tempconvcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf
-
-                    psf *= self._fp_mask
+            # FoV kernel
+            if self._kernelobj is not None and self.kernel_at_fov():
+                subap_kern = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
+                subap_kern /= self.xp.sum(subap_kern)
+                sKernel = subap_kern.shape[0]
+                if sKernel == cutsize:
+                    psf_cut = self.xp.fft.fftshift(self.xp.convolve(psf_cut, subap_kern, mode='same'))
                 else:
-                    tmp_fp4 = self.xp.fft.fftshift(tmp_fp4)
-                    tmp_fp4 *= self._fp_mask
-                    psf = self.xp.abs(tmp_fp4) ** 2
+                    psf_cut = self.xp.fft.fftshift(self.xp.convolve(psf_cut, self.xp.fft.fftshift(subap_kern, axes=(-2, -1)), mode='same'))
 
-                cutsize = self._cutsize
-                cutpixels = self._cutpixels
-                psf_cut = psf[cutpixels // 2: -cutpixels // 2, cutpixels // 2: -cutpixels // 2]
-
-                # FoV kernel
-                if self._kernelobj is not None and self.kernel_at_fov():
-                    subap_kern = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
-                    subap_kern /= self.xp.sum(subap_kern)
-                    sKernel = subap_kern.shape[0]
-                    if sKernel == cutsize:
-                        psf_cut = self.xp.fft.fftshift(self.xp.convolve(psf_cut, subap_kern, mode='same'))
-                    else:
-                        psf_cut = self.xp.fft.fftshift(self.xp.convolve(psf_cut, self.xp.fft.fftshift(subap_kern, axes=(-2, -1)), mode='same'))
-
-                self._psfimage[i * cutsize:(i + 1) * cutsize, j * cutsize:(j + 1) * cutsize] = psf_cut
+            # TODO this only works if the subap chunk is a strip, not multiple rows
+            psf_cut =  psf_cut.transpose(1, 0, 2).reshape(cutsize, cutsize*ny)
+            self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
         if psfTotalAtFft > 0:
             self._psfimage /= psfTotalAtFft

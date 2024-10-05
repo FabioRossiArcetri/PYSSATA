@@ -95,11 +95,11 @@ class ElectricField(BaseDataObj):
     def sub_ef(self, xfrom=None, xto=None, yfrom=None, yto=None, idx=None):
         if idx is not None:
             idx = self.xp.unravel_index(idx, self._A.shape)
-            xfrom, xto = self.xp.min(idx[0]), self.xp.max(idx[0])
-            yfrom, yto = self.xp.min(idx[1]), self.xp.max(idx[1])
+            xfrom, xto = self.xp.min(idx[0]), self.xp.max(idx[0] +1)
+            yfrom, yto = self.xp.min(idx[1]), self.xp.max(idx[1] +1)
         sub_ef = ElectricField(xto - xfrom + 1, yto - yfrom + 1, self.pixel_pitch)
-        sub_ef.A = self._A[xfrom:xto+1, yfrom:yto+1]
-        sub_ef.phaseInNm = self._phaseInNm[xfrom:xto+1, yfrom:yto+1]
+        sub_ef.A = self._A[xfrom:xto, yfrom:yto]
+        sub_ef.phaseInNm = self._phaseInNm[xfrom:xto, yfrom:yto]
         sub_ef.S0 = self._S0
         return sub_ef
 
