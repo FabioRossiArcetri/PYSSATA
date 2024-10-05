@@ -86,6 +86,7 @@ class SH(BaseProcessingObj):
         self._fft_size = 0
         self._input_ef_set = False
         self._trigger_geometry_calculated = False
+        self._extrapol_mat = None
         
         self._ccd_side = self._subap_npx * self._lenslet.n_lenses
         self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self._target_device_idx)
@@ -332,14 +333,11 @@ class SH(BaseProcessingObj):
         in_ef = self.inputs['in_ef'].get(self._target_device_idx)
         s = in_ef.size
 
-        # Interpolation of input array if needed
         fov_oversample = self._fov_ovs
 
         subap_wanted_fov = self._subap_wanted_fov
         sensor_pxscale = self._sensor_pxscale
         subap_npx = self._subap_npx
-        
-        M = s[0] * fov_oversample
 
         self._rotAnglePhInDeg = self._rotAnglePhInDeg + self._aRotAnglePhInDeg
         self._xyShiftPhInPixel = np.array([self._xShiftPhInPixel + self._aXShiftPhInPixel, self._yShiftPhInPixel + self._aYShiftPhInPixel]) * fov_oversample
@@ -347,50 +345,55 @@ class SH(BaseProcessingObj):
         if not self._floatShifts:
             self._xyShiftPhInPixel = np.round(self._xyShiftPhInPixel).astype(int)
 
-        if fov_oversample != 1 or self._rotAnglePhInDeg != 0 or np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
-            wf1_np = M
-            self._wf1 = ElectricField(M, M, in_ef.pixel_pitch / fov_oversample)
+        if fov_oversample != 1 or self._rotAnglePhInDeg != 0 or np.sum(np.abs(self._xyShiftPhInPixel)) != 0:
+            M0 = s[0] * fov_oversample
+            M1 = s[1] * fov_oversample
+            wf1 = ElectricField(M0, M1, in_ef.pixel_pitch / fov_oversample)
         else:
-            self._wf1 = in_ef            
+            wf1 = in_ef            
             
-        wf1_np = self._wf1.size[0]
-        f = self.xp.zeros((wf1_np, wf1_np), dtype=int)
+        f = self.xp.zeros(wf1.size, dtype=int)
         
         # Reuse geometry calculated in set_in_ef
         np_sub = self._congrid_np_sub
         fft_size = self._fft_size
 
         # Subaperture extracted from full pupil
-        self._wf3 = self.xp.zeros((fft_size, fft_size), dtype=complex)
+        wf3 = self.xp.zeros((fft_size, fft_size), dtype=complex)
    
         # Focal plane result from FFT
-        self._fp4 = ElectricField(fft_size, fft_size, self._wavelengthInNm / 1e9 / (self._wf1.pixel_pitch * fft_size))
-
-        self._fov_complete = self._fp4.size[0] * self._fp4.pixel_pitch
-        self._fp_mask = make_mask(fft_size, diaratio=subap_wanted_fov / self._fov_complete, square=self._squaremask, xp=self.xp)
-
-        # 1/2 Px tilt
-        self._tltf = self.get_tlt_f(np_sub, fft_size - np_sub)
+        fp4 = ElectricField(fft_size, fft_size, self._wavelengthInNm / 1e9 / (wf1.pixel_pitch * fft_size))
+        fov_complete = fp4.size[0] * fp4.pixel_pitch
 
         # Calculate subaperture indexes
         self._subap_idx = self.xp.zeros((self._lenslet.dimx, self._lenslet.dimy, np_sub * np_sub), dtype=int)
         for i in range(self._lenslet.dimx):
             for j in range(self._lenslet.dimy):
                 lens = self._lenslet.get(i, j)  # [x, y, size]
-                x = wf1_np / 2.0 * (1 + lens[0])
-                y = wf1_np / 2.0 * (1 + lens[1])
+                x = wf1.size[0] / 2.0 * (1 + lens[0])
+                y = wf1.size[1] / 2.0 * (1 + lens[1])
 
                 f.fill(0)
                 f[int(np.round(x - np_sub / 2.)):int(np.round(x + np_sub / 2.)),
-                int(np.round(y - np_sub / 2.)):int(np.round(y + np_sub / 2.))] = 1
+                  int(np.round(y - np_sub / 2.)):int(np.round(y + np_sub / 2.))] = 1
                 idx = self.xp.ravel_multi_index(f.nonzero(), f.shape)
                 self._subap_idx[i, j, :] = idx
 
         sensor_subap_fov = sensor_pxscale * subap_npx
-        fov_cut = self._fov_complete - sensor_subap_fov
-        self._cutpixels = int(np.round(fov_cut / self._fp4.pixel_pitch) / 2 * 2)
-        self._cutsize = (self._fp4.size[0] - self._cutpixels)
+        fov_cut = fov_complete - sensor_subap_fov
+        
+        self._cutpixels = int(np.round(fov_cut / fp4.pixel_pitch) / 2 * 2)
+        self._cutsize = fp4.size[0] - self._cutpixels
         self._psfimage = self.xp.zeros((self._cutsize * self._lenslet.dimx, self._cutsize * self._lenslet.dimy))
+        
+        # 1/2 Px tilt
+        self._tltf = self.get_tlt_f(np_sub, fft_size - np_sub)
+        self._fp_mask = make_mask(fft_size, diaratio=subap_wanted_fov / fov_complete, square=self._squaremask, xp=self.xp)
+
+        # Remember a few things
+        self._wf1 = wf1
+        self._wf3 = wf3
+        self._fp4 = fp4
 
     def trigger(self, t):
         
@@ -455,7 +458,7 @@ class SH(BaseProcessingObj):
                 self._wf3[:ss[0], :ss[1]] = wf2.ef_at_lambda(self._wavelengthInNm) * self._tltf
 
                 if self._debugOutput:
-                    tempefcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = wf3
+                    tempefcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = self._wf3
 
                 # Kernel triggering
                 if i == 0 and j == 0 and self._kernelobj is not None:
