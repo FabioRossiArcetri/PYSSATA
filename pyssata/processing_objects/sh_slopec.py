@@ -1,5 +1,4 @@
 
-import numbers
 import numpy as np
 
 from pyssata.data_objects.slopes import Slopes
@@ -8,6 +7,29 @@ from pyssata.base_value import BaseValue
 from pyssata.lib import make_mask
 
 from pyssata.processing_objects.slopec import Slopec
+
+from pyssata import cp
+
+if cp:
+    clamp_generic_less_gpu = cp.ElementwiseKernel(
+        'T x, T c',
+        'T y',
+        'y = (y < x)?c:y',
+        'clamp_generic')
+
+    clamp_generic_more_gpu = cp.ElementwiseKernel(
+        'T x, T c',
+        'T y',
+        'y = (y > x)?c:y',
+        'clamp_generic')
+
+
+def clamp_generic_less_cpu(x, c, y):
+    y[:] = np.where(y < x, c, y)
+
+
+def clamp_generic_more_cpu(x, c, y):
+    y[:] = np.where(y > x, c, y)
 
     
 class ShSlopec(Slopec):
@@ -25,7 +47,6 @@ class ShSlopec(Slopec):
         self._subap_counts = BaseValue()
         self._exp_weight = None
         self._subapdata = None
-        self._detailed_debug = -1
         self._xweights = None
         self._yweights = None
         self._xcweights = None
@@ -46,6 +67,13 @@ class ShSlopec(Slopec):
         self._cog_2ndstep_size = 0
         self._dotemplate = False
         self._store_thr_mask_cube = False
+
+        if self.xp == cp:
+            self._clamp_generic_less = clamp_generic_less_gpu
+            self._clamp_generic_more = clamp_generic_more_gpu
+        else:
+            self._clamp_generic_less = clamp_generic_less_cpu
+            self._clamp_generic_more = clamp_generic_more_cpu
 
         # Property settings
         self.exp_weight = exp_weight
@@ -100,33 +128,33 @@ class ShSlopec(Slopec):
         if quadcell_mode:
             x = np.where(x > 0, 1.0, -1.0)
             y = np.where(y > 0, 1.0, -1.0)
-            xc, yc = np.copy(x), np.copy(y)
+            xc, yc = x, y
         else:
-            xc, yc = np.copy(x), np.copy(y)
+            xc, yc = x, y
             # Apply exponential weights if exp_weight is not 1
             x = np.where(x > 0, np.power(x, exp_weight), -np.power(np.abs(x), exp_weight))
             y = np.where(y > 0, np.power(y, exp_weight), -np.power(np.abs(y), exp_weight))
 
         # Adjust xc, yc for centroid calculations in two steps
-        xc = np.where(x > 0, np.copy(xc), -np.abs(xc))
-        yc = np.where(y > 0, np.copy(yc), -np.abs(yc))
+        xc = np.where(x > 0, xc, -np.abs(xc))
+        yc = np.where(y > 0, yc, -np.abs(yc))
 
         # Apply windowing or weighted pixel mask
         if weightedPixRad != 0:
             if windowing:
                 # Windowing case (must be an integer)
-                mask_weighted = make_mask(np_sub, diaratio=(2.0 * weightedPixRad / np_sub), xp=self.xp)
+                mask_weighted = make_mask(np_sub, diaratio=(2.0 * weightedPixRad / np_sub), xp=np)
             else:
                 # Weighted Center of Gravity (WCoG)
                 mask_weighted = self.psf_gaussian(np_sub, 2, [weightedPixRad, weightedPixRad])
-                mask_weighted /= self.xp.max(mask_weighted)
+                mask_weighted /= np.max(mask_weighted)
 
             mask_weighted[mask_weighted < 1e-6] = 0.0
 
-            x *= mask_weighted.astype(float)
-            y *= mask_weighted.astype(float)
+            x *= mask_weighted.astype(self.dtype)
+            y *= mask_weighted.astype(self.dtype)
         else:
-            mask_weighted = self.xp.ones((np_sub, np_sub), dtype=float)
+            mask_weighted = np.ones((np_sub, np_sub), dtype=self.dtype)
 
         return {"x": x, "y": y, "xc": xc, "yc": yc, "mask_weighted": mask_weighted}
 
@@ -153,7 +181,7 @@ class ShSlopec(Slopec):
                     print(f'self._weightedPixRad: {self._weightedPixRad}')
                 self.set_xy_weights()
 
-        if self._dotemplate or self._correlation or self._two_steps_cog or self._detailed_debug > 0:
+        if self._dotemplate or self._correlation or self._two_steps_cog:
             self.calc_slopes_for(t, accumulated=accumulated)
         else:
             self.calc_slopes_nofor(t, accumulated=accumulated)
@@ -326,25 +354,19 @@ class ShSlopec(Slopec):
             print('subapdata is not valid.')
             return
 
+        print('nofor')
         in_pixels = self.inputs['in_pixels'].get(self._target_device_idx).pixels
 
         n_subaps = self._subapdata.n_subaps
         np_sub = self._subapdata.np_sub
-        pixels = self._accumulated_pixels.pixels if accumulated else in_pixels
-
-        if self._store_thr_mask_cube:
-            thr_mask_cube = self.xp.zeros((np_sub, np_sub, n_subaps), dtype=int)
-
-        flux_per_subaperture_vector = self.xp.zeros(n_subaps, dtype=float)
-        max_flux_per_subaperture_vector = self.xp.zeros(n_subaps, dtype=float)
+        orig_pixels = self._accumulated_pixels.pixels if accumulated else in_pixels
 
         if self._thr_value > 0 and self._thr_ratio_value > 0:
             raise ValueError("Only one between _thr_value and _thr_ratio_value can be set.")
 
         # Reform pixels based on the subaperture index
-        orig_pixels = pixels
-        idx2d = self.xp.unravel_index(self.subap_idx, pixels.shape)
-        pixels = pixels[idx2d].T
+        idx2d = self.xp.unravel_index(self.subap_idx, orig_pixels.shape)
+        pixels = orig_pixels[idx2d].T
         
         print(self.subap_idx[0])
         print(self.xp.unravel_index(self.subap_idx[0], orig_pixels.shape))
@@ -390,24 +412,17 @@ class ShSlopec(Slopec):
         # Thresholding logic
         if self._thr_ratio_value > 0:
             thr = self._thr_ratio_value * max_flux_per_subaperture_vector
+            thr = thr[:, self.xp.newaxis] * self.xp.ones((1, np_sub * np_sub))
         elif self._thr_pedestal or self._thr_value > 0:
             thr = self._thr_value
         else:
             thr = 0
 
-        if isinstance(thr, numbers.Number):
-            thr = self.xp.tile(thr, (np_sub * np_sub, n_subaps))
-        else:
-            thr = thr[:, self.xp.newaxis] * self.xp.ones((1, np_sub * np_sub))
-
         if self._thr_pedestal:
-            thr_idx = self.xp.where(pixels < thr)
+            self._clamp_generic_less(thr, 0, pixels)
         else:
             pixels -= thr
-            thr_idx = self.xp.where(pixels < 0)
-
-        if len(thr_idx[0]) > 0:
-            pixels[thr_idx] = 0
+            self._clamp_generic_less(0, 0, pixels)
 
         if self._store_thr_mask_cube:
             thr_mask_cube = thr.reshape(np_sub, np_sub, n_subaps)
@@ -415,12 +430,13 @@ class ShSlopec(Slopec):
         # Compute denominator for slopes
         subap_tot = self.xp.sum(pixels * self._mask_weighted.reshape(np_sub * np_sub, 1), axis=0)
         mean_subap_tot = self.xp.mean(subap_tot)
-        idx_le_0 = self.xp.where(subap_tot <= mean_subap_tot * 1e-3)[0]
-        if len(idx_le_0) > 0:
-            subap_tot[idx_le_0] = mean_subap_tot
         factor = 1.0 / subap_tot
-        if len(idx_le_0) > 0:
-            factor[idx_le_0] = 0.0
+
+# TEST replacing these three lines with clamp_generic_more
+#        idx_le_0 = self.xp.where(subap_tot <= mean_subap_tot * 1e-3)[0]
+#        if len(idx_le_0) > 0:
+#            factor[idx_le_0] = 0.0
+        self._clamp_generic_more( 1.0 / (mean_subap_tot * 1e-3), 0, factor)
 
         # Compute slopes
         sx = self.xp.sum(pixels * self._xweights.reshape(np_sub * np_sub, 1) * factor[self.xp.newaxis, :], axis=0)
@@ -458,8 +474,8 @@ class ShSlopec(Slopec):
             print(f"Slopes min, max and rms : {self.xp.min(sx)}, {self.xp.max(sx)}, {self.xp.sqrt(self.xp.mean(sx ** 2))}")
 
     def psf_gaussian(self, np_sub, fwhm):
-        x = self.xp.linspace(-1, 1, np_sub)
-        y = self.xp.linspace(-1, 1, np_sub)
-        x, y = self.xp.meshgrid(x, y)
-        gaussian = self.xp.exp(-4 * self.xp.log(2) * (x ** 2 + y ** 2) / fwhm[0] ** 2)
+        x = np.linspace(-1, 1, np_sub)
+        y = np.linspace(-1, 1, np_sub)
+        x, y = np.meshgrid(x, y)
+        gaussian = np.exp(-4 * np.log(2) * (x ** 2 + y ** 2) / fwhm[0] ** 2, dtype=self.dtype)
         return gaussian
