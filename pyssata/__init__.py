@@ -54,12 +54,12 @@ def init(device_idx=-1, precision=0):
             cp = cp
         except:
             print("Cupy import failed. PYSSATA will fall back to CPU use.")
-            cp = np
+            cp = None
             xp = np
             default_target_device_idx=-1
     else:
         print("env variable PYSSATA_DISABLE_GPU prevents using the GPU.")
-        cp = np
+        cp = None
         xp = np
         default_target_device_idx=-1
 
@@ -88,7 +88,7 @@ def init(device_idx=-1, precision=0):
 
 
 def cpuArray(v):    
-    if isinstance(v, (np.ndarray, np.float64, np.int64, np.float32)):
+    if isinstance(v, (np.ndarray, np.float64, np.int64, np.float32, type(None))):
         return v
     else:
         # which one is better, xp.asnumpy(v) or v.get() ? almost the same but asnumpy is more general
