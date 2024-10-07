@@ -14,7 +14,7 @@ class IIRControl(BaseProcessingObj):
         self._verbose = True
         self._iirfilter = iirfilter
         
-        super().__init__(target_device_idx=device_idx, precision=precision)        
+        super().__init__(device_idx=device_idx, precision=precision)        
 
         self._delay = delay if delay is not None else 0
         self._n = iirfilter.nfilter
@@ -25,7 +25,7 @@ class IIRControl(BaseProcessingObj):
         self._ist = self.xp.zeros_like(iirfilter.num)
         self._ost = self.xp.zeros_like(iirfilter.den)
 
-        self._out_comm = BaseValue(target_device_idx=device_idx)
+        self._out_comm = BaseValue(device_idx=device_idx)
    
         self.inputs['delta_comm'] = InputValue(type=BaseValue)
         self.outputs['out_comm'] = self._out_comm
@@ -137,7 +137,7 @@ class IIRControl(BaseProcessingObj):
     def trigger(self, t):
         ist = self._ist
         ost = self._ost
-        in_delta_comm = self.inputs['delta_comm'].get(self._target_device_idx)
+        in_delta_comm = self.inputs['delta_comm'].get(self._device_idx)
 
         if in_delta_comm.generation_time == t:
             if self._opticalgain is not None:

@@ -147,10 +147,10 @@ class IFunc(BaseDataObj):
             else:
                 self._influence_function = self._influence_function[:, start_mode:nmodes] 
       
-    def restore(filename, target_device_idx=None, exten=1):
+    def restore(filename, device_idx=None, exten=1):
         with fits.open(filename) as hdul:
             ifunc = hdul[exten].data.T
             mask = hdul[exten+1].data
-        return IFunc(ifunc, mask=mask, target_device_idx=target_device_idx)
+        return IFunc(ifunc, mask=mask, device_idx=device_idx)
 
 

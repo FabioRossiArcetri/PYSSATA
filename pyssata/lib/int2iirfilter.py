@@ -27,12 +27,12 @@
 from pyssata.data_objects.iirfilter import IIRFilter
 
 
-def int2iirfilter(gain, ff=None, target_device_idx=None, precision=None):
+def int2iirfilter(gain, ff=None, device_idx=None, precision=None):
 
     # This routine is called before a parent object can be initialized,
     # so get the xp and dtpye information from this IIRFilter instead.
     
-    iirfilter = IIRFilter(target_device_idx=target_device_idx, precision=precision)
+    iirfilter = IIRFilter(device_idx=device_idx, precision=precision)
     xp = iirfilter.xp
     float_dtype = iirfilter.dtype
 

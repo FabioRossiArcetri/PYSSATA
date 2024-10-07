@@ -9,7 +9,7 @@ class BaseOperation(BaseProcessingObj):
     ''''Simple operations with base value(s)'''
 
     def __init__(self, constant_mult=None, constant_div=None, constant_sum=None, constant_sub=None, mult=False, div=False, sum=False, sub=False,
-                 target_device_idx=None, precision=None):
+                 device_idx=None, precision=None):
         """
         Initialize the base operation object.
 
@@ -36,7 +36,7 @@ class BaseOperation(BaseProcessingObj):
         self._div = div
         self._sum = sum
         self._sub = sub
-        self._out_value = BaseValue(target_device_idx=target_device_idx)
+        self._out_value = BaseValue(device_idx=device_idx)
 
         self.inputs['in_value1'] = InputValue(type=BaseValue)
         self.inputs['in_value2'] = InputValue(type=BaseValue)
@@ -63,8 +63,8 @@ class BaseOperation(BaseProcessingObj):
         return self._out_value
 
     def trigger(self, t):
-        value1 = self.inputs['in_value1'].get(self._target_device_idx)
-        value2 = self.inputs['in_value2'].get(self._target_device_idx)
+        value1 = self.inputs['in_value1'].get(self._device_idx)
+        value2 = self.inputs['in_value2'].get(self._device_idx)
         if value1 and value1.generation_time == t:
             if self._constant_mult is not None:
                 self._out_value.value = value1.value * self._constant_mult
@@ -100,7 +100,7 @@ class BaseOperation(BaseProcessingObj):
         Returns:
         bool: True if the check is successful, False otherwise
         """
-        return self._out_value is not None and self.inputs['in_value1'].get(self._target_device_idx) is not None
+        return self._out_value is not None and self.inputs['in_value1'].get(self._device_idx) is not None
 
     def save(self, filename):
         hdr = fits.Header()

@@ -6,7 +6,7 @@ from pyssata.base_value import BaseValue
 
 class ModesDisplay(BaseProcessingObj):
     def __init__(self, disp_factor=1, wsize=(600, 300), window=22, yrange=(-100, 100), oplot=False, color=1, psym=-4, title=''):
-        super().__init__(target_device_idx=-1)
+        super().__init__(device_idx=-1)
 
         self._modes = None
         self._wsize = wsize
@@ -90,7 +90,7 @@ class ModesDisplay(BaseProcessingObj):
         plt.title(self._title if self._title != '' else 'modes')
 
     def trigger(self, t):
-        m = self.inputs['modes'].get(self._target_device_idx)
+        m = self.inputs['modes'].get(self._device_idx)
         if m.generation_time == t:
             if not self._opened and not self._oplot:
                 self.set_w()
@@ -108,7 +108,7 @@ class ModesDisplay(BaseProcessingObj):
             plt.pause(0.01)
 
     def run_check(self, time_step):
-        return self.inputs['modes'].get(self._target_device_idx) is not None
+        return self.inputs['modes'].get(self._device_idx) is not None
 
     @classmethod
     def from_dict(cls, params):

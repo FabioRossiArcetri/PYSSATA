@@ -6,8 +6,8 @@ from pyssata.data_objects.base_data_obj import BaseDataObj
 from astropy.io import fits
 
 class IIRFilter(BaseDataObj):
-    def __init__(self, target_device_idx=None, precision=None):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+    def __init__(self, device_idx=None, precision=None):
+        super().__init__(device_idx=device_idx, precision=precision)
         self.nfilter = 0
         self._ordnum = None
         self._ordden = None
