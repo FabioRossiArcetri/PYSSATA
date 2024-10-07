@@ -87,6 +87,9 @@ class Modalrec(BaseProcessingObj):
         self.outputs['out_modes'] = self.out_modes
         self.outputs['out_pseudo_ol_modes'] = self.pseudo_ol_modes
         self.outputs['out_modes_first_step'] = self.modes_first_step
+#       uncomment when the code is a stream
+#        super().build_stream()
+
 
     def set_layer_modes_list(self):
         if self._recmat.modes2recLayer is not None:
@@ -173,25 +176,25 @@ class Modalrec(BaseProcessingObj):
             raise Exception("Control can be added only if POLC is set to 1.")
         self._control_list.append(control)
 
-    def trigger(self, t, slope_ptr=None):
+    def trigger_code(self): # , slope_ptr=None
         if self._recmat._recmat is None:
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
 
         slopes = self.inputs['in_slopes'].get(self._target_device_idx)
         
-        if slopes.generation_time == t:
+        if slopes.generation_time == self.current_time:
             comm_new = []
             if len(self._control_list) > 0:
                 for control in self._control_list:
                     comm_new.append(control.get_past_state(0))
 
-            if self._modes_first_step.generation_time != t:
+            if self._modes_first_step.generation_time != self.current_time:
                 if self._polc:
-                    self.compute_pseudo_ol_slopes(t)
+                    self.compute_pseudo_ol_slopes(self.current_time)
                     m = self.compute_modes(self._recmat, self._pseudo_ol_slopes.ptr_slopes)
                     self._pseudo_ol_modes.value = m
-                    self._pseudo_ol_modes.generation_time = t
+                    self._pseudo_ol_modes.generation_time = self.current_time
 
                     if len(m) == len(comm_new):
                         self._modes_first_step.value = m - comm_new
@@ -201,12 +204,12 @@ class Modalrec(BaseProcessingObj):
                     m = self.compute_modes(self._recmat, slopes.slopes)
                     self._modes_first_step.value = m
 
-                self._modes_first_step.generation_time = t
+                self._modes_first_step.generation_time = self.current_time
 
                 if self._layer_modes_list is not None:
                     for i, idx_list in enumerate(self._layer_idx_list):
                         self._layer_modes_list[i].value = self._modes_first_step.value[idx_list]
-                        self._layer_modes_list[i].generation_time = t
+                        self._layer_modes_list[i].generation_time = self.current_time
 
             if self._projmat is None:
                 if self._verbose:
@@ -219,13 +222,13 @@ class Modalrec(BaseProcessingObj):
                 if self._verbose:
                     print(f"first {min(6, len(mp))} residual values after projection: {mp[:min(5, len(mp))]}")
                 self._modes.value = mp
-                self._modes.generation_time = t
+                self._modes.generation_time = self.current_time
 
             if self._polc and len(self._modes_first_step.value) != len(comm_new):
                 self._modes.value -= self._control_list[self._dm_idx].get_past_state(0)
         else:
             if self._verbose:
-                print(f"slope generation time: {slopes.generation_time} is not equal to {t}")
+                print(f"slope generation time: {slopes.generation_time} is not equal to {self.current_time}")
 
     def compute_pseudo_ol_slopes(self, t, slopes=None):
         if slopes is None:

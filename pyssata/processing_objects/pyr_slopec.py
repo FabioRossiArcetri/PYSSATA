@@ -72,7 +72,7 @@ class PyrSlopec(Slopec):
                 self._slopes.resize(len(self._pupdata.ind_pup) * 2)
             self._accumulated_slopes.resize(len(self._pupdata.ind_pup) * 2)
 
-    def calc_slopes(self, t):
+    def calc_slopes(self):
         if not self._pupdata:
             return
 
@@ -85,7 +85,7 @@ class PyrSlopec(Slopec):
         sx, sy, flux = pyr_compute_slopes(pixels, self._pupdata.ind_pup, self._shlike, self._slopes_from_intensity, self._norm_factor, threshold, xp=self.xp)
 
         self._flux_per_subaperture_vector.value = flux
-        self._flux_per_subaperture_vector.generation_time = t
+        self._flux_per_subaperture_vector.generation_time = self.current_time
 
         idx  = self._pupdata.ind_pup.flatten().astype(self.xp.int64)
         v = pixels.flatten()
@@ -98,9 +98,9 @@ class PyrSlopec(Slopec):
         else:
             self._slopes.xslopes = sx
             self._slopes.yslopes = sy
-        self._slopes.generation_time = t
-        self._total_counts.generation_time = t
-        self._subap_counts.generation_time = t
+        self._slopes.generation_time = self.current_time
+        self._total_counts.generation_time = self.current_time
+        self._subap_counts.generation_time = self.current_time
 
 #        if 1:#if self._verbose:  # Verbose?
 #            print(f'Slopes min, max and rms: {self.xp.min(self.xp.array([sx, sy]))}, {self.xp.max(self.xp.array([sx, sy]))}  //  {self.xp.sqrt(self.xp.mean(self.xp.array([sx**2, sy**2])))}')

@@ -14,12 +14,12 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         """
         BaseTimeObj.__init__(self, target_device_idx=target_device_idx, precision=precision)
 
-        if self._target_device_idx<0:
-            from scipy.ndimage import rotate
-            from scipy.interpolate import RegularGridInterpolator
-        else:
+        if self._target_device_idx>=0:
             from cupyx.scipy.ndimage import rotate
             from cupyx.scipy.interpolate import RegularGridInterpolator
+        else:
+            from scipy.ndimage import rotate
+            from scipy.interpolate import RegularGridInterpolator
 
 
         self.rotate = rotate        

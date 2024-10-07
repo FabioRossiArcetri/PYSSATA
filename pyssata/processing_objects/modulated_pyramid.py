@@ -132,6 +132,8 @@ class ModulatedPyramid(BaseProcessingObj):
         self._mod_steps = int(mod_step)
         self._ttexp = None
         self.cache_ttexp()
+#       uncomment when the code is a stream
+        super().build_stream()
 
     @property
     def mod_amp(self):
@@ -412,13 +414,13 @@ class ModulatedPyramid(BaseProcessingObj):
 
             self._flux_factor_vector = self.xp.ones(self._mod_steps, dtype=self.dtype)
 
-    def trigger(self, t):
+    def trigger_code(self):
         in_ef = self.inputs['in_ef'].get(self._target_device_idx)
-        if in_ef.generation_time != t:
+        if in_ef.generation_time != self.current_time:
             return
 
         if self._extended_source_in_on and self._extSourcePsf is not None:
-            if self._extSourcePsf.generation_time == t:
+            if self._extSourcePsf.generation_time == self.current_time:
                 if self.xp.sum(self.xp.abs(self._extSourcePsf.value)) > 0:
                     self._extSource.updatePsf(self._extSourcePsf.value)
                     self._flux_factor_vector = self._extSource.coeff_flux
@@ -515,13 +517,13 @@ class ModulatedPyramid(BaseProcessingObj):
             ccd = ccd_internal
 
         self._out_i.i = ccd
-        self._out_i.generation_time = t
+        self._out_i.generation_time = self.current_time
         self._psf_tot.value = psf_tot
-        self._psf_tot.generation_time = t
+        self._psf_tot.generation_time = self.current_time
         self._psf_bfm.value = psf_bfm
-        self._psf_bfm.generation_time = t
+        self._psf_bfm.generation_time = self.current_time
         self._out_transmission.value = transmission
-        self._out_transmission.generation_time = t
+        self._out_transmission.generation_time = self.current_time
 
     def run_check(self, time_step):
         if self._extended_source_in_on:

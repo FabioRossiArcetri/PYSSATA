@@ -163,6 +163,10 @@ class CCD(BaseProcessingObj):
         self.outputs['out_pixels'] = self._pixels
         self.outputs['integrated_i'] = self._integrated_i
 
+#       uncomment when the code is a stream
+#        super().build_stream()
+
+
     @property
     def dt(self):
         return self._dt
@@ -195,10 +199,10 @@ class CCD(BaseProcessingObj):
         self._pixels.size = (s[0] // value, s[1] // value)
         self._binning = value
 
-    def trigger(self, t):
-        if self._start_time <= 0 or t >= self._start_time:
+    def trigger_code(self):
+        if self._start_time <= 0 or self.current_time >= self._start_time:
             in_i = self.inputs['in_i'].get(self._target_device_idx)
-            if in_i.generation_time == t:
+            if in_i.generation_time == self.current_time:
                 if self._loop_dt == 0:
                     raise ValueError('ccd object loop_dt property must be set.')
                 if self._doNotChangeI:
@@ -206,7 +210,7 @@ class CCD(BaseProcessingObj):
                 else:
                     self._integrated_i.sum(in_i, factor=self.t_to_seconds(self._loop_dt) * self._bandw)
 
-            if (t + self._loop_dt - self._dt - self._start_time) % self._dt == 0:
+            if (self.current_time + self._loop_dt - self._dt - self._start_time) % self._dt == 0:
                 if self._doNotChangeI:
                     self._pixels.pixels = self._integrated_i.i.copy()
                 else:
@@ -214,7 +218,7 @@ class CCD(BaseProcessingObj):
                     self.apply_qe()
                     self.apply_noise()
 
-                self._pixels.generation_time = t
+                self._pixels.generation_time = self.current_time
                 self._integrated_i.i *= 0.0
 
     def apply_noise(self):

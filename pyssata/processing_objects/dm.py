@@ -50,6 +50,8 @@ class DM(BaseProcessingObj):
         self._sign = -1
         self.inputs['in_command'] = InputValue(type=BaseValue)
         self.outputs['out_layer'] = self._layer
+#       uncomment when the code is a stream
+#        super().build_stream()
     
     def compute_shape(self):
         commands_input = self.inputs['in_command'].get(self._target_device_idx)
@@ -68,21 +70,21 @@ class DM(BaseProcessingObj):
 
         self._layer.phaseInNm = temp_matrix
 
-    def trigger(self, t):
+    def trigger_code(self):
         command = self.inputs['in_command'].get(self._target_device_idx)
         if self._verbose:
-            print(f"time: {self.t_to_seconds(t)}")
+            print(f"time: {self.current_time_seconds}")
             print(f"command generation time: {self.t_to_seconds(command.generation_time)}")
             commands = command.value
             
             if commands.size > 0:
                 print(f"first {min(6, commands.size)} command values: {commands[:min(5, commands.size)]}")
         
-        if command.generation_time == t:
+        if command.generation_time == self.current_time:
             if self._verbose:
                 print("---> command applied to DM")
             self.compute_shape()
-            self._layer.generation_time = t
+            self._layer.generation_time = self.current_time
         elif self._verbose:
             print(f"command not applied to DM, command generation time: {command.generation_time} is not equal to {t}")
     

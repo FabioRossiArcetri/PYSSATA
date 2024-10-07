@@ -42,6 +42,8 @@ class AtmoPropagation(BaseProcessingObj):
             self.outputs[name] = self._pupil_dict[name]
             
         self.inputs['layer_list'] = InputList(type=Layer)
+#       uncomment when the code is a stream
+#        super().build_stream()
 
     def add_source(self, name, source):
         ef = ElectricField(self._pixel_pupil, self._pixel_pupil, self._pixel_pitch, target_device_idx=self._target_device_idx)
@@ -95,7 +97,7 @@ class AtmoPropagation(BaseProcessingObj):
                 
                 self._propagators.append(H)
 
-    def propagate(self, t):
+    def trigger_code(self):
         if self._doFresnel:
             self.doFresnel_setup()
 
@@ -193,16 +195,13 @@ class AtmoPropagation(BaseProcessingObj):
                 if self._doFresnel:
                     update_ef.physical_prop(self.wavelengthInNm, propagator, temp_array=None)
 
+            pupil.generation_time = self.current_time
 
-            pupil.generation_time = t
-
-    def trigger(self, t):
-        self.propagate(t)
 
     def run_check(self, time_step):
         # TODO here for no better place, we need something like a "setup()" method called before the loop starts        
         self._layer_list = self.inputs['layer_list'].get(self._target_device_idx)        
-        self._shiftXY_list = [layer.shiftXYinPixel.get() if hasattr(layer, 'shiftXYinPixel') else np.array([0, 0]) for layer in self._layer_list]
+        self._shiftXY_list = [layer.shiftXYinPixel if hasattr(layer, 'shiftXYinPixel') else np.array([0, 0]) for layer in self._layer_list]
         self._rotAnglePhInDeg_list = [layer.rotInDeg if hasattr(layer, 'rotInDeg') else 0 for layer in self._layer_list]
         self._magnification_list = [max(layer.magnification, 1.0) if hasattr(layer, 'magnification') else 1.0 for layer in self._layer_list]
 
