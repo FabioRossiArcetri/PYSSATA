@@ -99,10 +99,12 @@ rec:
     in_slopes:        'slopec.out_slopes'
 
 
-#control:
-#  class:             'IntControl'
-#  delay:             2                      # Total temporal delay in time steps
-#  int_gain_data:    'g0.80_4094'
+control:
+  class:             'IntControl'
+  delay:             2                      # Total temporal delay in time steps
+  int_gain_data:    'g0.80_4094'
+  inputs:
+      delta_comm: 'rec.out_modes'     
 
 
 dm:
@@ -110,7 +112,7 @@ dm:
   ifunc_object:      'EELT512nm4094klnogapRoundObs'
   height:            0                      # DM height [m]
   inputs:
-      in_command: 'rec.out_modes'              # TODO skip control object for now
+      in_command: 'control.out_comm'
 
 
 psf:
