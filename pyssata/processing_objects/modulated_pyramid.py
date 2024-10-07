@@ -301,13 +301,13 @@ class ModulatedPyramid(BaseProcessingObj):
 
         iu = 1j  # complex unit
         
-        self._ttexp = self.xp.ndarray(shape=(self._tilt_x.shape[0], self._tilt_x.shape[1], self._mod_steps), dtype=self.complex_dtype)
+        self._ttexp = self.xp.ndarray(shape=(self._mod_steps, self._tilt_x.shape[0], self._tilt_x.shape[1]), dtype=self.complex_dtype)
 
         for tt in range(self._mod_steps):
             angle = 2 * self.xp.pi * (tt / self._mod_steps)
             pup_tt = source.coeff_tiltx[tt] * self._ext_xtilt + source.coeff_tilty[tt] * self._ext_ytilt
             pup_focus = -1 * source.coeff_focus[tt] * self._ext_focus
-            self._ttexp[:, :, tt] = self.xp.exp(-iu * (pup_tt + pup_focus))
+            self._ttexp[tt, :, :] = self.xp.exp(-iu * (pup_tt + pup_focus))
 
         i = source.coeff_flux
         idx = self.xp.where(self.xp.abs(i) < self.xp.max(self.xp.abs(i)) * 1e-5)[0]
@@ -403,12 +403,12 @@ class ModulatedPyramid(BaseProcessingObj):
 
             iu = 1j  # complex unit
 
-            self._ttexp = self.xp.ndarray(shape=(self._tilt_x.shape[0], self._tilt_x.shape[1], self._mod_steps), dtype=self.complex_dtype)
+            self._ttexp = self.xp.ndarray(shape=(self._mod_steps, self._tilt_x.shape[0], self._tilt_x.shape[1]), dtype=self.complex_dtype)
             for tt in range(self._mod_steps):
                 angle = 2 * self.xp.pi * (tt / self._mod_steps)
                 pup_tt = self._mod_amp * self.xp.sin(angle) * self._tilt_x + \
                          self._mod_amp * self.xp.cos(angle) * self._tilt_y
-                self._ttexp[:, :, tt] = self.xp.exp(-iu * pup_tt, dtype=self.complex_dtype)
+                self._ttexp[tt, :, :] = self.xp.exp(-iu * pup_tt, dtype=self.complex_dtype)
 
             self._flux_factor_vector = self.xp.ones(self._mod_steps, dtype=self.dtype)
 
@@ -443,21 +443,23 @@ class ModulatedPyramid(BaseProcessingObj):
         psf_bfm = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
         psf_tot = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
 
-        u_tlt = self.xp.zeros((self._fft_totsize, self._fft_totsize, self.mod_steps), dtype=self.complex_dtype)
+        u_tlt = self.xp.zeros((self.mod_steps, self._fft_totsize, self._fft_totsize), dtype=self.complex_dtype)
         
         mean_value = self.xp.median(self._flux_factor_vector) * 1e-3
-        fp_mask = self._fp_mask[:,:, self.xp.newaxis]
-        my_exp = self._myexp[:,:, self.xp.newaxis]
+        fp_mask = self._fp_mask[self.xp.newaxis, :,:]
+        my_exp = self._myexp[self.xp.newaxis, :,:]
+
 
         #plan1 = get_fft_plan(u_tlt, axes=(0, 1), value_type='C2C')            
         #plan2 = get_fft_plan(u_tlt, axes=(0, 1), value_type='C2C')            
         ffv = self.xp.where(self._flux_factor_vector > mean_value, self._flux_factor_vector, 0)
-        tmp = self.xp.repeat(u_tlt_const[:, :, self.xp.newaxis], ffv.shape[0], axis=2)            
+        ffv = ffv[:, self.xp.newaxis, self.xp.newaxis]
+        tmp = self.xp.repeat(u_tlt_const[self.xp.newaxis, :, :], ffv.shape[0], axis=0)            
         tmp = tmp * self._ttexp
         ss = tmp.shape
-        u_tlt[0:ss[0], 0:ss[1], :] = tmp
+        u_tlt[:, 0:ss[1], 0:ss[2]] = tmp
         #with plan1:
-        u_fp = self.xp.fft.fftshift(self.xp.fft.fft2(u_tlt, axes=(0, 1)), axes=(0, 1))                                       
+        u_fp = self.xp.fft.fftshift(self.xp.fft.fft2(u_tlt, axes=(-2, -1)), axes=(-2, -1))                                       
         if self._target_device_idx>-1:
             u_fp_pyr, fpsf = pyr1_fused(u_fp, ffv, my_exp, fp_mask)
         else:
@@ -466,7 +468,7 @@ class ModulatedPyramid(BaseProcessingObj):
             u_fp *= fp_mask
             u_fp_pyr = u_fp * my_exp
         #with plan2:
-        pup_pyr_tot = self.xp.sum( self.xp.abs(self.xp.fft.ifft2(u_fp_pyr, axes=(0, 1))) ** 2 * ffv, axis=2)            
+        pup_pyr_tot = self.xp.sum( self.xp.abs(self.xp.fft.ifft2(u_fp_pyr, axes=(-2, -1))) ** 2 * ffv, axis=0)            
         psf_bfm = self.xp.sum(fpsf , axis=2)
         psf_tot = self.xp.sum(fpsf*fp_mask, axis=2)
         # self.xp.cuda.runtime.deviceSynchronize()
