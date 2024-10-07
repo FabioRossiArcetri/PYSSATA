@@ -5,6 +5,7 @@ from scipy.stats import gamma
 from scipy.ndimage import convolve
 
 from pyssata import show_in_profiler
+from pyssata import cp
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue
 from pyssata.data_objects.pixels import Pixels
@@ -13,16 +14,12 @@ from pyssata.lib.calc_detector_noise import calc_detector_noise
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 
 
-try:
-    import cupy as cp
+if cp:
     clamp_generic_gpu = cp.ElementwiseKernel(
         'T x, T c',
         'T y',
         'y = (y < x)?c:y',
         'clamp_generic')
-
-except ImportError:
-    pass
 
 def clamp_generic_cpu(x, c, y):
     y[:] = np.where(y < x, c, y)

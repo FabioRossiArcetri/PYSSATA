@@ -2,11 +2,14 @@ from astropy.io import fits
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
+from pyssata.connections import InputValue
+
 
 class BaseOperation(BaseProcessingObj):
     ''''Simple operations with base value(s)'''
 
-    def __init__(self, constant_mult=None, constant_div=None, constant_sum=None, constant_sub=None, mult=False, div=False, sum=False, sub=False):
+    def __init__(self, constant_mult=None, constant_div=None, constant_sum=None, constant_sub=None, mult=False, div=False, sum=False, sub=False,
+                 target_device_idx=None, precision=None):
         """
         Initialize the base operation object.
 
@@ -23,18 +26,21 @@ class BaseOperation(BaseProcessingObj):
         super().__init__()
 
         self._constant_mult = constant_mult
-        self._constant_div = 1.0 / constant_div if constant_div is not None else None
         self._constant_sum = constant_sum
-        self._constant_sub = -constant_sub if constant_sub is not None else None
+        if constant_div is not None:
+            self._constant_mult = 1.0 / constant_div
+        if constant_sub is not None:
+            self._constant_sum = -constant_sub
 
         self._mult = mult
         self._div = div
         self._sum = sum
         self._sub = sub
+        self._out_value = BaseValue(target_device_idx=target_device_idx)
 
-        self._in_value1 = None
-        self._in_value2 = None
-        self._out_value = BaseValue()
+        self.inputs['in_value1'] = InputValue(type=BaseValue)
+        self.inputs['in_value2'] = InputValue(type=BaseValue)
+        self.outputs['out_value'] = self._out_value
 
     @property
     def in_value1(self):
@@ -57,22 +63,30 @@ class BaseOperation(BaseProcessingObj):
         return self._out_value
 
     def trigger(self, t):
-        if self._in_value1 and self._in_value1.generation_time == t:
+        value1 = self.inputs['in_value1'].get(self._target_device_idx)
+        value2 = self.inputs['in_value2'].get(self._target_device_idx)
+        if value1 and value1.generation_time == t:
             if self._constant_mult is not None:
-                self._out_value.value = self._in_value1.value * self._constant_mult
+                self._out_value.value = value1.value * self._constant_mult
             if self._constant_sum is not None:
-                self._out_value.value = self._in_value1.value + self._constant_sum
+                self._out_value.value = value1.value + self._constant_sum
             self._out_value.generation_time = t
 
-        if self._in_value1 and self._in_value2 and (self._in_value1.generation_time == t or self._in_value2.generation_time == t):
+        if value1 and value2 and (value1.generation_time == t or value2.generation_time == t):
+            temp = 0
             if self._mult:
-                self._out_value.value = self._in_value1.value * self._in_value2.value
+                if value1.value is not None: temp = value1.value.copy()
+                if value2.value is not None: temp *= value2.value.copy()
             if self._div:
-                self._out_value.value = self._in_value1.value / self._in_value2.value
+                if value1.value is not None: temp = value1.value.copy()
+                if value2.value is not None: temp /= value2.value.copy()
             if self._sum:
-                self._out_value.value = self._in_value1.value + self._in_value2.value
+                if value1.value is not None: temp = value1.value.copy()
+                if value2.value is not None: temp += value2.value.copy()
             if self._sub:
-                self._out_value.value = self._in_value1.value - self._in_value2.value
+                if value1.value is not None: temp = value1.value.copy()
+                if value2.value is not None: temp -= value2.value.copy()
+            self._out_value.value = temp
             self._out_value.generation_time = t
 
     def run_check(self, time_step, errmsg=None):
@@ -86,7 +100,7 @@ class BaseOperation(BaseProcessingObj):
         Returns:
         bool: True if the check is successful, False otherwise
         """
-        return self._out_value is not None and self._in_value1 is not None
+        return self._out_value is not None and self.inputs['in_value1'].get(self._target_device_idx) is not None
 
     def save(self, filename):
         hdr = fits.Header()

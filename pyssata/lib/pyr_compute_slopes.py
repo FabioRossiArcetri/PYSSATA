@@ -3,8 +3,7 @@ import numpy as np
 from pyssata import cp
 from pyssata import show_in_profiler
 
-try:
-    import cupy as cp
+if cp:
     clamp_generic_less_gpu = cp.ElementwiseKernel(
         'T x, T c',
         'T y',
@@ -16,9 +15,6 @@ try:
         'T y',
         'y = (y > x)?c:y',
         'clamp_generic')
-
-except ImportError:
-    pass
 
 
 def clamp_generic_less_cpu(x, c, y):
@@ -104,7 +100,6 @@ def pyr_compute_slopes(frame, ind_pup, SHLIKE=False, INTENSITY_BASED=False, norm
             factor = 1.0 / inv_factor
             clamp_generic_less(0,0, factor)
             
-
         sx = (A+B-C-D).astype(float_dtype) * factor
         sy = (B+C-A-D).astype(float_dtype) * factor
 

@@ -10,7 +10,7 @@ class IntControl(IIRControl):
                 device_idx=None, 
                 precision=None
                 ):        
-        iirfilter = int2iirfilter(np.array(int_gain, dtype=float_dtype), ff=ff, xp=np)
+        iirfilter = int2iirfilter(int_gain, ff=ff, device_idx=device_idx, precision=precision)
 
         # Initialize IIRControl object
         super().__init__(iirfilter, delay=delay,device_idx=device_idx, precision=precision)
