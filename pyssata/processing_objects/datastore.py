@@ -18,12 +18,16 @@ class Datastore(BaseProcessingObj):
     '''Data storage object'''
 
     def __init__(self, store_dir: str):
-        super().__init__()
         self._items = {}
         self._storage = {}
         self._decimation_t = 0
         self._data_filename = ''
         self._tn_dir = store_dir
+        super().__init__()
+        
+#       uncomment when the code is a stream
+#        super().build_stream()
+
 
     def add(self, data_obj, name=None):
         if name is None:
@@ -197,11 +201,11 @@ class Datastore(BaseProcessingObj):
                 plt.plot(times[init:], values, **kwargs)
         plt.show()
 
-    def trigger(self, t):
+    def trigger_code(self):
         do_store_values = self._decimation_t == 0 or t % self._decimation_t == 0
         if do_store_values:
             for k, item in self._items.items():
-                if item is not None and item.generation_time == t:
+                if item is not None and item.generation_time == self.current_time:
                     if isinstance(item, BaseValue):
                         v = cpuArray(item.value)
                     elif isinstance(item, Slopes):
@@ -212,7 +216,7 @@ class Datastore(BaseProcessingObj):
                         v = cpuArray(item.phaseInNm)
                     else:
                         raise TypeError(f"Error: don't know how to save an object of type {type(item)}")
-                    self._storage[k][t] = v
+                    self._storage[k][self.current_time] = v
 
     def run_check(self, time_step, errmsg=''):
         return True

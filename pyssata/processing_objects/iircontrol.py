@@ -20,7 +20,7 @@ class IIRControl(BaseProcessingObj):
         self._delay = delay if delay is not None else 0
         self._n = iirfilter.nfilter
         self._type = iirfilter.num.dtype
-        self.set_state_buffer_length(int(self.xp.ceil(self._delay)) + 1)
+        self.set_state_buffer_length(int(np.ceil(self._delay)) + 1)
         
         # Initialize state vectors
         self._ist = self.xp.zeros_like(iirfilter.num)
@@ -42,6 +42,9 @@ class IIRControl(BaseProcessingObj):
         self._skipOneStep = False
         self._StepIsNotGood = False
         self._start_time = 0
+#       uncomment when the code is a stream
+#        super().build_stream()
+
 
     def set_state_buffer_length(self, total_length):
         self._total_length = total_length
@@ -90,8 +93,8 @@ class IIRControl(BaseProcessingObj):
         if remainder_delay == 0:
             return self._state[:, int(past_step)]
         else:
-            return (remainder_delay * self._state[:, int(self.xp.ceil(past_step))] +
-                    (1 - remainder_delay) * self._state[:, int(self.xp.ceil(past_step))-1])
+            return (remainder_delay * self._state[:, int(np.ceil(past_step))] +
+                    (1 - remainder_delay) * self._state[:, int(np.ceil(past_step))-1])
 
     @property
     def comm(self):
@@ -135,13 +138,13 @@ class IIRControl(BaseProcessingObj):
             modal_start_time_[i] = self.seconds_to_t(modal_start_time[i])
         self._modal_start_time = modal_start_time_
 
-    def trigger(self, t):
+    def trigger_code(self):
         ist = self._ist
         ost = self._ost
         in_delta_comm = self.inputs['delta_comm'].get(self._target_device_idx)
         self._outFinite = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
         self._idx_finite = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
-        if in_delta_comm.generation_time == t:
+        if in_delta_comm.generation_time == self.current_time:
             if self._opticalgain is not None:
                 if self._opticalgain.value > 0:
                     delta_comm = in_delta_comm.value * 1.0 / self._opticalgain.value
@@ -151,7 +154,7 @@ class IIRControl(BaseProcessingObj):
                     print(f"WARNING: optical gain compensation has been applied (g_opt = {self._opticalgain.value:.5f}).")
 
             if self._start_time > 0 and self._start_time > t:
-                newc = self.xp.zeros_like(in_delta_comm.value)
+                # newc = self.xp.zeros_like(in_delta_comm.value)
                 print(f"delta comm generation time: {in_delta_comm.generation_time} is not greater than {self._start_time}")
             else:
                 delta_comm = in_delta_comm.value
@@ -189,23 +192,23 @@ class IIRControl(BaseProcessingObj):
                     gain_idx = self._gain_gmt_imm if self._gain_gmt_imm is not None else self.xp.zeros(0, dtype=self.dtype)
                     delta_comm *= gmt_init_mod_manager(self.t_to_seconds(t), len(delta_comm), time_idx=time_idx, gain_idx=gain_idx)
 
-                n_delta_comm = self.xp.size(delta_comm)
+                n_delta_comm = delta_comm.size
                 if n_delta_comm < self._iirfilter.nfilter:
                     delta_comm = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
                     delta_comm[:n_delta_comm] = in_delta_comm.value
 
                 if self._offset is not None:
-                    n_offset = self.xp.size(self._offset)
+                    n_offset = self._offset.shape[0]
                     delta_comm[:n_offset] += self._offset
 
                 newc = self.compute_comm(delta_comm)                
 
-                if self.xp.all(newc == 0) and self._offset is not None:
-                    newc[:n_offset] += self._offset
-                    print("WARNING (IIRCONTROL): newc is a null vector, applying offset.")
+                #if self.xp.all(newc == 0) and self._offset is not None:
+                #    newc[:n_offset] += self._offset
+                #    print("WARNING (IIRCONTROL): newc is a null vector, applying offset.")
 
                 if self._verbose:
-                    n_newc = self.xp.size(newc)
+                    n_newc = newc.size
                     print(f"first {min(6, n_delta_comm)} delta_comm values: {delta_comm[:min(6, n_delta_comm)]}")
                     print(f"first {min(6, n_newc)} comm values: {newc[:min(6, n_newc)]}")
         else:
@@ -216,14 +219,14 @@ class IIRControl(BaseProcessingObj):
         self.state_update(newc)
 
         self._out_comm.value = self.comm
-        self._out_comm.generation_time = t
+        self._out_comm.generation_time = self.current_time
 
         if self._verbose:
             print(f"first {min(6, len(self._out_comm.value))} output comm values: {self._out_comm.value[:min(6, len(self._out_comm.value))]}")
 
     def compute_comm(self, input):
         nfilter = self._iirfilter.num.shape[0]
-        ninput = self.xp.size(input)
+        ninput = input.size
         output = input*0
 
         if nfilter < ninput:
@@ -266,9 +269,9 @@ class IIRControl(BaseProcessingObj):
         return output
     
     def online_filter(self, num, den, input, ost, ist):
-        sden = self.xp.shape(den)
-        snum = self.xp.shape(num)
-        n_input = self.xp.size(input)
+        sden = den.shape
+        snum = num.shape
+        n_input = input.size
         
         no = sden[1]
         ni = snum[1]

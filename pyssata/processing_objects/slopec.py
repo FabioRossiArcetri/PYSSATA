@@ -247,7 +247,7 @@ class Slopec(BaseProcessingObj):
         in_pixels = self.inputs['in_pixels'].get(self._target_device_idx)
         return not (self._weight_from_accumulated and self._accumulate) and in_pixels and self._slopes and ((not self._use_sn) or (self._use_sn and self._sn))
 
-    def calc_slopes(self, t, accumulated=False):
+    def calc_slopes(self, accumulated=False):
         raise NotImplementedError(f'{self.repr()} Please implement calc_slopes in your derived class!')
 
     def do_accumulation(self, t):
@@ -275,10 +275,10 @@ class Slopec(BaseProcessingObj):
         if self._verbose:
             print(f'accumulation factor is: {factor}')
 
-    def trigger(self, t):
+    def trigger_code(self):
         in_pixels = self.inputs['in_pixels'].get(self._target_device_idx)
-        if in_pixels.generation_time == t:
-            self.calc_slopes(t)
+        if in_pixels.generation_time == self.current_time:
+            self.calc_slopes()
             
         if self._do_rec:
             m = self.xp.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
@@ -290,10 +290,10 @@ class Slopec(BaseProcessingObj):
 
         # TO BE MOVED to SH
         if self._weight_from_accumulated:
-            self.do_accumulation(t)
+            self.do_accumulation(self.current_time)
 
-        if in_pixels.generation_time == t:
-            self.calc_slopes(t)
+        if in_pixels.generation_time == self.current_time:
+            self.calc_slopes()
             if not self.xp.isfinite(self._slopes.slopes).all():
                 raise ValueError('slopes have non-finite elements')
             if self._sn is not None and self._use_sn:
