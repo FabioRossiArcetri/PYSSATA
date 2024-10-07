@@ -91,14 +91,12 @@ class ModesDisplay(BaseProcessingObj):
 
     def trigger(self, t):
         m = self.inputs['modes'].get(self._target_device_idx)
-        print(m.value.shape)
         if m.generation_time == t:
             if not self._opened and not self._oplot:
                 self.set_w()
                 self._opened = True
 
             plt.figure(self._window)
-            print(f'{self._first=}')
             if self._first:
                 self._line = plt.plot(m.value, '.-')
                 plt.title(self._title)
