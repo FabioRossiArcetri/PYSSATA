@@ -111,8 +111,6 @@ class AtmoEvolution(BaseProcessingObj):
         self.outputs['layer_list'] = self.layer_list
         self._last_position = self.xp.zeros(self._n_phasescreens, dtype=self.dtype)
 
-#        super().build_stream()
-
     @property
     def seed(self):
         return self._seed
@@ -276,9 +274,9 @@ class AtmoEvolution(BaseProcessingObj):
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
         self.delta_time = self.t_to_seconds(self.current_time - self._last_t) + self._extra_delta_time        
-        self.seeing = self.inputs['seeing'].get(self._target_device_idx).value
-        self.wind_speed = self.inputs['wind_speed'].get(self._target_device_idx).value
-        self.wind_direction = self.inputs['wind_direction'].get(self._target_device_idx).value
+        self.seeing = self.local_inputs['seeing'].value
+        self.wind_speed = self.local_inputs['wind_speed'].value
+        self.wind_direction = self.local_inputs['wind_direction'].value
     
     def trigger_code(self):
         # if len(self._phasescreens) != len(wind_speed) or len(self._phasescreens) != len(wind_direction):
@@ -344,6 +342,8 @@ class AtmoEvolution(BaseProcessingObj):
         self._last_t = last_t
 
     def run_check(self, time_step):
+        self.prepare_trigger(0)
+
         errmsg = ''
         if not (self._seed > 0):
             errmsg += ' Seed <= 0.'
@@ -359,9 +359,11 @@ class AtmoEvolution(BaseProcessingObj):
         seeing = self.inputs['seeing'].get(self._target_device_idx)
         wind_speed = self.inputs['wind_speed'].get(self._target_device_idx)
         wind_direction = self.inputs['wind_direction'].get(self._target_device_idx)
-
+                
         check = self._seed > 0 and isinstance(seeing, BaseValue) and isinstance(wind_direction, BaseValue) and isinstance(wind_speed, BaseValue)
         if not check:
             raise ValueError(errmsg)
+          
+        #super().build_stream()
         return check
 

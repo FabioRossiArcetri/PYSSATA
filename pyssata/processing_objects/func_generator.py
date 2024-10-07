@@ -21,11 +21,11 @@ class FuncGenerator(BaseProcessingObj):
             self._repeat_ncycles = False
         self._active = True
 
-        self._amp = xp.array(0)
-        self._freq = xp.array(0)
-        self._offset = xp.array(0)
-        self._constant = xp.array(0)
-        self._output = BaseValue(target_device_idx=target_device_idx)
+        self._amp = self.xp.array(0)
+        self._freq = self.xp.array(0)
+        self._offset = self.xp.array(0)
+        self._constant = self.xp.array(0)
+        self._output = BaseValue(target_device_idx=target_device_idx, value=self.xp.array(0))
 
         if seed is not None:
             if str(seed).strip() == 'auto':
@@ -124,6 +124,7 @@ class FuncGenerator(BaseProcessingObj):
 
         self._output.value = s
         self._output.generation_time = self.current_time
+        print('func trigger')
 
     def get_time_hist_at_time(self, t):
         if not self._active:
