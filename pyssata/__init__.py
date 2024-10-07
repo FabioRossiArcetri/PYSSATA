@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import functools
 from functools import wraps
 
 cpu_float_dtype_list = [np.float64, np.float32]
@@ -111,11 +112,9 @@ def show_in_profiler(message=None, color_id=None, argb_color=None, sync=False):
 
     except ImportError:
         def decorator(f):
-            @wraps(f)
-            def wrapper(*args, **kwargs):
-                return f(*args, **kwargs)
-            return wrapper
+            return f
         return decorator
+
 
 def fuse(kernel_name=None):
     '''
