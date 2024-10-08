@@ -7,19 +7,17 @@ from astropy.io import fits
 from pyssata.data_objects.recmat import Recmat
 
 class Intmat:
-    def __init__(self, intmat):
+    def __init__(self,
+                 intmat,
+                 slope_mm = None,
+                 slope_rms = None,
+                 pupdata_tag: str = '',
+                 norm_factor: float= 0.0):
         self._intmat = intmat
-        self._slope_mm = None
-        self._slope_rms = None
-        self._pupdata_tag = ''
-        self._norm_factor = 0.0
-
-    def set_intmat(self, intmat):
-        self._intmat = intmat
-
-    def row(self, row):
-        r = xp.reshape(self._intmat[row, :], (-1,))
-        return {'slopes': r, 'pupdata_tag': self._pupdata_tag}
+        self._slope_mm = slope_mm
+        self._slope_rms = slope_rms
+        self._pupdata_tag = pupdata_tag
+        self._norm_factor = norm_factor
 
     def reduce_size(self, n_modes_to_be_discarded):
         nmodes = self._intmat.shape[0]
@@ -44,7 +42,7 @@ class Intmat:
             hdr = {}
         hdr['VERSION'] = 1
         hdr['PUP_TAG'] = self._pupdata_tag
-        hdr['TAG'] = self._norm_factor
+        hdr['NORMFACT'] = self._norm_factor
         # Save fits file
         fits.writeto(filename, self._intmat, hdr, overwrite=True)
         if self._slope_mm is not None:
@@ -52,15 +50,20 @@ class Intmat:
         if self._slope_rms is not None:
             fits.append(filename, self._slope_rms)
 
-    def read(self, filename, hdr=None, exten=0):
-        self.set_intmat(fits.getdata(filename, ext=exten))
+    @staticmethod
+    def restore(filename, hdr=None, exten=0):
+        intmat = fits.getdata(filename, ext=exten)
         hdr = fits.getheader(filename, ext=exten)
-        self._norm_factor = float(hdr.get('NORMFACT', 0.0))
+        norm_factor = float(hdr.get('NORMFACT', 0.0))
+        pupdata_tag = float(hdr.get('PUP_TAG', ''))
         # Reading additional fits extensions
-        info = fits.info(filename)
-        if len(info) > 1:
-            self._slope_mm = fits.getdata(filename, ext=exten + 1)
-            self._slope_rms = fits.getdata(filename, ext=exten + 2)
+        num_ext = len(fits.open(filename))
+        if num_ext >= exten + 2:
+            slope_mm = fits.getdata(filename, ext=exten + 1)
+            slope_rms = fits.getdata(filename, ext=exten + 2)
+        else:
+            slope_mm = slope_rms = None
+        return Intmat(intmat, slope_mm, slope_rms, pupdata_tag, norm_factor)
 
     def generate_rec(self, nmodes=None, cut_modes=0, w_vec=None, interactive=False):
         if nmodes is not None:
@@ -68,8 +71,7 @@ class Intmat:
         else:
             intmat = self._intmat
         recmat = self.pseudo_invert(intmat, n_modes_to_drop=cut_modes, w_vec=w_vec, interactive=interactive)
-        rec = Recmat()
-        rec.set_recmat(recmat)
+        rec = Recmat(recmat)
         rec.im_tag = self._norm_factor
         return rec
 
