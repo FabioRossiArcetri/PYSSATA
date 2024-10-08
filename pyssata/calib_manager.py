@@ -23,7 +23,7 @@ class CalibManager(BaseParameterObj):
             'background': 'backgrounds/',
             'pupils': 'pupils/',
             'pupdata': 'pupils',
-            'subaps': 'subaps/',
+            'subapdata': 'subapdata/',
             'rec': 'rec/',
             'recmat': 'rec/',
             'im': 'im/',

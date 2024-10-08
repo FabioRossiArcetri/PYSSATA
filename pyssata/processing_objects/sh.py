@@ -36,7 +36,7 @@ class SH(BaseProcessingObj):
                  subap_npx: int,
                  FoVres30mas: bool = False,
                  squaremask: bool = True,
-                 gauss_kern = None, 
+                 gauss_kern = None,
                  fov_ovs_coeff: float = 0,
                  xShiftPhInPixel: float = 0,
                  yShiftPhInPixel: float = 0,
@@ -281,57 +281,9 @@ class SH(BaseProcessingObj):
 
         # Check for valid phase size
         if abs((ef_size * round(self._fov_ovs) * lens[2]) / 2.0 - round((ef_size * round(self._fov_ovs) * lens[2]) / 2.0)) > 1e-4:
-            raise ValueError('ERROR: interpolated input phase size is not divisible by subapertures.')
+            raise ValueError(f'ERROR: interpolated input phase size {ef_size} * {round(self._fov_ovs)} is not divisible by subapertures.')
         elif not self._noprints:
             print(f'GOOD: interpolated input phase size is divisible by {self._lenslet.n_lenses} subapertures.')
-
-    def detect_subaps(self, image, lenslet, energy_th):
-        np = image.shape[0]
-        mask_subap = self.xp.zeros_like(image)
-
-        idxs = {}
-        map = {}
-        count = 0
-        spot_intensity = self.xp.zeros((self._lenslet.dimx, self._lenslet.dimy))
-        x = self.xp.zeros((self._lenslet.dimx, self._lenslet.dimy))
-        y = self.xp.zeros((self._lenslet.dimx, self._lenslet.dimy))
-
-        for i in range(self._lenslet.dimx):
-            for j in range(self._lenslet.dimy):
-                lens = self._lenslet.get(i, j)
-                x[i, j] = np / 2.0 * (1 + lens[0])
-                y[i, j] = np / 2.0 * (1 + lens[1])
-                np_sub = round(np / 2.0 * lens[2])
-
-                mask_subap *= 0
-                mask_subap[self.xp.round(x[i, j] - np_sub / 2):self.xp.round(x[i, j] + np_sub / 2),
-                           self.xp.round(y[i, j] - np_sub / 2):self.xp.round(y[i, j] + np_sub / 2)] = 1
-
-                spot_intensity[i, j] = self.xp.sum(image * mask_subap)
-
-        for i in range(self._lenslet.dimx):
-            for j in range(self._lenslet.dimy):
-                if spot_intensity[i, j] > energy_th * self.xp.max(spot_intensity):
-                    mask_subap *= 0
-                    mask_subap[self.xp.round(x[i, j] - np_sub / 2):self.xp.round(x[i, j] + np_sub / 2),
-                               self.xp.round(y[i, j] - np_sub / 2):self.xp.round(y[i, j] + np_sub / 2)] = 1
-                    idxs[count] = self.xp.where(mask_subap == 1)
-                    map[count] = j * self._lenslet.dimx + i
-                    count += 1
-
-        if count == 0:
-            raise ValueError("Error: no subapertures selected")
-
-        v = self.xp.zeros((len(idxs), np_sub*np_sub), dtype=int)
-        m = self.xp.zeros(len(idxs), dtype=int)
-        for k, idx in idxs.items():
-            v[k] = self.xp.ravel_multi_index(idx, image.shape)
-            m[k] = map[k]
-        
-        subap_data = SubapData(idxs=v, map=m, nx=self._lenslet.dimx, ny=self._lenslet.dimy, energy_th=energy_th,
-                           target_device_idx=self._target_device_idx, precision=self._precision)
-      
-        return subap_data
     
     def calc_trigger_geometry(self):
         
@@ -414,6 +366,10 @@ class SH(BaseProcessingObj):
         # Remember a few things
         self._wf1 = wf1
         self._wf3 = wf3
+
+    def run_check(self, dt):
+        # TODO
+        return True
 
     def trigger(self, t):
         

@@ -1,0 +1,16 @@
+
+
+sh_subaps:
+  class: 'ShSubapCalibrator'
+  subap_on_diameter: 20
+  wavelengthInNm:    750                     # [nm] SH wavelength
+  output_tag:        'scao_subaps'
+  #tag_template:      'subap_{main.tag}_n{subap_on_diameter}'
+  inputs:
+    in_ef: 'prop.on_axis_source'
+
+
+remove: ['slopec']
+ 
+
+

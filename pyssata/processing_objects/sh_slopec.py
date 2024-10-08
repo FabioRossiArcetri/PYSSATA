@@ -22,12 +22,13 @@ def clamp_generic_more(x, c, y, xp):
 class ShSlopec(Slopec):
     def __init__(self,
                  subapdata: SubapData,
+                 sn: Slopes=None,
                  thr_value: float = -1,
                  exp_weight: float = 1.0,
                  corr_template = None,                
                  target_device_idx: int = None, 
                  precision: int = None ):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)
+        super().__init__(sn=sn, target_device_idx=target_device_idx, precision=precision)
         self._thr_value = thr_value
         self._thr_mask_cube = BaseValue()  
         self._total_counts = BaseValue()
