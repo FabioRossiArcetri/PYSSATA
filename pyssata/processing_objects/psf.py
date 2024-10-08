@@ -103,18 +103,16 @@ class PSF(BaseProcessingObj):
             self._int_psf.value *= 0
         self._intsr = 0
 
-    def trigger(self, t):
+    def trigger_code(self):
         in_ef = self.inputs['in_ef'].get(self._target_device_idx)
-        
-        if in_ef and in_ef.generation_time == t:
-
+        if in_ef and in_ef.generation_time == self.current_time:
             if self._psf.value is None:
                 s = [dim * self._nd for dim in in_ef.size]
                 self._psf.value = self.xp.zeros(s, dtype=self.dtype)
                 self._int_psf.value = self.xp.zeros(s, dtype=self.dtype)
                 self._ref = None
         
-            if self.t_to_seconds(t) >= self._start_time:
+            if self.current_time_seconds >= self._start_time:
                 self._count += 1
 
             s = [np.around(dim * self._nd) for dim in in_ef.size]
@@ -124,18 +122,20 @@ class PSF(BaseProcessingObj):
                 self._ref.i = calc_psf(in_ef.A * 0.0, in_ef.A, imwidth=s[0], normalize=True, xp=self.xp, complex_dtype=self.complex_dtype)
 
             self._psf.value = calc_psf(in_ef.phi_at_lambda(self._wavelengthInNm), in_ef.A, imwidth=s[0], normalize=True, xp=self.xp, complex_dtype=self.complex_dtype)
-            if self.t_to_seconds(t) >= self._start_time:
+            if self.current_time_seconds >= self._start_time:
                 self._int_psf.value += self._psf.value
 
             self._sr.value = self._psf.value[s[0] // 2, s[1] // 2] / self._ref.i[s[0] // 2, s[1] // 2]
-            if self.t_to_seconds(t) >= self._start_time:
+
+            if self.current_time_seconds >= self._start_time:
                 self._intsr += self._sr.value
                 self._int_sr.value = self._intsr / self._count
 
-            self._psf.generation_time = t
-            if self.t_to_seconds(t) >= self._start_time:
-                self._int_psf.generation_time = t
-            self._sr.generation_time = t
-            if self.t_to_seconds(t) >= self._start_time:
-                self._int_sr.generation_time = t
+            self._psf.generation_time = self.current_time
+
+            if self.current_time_seconds >= self._start_time:
+                self._int_psf.generation_time = self.current_time
+            self._sr.generation_time = self.current_time
+            if self.current_time_seconds >= self._start_time:
+                self._int_sr.generation_time = self.current_time
 
