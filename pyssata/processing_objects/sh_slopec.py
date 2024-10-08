@@ -151,9 +151,9 @@ class ShSlopec(Slopec):
         self._accumulated_slopes = Slopes(p.n_subaps * 2)
         self.set_xy_weights()
 
-    def calc_slopes(self, t, accumulated=False):
+    def calc_slopes(self, accumulated=False):
         if self._vecWeiPixRadT is not None:
-            time = self.t_to_seconds(t)
+            time = self.current_time_seconds
             idxW = self.xp.where(time > self._vecWeiPixRadT[:, 1])[-1]
             if len(idxW) > 0:
                 self._weightedPixRad = self._vecWeiPixRadT[idxW, 0]
@@ -162,12 +162,12 @@ class ShSlopec(Slopec):
                 self.set_xy_weights()
 
         if self._dotemplate or self._correlation or self._two_steps_cog:
-            self.calc_slopes_for(t, accumulated=accumulated)
+            self.calc_slopes_for(accumulated=accumulated)
         else:
-            self.calc_slopes_nofor(t, accumulated=accumulated)
+            self.calc_slopes_nofor(accumulated=accumulated)
 
 
-    def calc_slopes_for(self, t, accumulated=False):
+    def calc_slopes_for(self, accumulated=False):
         """
         Calculate slopes using a for loop over subapertures.
 
@@ -301,28 +301,28 @@ class ShSlopec(Slopec):
         if accumulated:
             self._accumulated_slopes.xslopes = sx
             self._accumulated_slopes.yslopes = sy
-            self._accumulated_slopes.generation_time = t
+            self._accumulated_slopes.generation_time = self.current_time
         else:
             if self._store_thr_mask_cube:
                 self._thr_mask_cube.value = thr_mask_cube
-                self._thr_mask_cube.generation_time = t
+                self._thr_mask_cube.generation_time = self.current_time
 
             self._slopes.xslopes = sx
             self._slopes.yslopes = sy
-            self._slopes.generation_time = t
+            self._slopes.generation_time = self.current_time
 
             self._flux_per_subaperture_vector.value = flux_per_subaperture
-            self._flux_per_subaperture_vector.generation_time = t
+            self._flux_per_subaperture_vector.generation_time = self.current_time
             self._total_counts.value = self.xp.sum(self._flux_per_subaperture_vector.value)
-            self._total_counts.generation_time = t
+            self._total_counts.generation_time = self.current_time
             self._subap_counts.value = self.xp.mean(self._flux_per_subaperture_vector.value)
-            self._subap_counts.generation_time = t
+            self._subap_counts.generation_time = self.current_time
 
         if self._verbose:
             print(f"Slopes min, max and rms : {self.xp.min(sx)}, {self.xp.max(sx)}, {self.xp.sqrt(self.xp.mean(sx ** 2))}")
 
     
-    def calc_slopes_nofor(self, t, accumulated=False):
+    def calc_slopes_nofor(self, accumulated=False):
         """
         Calculate slopes without a for-loop over subapertures.
         
@@ -416,7 +416,7 @@ class ShSlopec(Slopec):
 #        idx_le_0 = self.xp.where(subap_tot <= mean_subap_tot * 1e-3)[0]
 #        if len(idx_le_0) > 0:
 #            factor[idx_le_0] = 0.0
-        clamp_generic_more( 1.0 / (mean_subap_tot * 1e-3), 0, factor, xp=self.xp))
+        clamp_generic_more( 1.0 / (mean_subap_tot * 1e-3), 0, factor, xp=self.xp)
 
         # Compute slopes
         sx = self.xp.sum(pixels * self._xweights.reshape(np_sub * np_sub, 1) * factor[self.xp.newaxis, :], axis=0)
@@ -433,22 +433,22 @@ class ShSlopec(Slopec):
         if accumulated:
             self._accumulated_slopes.xslopes = sx
             self._accumulated_slopes.yslopes = sy
-            self._accumulated_slopes.generation_time = t
+            self._accumulated_slopes.generation_time = self.current_time
         else:
             if self._store_thr_mask_cube:
                 self._thr_mask_cube.value = thr_mask_cube
-                self._thr_mask_cube.generation_time = t
+                self._thr_mask_cube.generation_time = self.current_time
 
             self._slopes.xslopes = sx
             self._slopes.yslopes = sy
-            self._slopes.generation_time = t
+            self._slopes.generation_time = self.current_time
 
             self._flux_per_subaperture_vector.value = flux_per_subaperture_vector
-            self._flux_per_subaperture_vector.generation_time = t
+            self._flux_per_subaperture_vector.generation_time = self.current_time
             self._total_counts.value = self.xp.sum(self._flux_per_subaperture_vector.value)
-            self._total_counts.generation_time = t
+            self._total_counts.generation_time = self.current_time
             self._subap_counts.value = self.xp.mean(self._flux_per_subaperture_vector.value)
-            self._subap_counts.generation_time = t
+            self._subap_counts.generation_time = self.current_time
 
         if self._verbose:
             print(f"Slopes min, max and rms : {self.xp.min(sx)}, {self.xp.max(sx)}, {self.xp.sqrt(self.xp.mean(sx ** 2))}")
