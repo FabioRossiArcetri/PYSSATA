@@ -1,36 +1,23 @@
 
 import numpy as np
 
+from pyssata import fuse
+from pyssata.lib import make_mask
 from pyssata.data_objects.slopes import Slopes
 from pyssata.data_objects.subap_data import SubapData
 from pyssata.base_value import BaseValue
-from pyssata.lib import make_mask
 
 from pyssata.processing_objects.slopec import Slopec
 
-from pyssata import cp
 
-if cp:
-    clamp_generic_less_gpu = cp.ElementwiseKernel(
-        'T x, T c',
-        'T y',
-        'y = (y < x)?c:y',
-        'clamp_generic')
-
-    clamp_generic_more_gpu = cp.ElementwiseKernel(
-        'T x, T c',
-        'T y',
-        'y = (y > x)?c:y',
-        'clamp_generic')
+@fuse(kernel_name='clamp_generic_less')
+def clamp_generic_less(x, c, y, xp):
+    y[:] = xp.where(y < x, c, y)
 
 
-def clamp_generic_less_cpu(x, c, y):
-    y[:] = np.where(y < x, c, y)
-
-
-def clamp_generic_more_cpu(x, c, y):
-    y[:] = np.where(y > x, c, y)
-
+@fuse(kernel_name='clamp_generic_more')
+def clamp_generic_more(x, c, y, xp):
+    y[:] = xp.where(y > x, c, y)
     
 class ShSlopec(Slopec):
     def __init__(self,
@@ -67,13 +54,6 @@ class ShSlopec(Slopec):
         self._cog_2ndstep_size = 0
         self._dotemplate = False
         self._store_thr_mask_cube = False
-
-        if self.xp == cp:
-            self._clamp_generic_less = clamp_generic_less_gpu
-            self._clamp_generic_more = clamp_generic_more_gpu
-        else:
-            self._clamp_generic_less = clamp_generic_less_cpu
-            self._clamp_generic_more = clamp_generic_more_cpu
 
         # Property settings
         self.exp_weight = exp_weight
@@ -419,10 +399,10 @@ class ShSlopec(Slopec):
             thr = 0
 
         if self._thr_pedestal:
-            self._clamp_generic_less(thr, 0, pixels)
+            clamp_generic_less(thr, 0, pixels, xp=self.xp)
         else:
             pixels -= thr
-            self._clamp_generic_less(0, 0, pixels)
+            clamp_generic_less(0, 0, pixels, xp=self.xp)
 
         if self._store_thr_mask_cube:
             thr_mask_cube = thr.reshape(np_sub, np_sub, n_subaps)
@@ -436,7 +416,7 @@ class ShSlopec(Slopec):
 #        idx_le_0 = self.xp.where(subap_tot <= mean_subap_tot * 1e-3)[0]
 #        if len(idx_le_0) > 0:
 #            factor[idx_le_0] = 0.0
-        self._clamp_generic_more( 1.0 / (mean_subap_tot * 1e-3), 0, factor)
+        clamp_generic_more( 1.0 / (mean_subap_tot * 1e-3), 0, factor, xp=self.xp))
 
         # Compute slopes
         sx = self.xp.sum(pixels * self._xweights.reshape(np_sub * np_sub, 1) * factor[self.xp.newaxis, :], axis=0)
