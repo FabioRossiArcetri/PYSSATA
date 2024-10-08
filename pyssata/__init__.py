@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import functools
 from functools import wraps
 
 cpu_float_dtype_list = [np.float64, np.float32]
@@ -111,29 +112,38 @@ def show_in_profiler(message=None, color_id=None, argb_color=None, sync=False):
 
     except ImportError:
         def decorator(f):
-            @wraps(f)
-            def wrapper(*args, **kwargs):
-                return f(*args, **kwargs)
-            return wrapper
+            return f
         return decorator
+
 
 def fuse(kernel_name=None):
     '''
-    Decorator to allow using cupy's fuse
-    in a safe way even when cupy is not installed
+    Replacement of cupy.fuse() allowing runtime
+    dispatch to cupy or numpy.
+    
+    Fused function takes an xp argument that will
+    cause it to run as a fused kernel or a standard
+    numpy function. The xp argument can be used
+    inside the function as usual.
+
     Parameters are the same as cp.fuse()
     '''
-    try:
-        from cupy import fuse
-        return fuse(kernel_name=kernel_name)
-
-    except ImportError:
-        def decorator(f):
-            @wraps(f)
-            def wrapper(*args, **kwargs):
-                return f(*args, **kwargs)
-            return wrapper
-        return decorator
+    def decorator(f):
+        f_cp = functools.partial(f, xp=cp)
+        f_np = functools.partial(f, xp=np)
+        f_cpu = f_np
+        if cp:
+            f_gpu = cp.fuse(kernel_name=kernel_name)(f_cp)
+        else:
+            f_gpu = None
+        @wraps(f)
+        def wrapper(*args, xp, **kwargs):
+            if xp == cp:
+                return f_gpu(*args, **kwargs)
+            else:
+                return f_cpu(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 
