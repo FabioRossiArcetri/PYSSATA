@@ -32,7 +32,7 @@ class IFunc(BaseDataObj):
             if type_str is None:
                 raise ValueError('At least one of ifunc and type must be set')
             if mask is not None:
-                mask = (self.xp.array(mask, dtype=self.dtype) > 0).astype(self.dtype)
+                mask = (self.xp.array(mask) > 0).astype(self.dtype)
             if npixels is None:
                 raise ValueError("If ifunc is not set, then npixels must be set!")
             
@@ -46,6 +46,9 @@ class IFunc(BaseDataObj):
             else:
                 raise ValueError(f'Invalid ifunc type {type_str}')
         
+        ifunc = self.xp.array(ifunc)
+        mask = self.xp.array(mask)
+
         self._influence_function = ifunc
         self._mask_inf_func = mask
         self._idx_inf_func = self.xp.where(mask)
@@ -148,14 +151,10 @@ class IFunc(BaseDataObj):
             else:
                 self._influence_function = self._influence_function[:, start_mode:nmodes] 
       
-    def read(self, filename, exten=0):
-        hdul = fits.open(filename)
-        self.influence_function = hdul[exten].data
-        self.mask_inf_func = hdul[exten+1].data
-        
-    def restore(self, filename):
-        p = IFunc()
-        p.read(filename)
-        return p
+    def restore(filename, target_device_idx=None, exten=1):
+        with fits.open(filename) as hdul:
+            ifunc = hdul[exten].data.T
+            mask = hdul[exten+1].data
+        return IFunc(ifunc, mask=mask, target_device_idx=target_device_idx)
 
 

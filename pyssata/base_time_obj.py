@@ -28,6 +28,10 @@ class BaseTimeObj:
         #print(self.__class__.__name__)
         #print('target_device_idx', target_device_idx)
         #print('precision', precision)
+        
+        self.cuda_graph = None
+        self.current_time = 0
+        self.current_time_seconds = 0
 
         if precision is None:
             self._precision = global_precision
@@ -39,7 +43,7 @@ class BaseTimeObj:
         else:
             self._target_device_idx = target_device_idx
 
-        if not self._target_device_idx==-1:
+        if self._target_device_idx>=0:
             self._target_device = cp.cuda.Device(self._target_device_idx)      # GPU case
             self.dtype = gpu_float_dtype_list[self._precision]
             self.complex_dtype = gpu_complex_dtype_list[self._precision]
@@ -49,7 +53,7 @@ class BaseTimeObj:
             self.dtype = cpu_float_dtype_list[self._precision]
             self.complex_dtype = cpu_complex_dtype_list[self._precision]
             self.xp = np
-        
+
     def copyTo(self, target_device_idx):
         cloned = self
         excluded = ['_tag']
@@ -109,12 +113,6 @@ class BaseTimeObj:
             self.dtype = cpu_float_dtype_list[self._precision]
             self.complex_dtype = cpu_complex_dtype_list[self._precision]
             self.xp = np
-
-    def trigger(self, t):
-        # if the device is not the CPU and it is different from the default one, 
-        # then put in in use
-        if not self.target_device_idx==-1 and not self.target_device_idx==default_target_device:           
-            self._device.use()
 
     def t_to_seconds(self, t):
         return float(t) / float(self._time_resolution)

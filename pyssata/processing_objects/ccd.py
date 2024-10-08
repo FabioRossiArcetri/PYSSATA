@@ -1,10 +1,9 @@
 import math
-import numpy as np
 
 from scipy.stats import gamma
 from scipy.ndimage import convolve
 
-from pyssata import cp
+from pyssata import fuse
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.connections import InputValue
 from pyssata.data_objects.pixels import Pixels
@@ -13,15 +12,9 @@ from pyssata.lib.calc_detector_noise import calc_detector_noise
 from pyssata.processing_objects.modulated_pyramid import ModulatedPyramid
 
 
-if cp:
-    clamp_generic_gpu = cp.ElementwiseKernel(
-        'T x, T c',
-        'T y',
-        'y = (y < x)?c:y',
-        'clamp_generic')
-
-def clamp_generic_cpu(x, c, y):
-    y[:] = np.where(y < x, c, y)
+@fuse(kernel_name='clamp_generic')
+def clamp_generic(x, c, y, xp):
+    y[:] = xp.where(y < x, c, y)
 
 
 # TODO
@@ -46,11 +39,6 @@ class CCD(BaseProcessingObj):
                  ADU_gain=None, ADU_bias=400, emccd_gain=None,
                  target_device_idx=None, precision=None):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
-
-        if self.xp is cp:
-            self._clamp_generic = clamp_generic_gpu
-        else:
-            self._clamp_generic = clamp_generic_cpu
 
         if wfs:
             if not isinstance(wfs, ModalAnalysisWFS):
@@ -163,6 +151,10 @@ class CCD(BaseProcessingObj):
         self.outputs['out_pixels'] = self._pixels
         self.outputs['integrated_i'] = self._integrated_i
 
+#       uncomment when the code is a stream
+#        super().build_stream()
+
+
     @property
     def dt(self):
         return self._dt
@@ -195,10 +187,10 @@ class CCD(BaseProcessingObj):
         self._pixels.size = (s[0] // value, s[1] // value)
         self._binning = value
 
-    def trigger(self, t):
-        if self._start_time <= 0 or t >= self._start_time:
+    def trigger_code(self):
+        if self._start_time <= 0 or self.current_time >= self._start_time:
             in_i = self.inputs['in_i'].get(self._target_device_idx)
-            if in_i.generation_time == t:
+            if in_i.generation_time == self.current_time:
                 if self._loop_dt == 0:
                     raise ValueError('ccd object loop_dt property must be set.')
                 if self._doNotChangeI:
@@ -206,7 +198,7 @@ class CCD(BaseProcessingObj):
                 else:
                     self._integrated_i.sum(in_i, factor=self.t_to_seconds(self._loop_dt) * self._bandw)
 
-            if (t + self._loop_dt - self._dt - self._start_time) % self._dt == 0:
+            if (self.current_time + self._loop_dt - self._dt - self._start_time) % self._dt == 0:
                 if self._doNotChangeI:
                     self._pixels.pixels = self._integrated_i.i.copy()
                 else:
@@ -214,7 +206,7 @@ class CCD(BaseProcessingObj):
                     self.apply_qe()
                     self.apply_noise()
 
-                self._pixels.generation_time = t
+                self._pixels.generation_time = self.current_time
                 self._integrated_i.i *= 0.0
 
     def apply_noise(self):
@@ -251,8 +243,7 @@ class CCD(BaseProcessingObj):
 
         if self._photon_noise:
             ccd_frame = self.xp.round(ccd_frame * self._ADU_gain) + self._ADU_bias
-            self._clamp_generic(0, 0, ccd_frame)
-            #ccd_frame = self.xp.where(ccd_frame > 0, ccd_frame, 0)
+            clamp_generic(0, 0, ccd_frame, xp=self.xp)
 
             if not self._keep_ADU_bias:
                 ccd_frame -= self._ADU_bias
