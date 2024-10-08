@@ -124,7 +124,6 @@ class FuncGenerator(BaseProcessingObj):
 
         self._output.value = s
         self._output.generation_time = self.current_time
-        print('func trigger')
 
     def get_time_hist_at_time(self, t):
         if not self._active:

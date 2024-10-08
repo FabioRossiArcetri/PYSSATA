@@ -93,7 +93,7 @@ class CalibManager(BaseParameterObj):
         filename = self.filename(subdir, name)
         if get_filename:
             return filename
-        print(filename)
+        print('Reading:', filename)
         if not os.path.exists(filename):
             print(f"Missing file: {filename}")
             return None
