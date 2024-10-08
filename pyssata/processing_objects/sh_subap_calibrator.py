@@ -12,9 +12,9 @@ class ShSubapCalibrator(BaseProcessingObj):
                  wavelengthInNm: float,
                  subap_on_diameter: int,
                  energy_th: float,
+                 data_dir: str,         # Set by main simul object
                  output_tag: str = None,
                  tag_template: str = None,
-                 data_dir: str,         # Set by main simul object
                  target_device_idx: int = None, 
                  precision: int = None
                 ):
@@ -27,7 +27,7 @@ class ShSubapCalibrator(BaseProcessingObj):
         if tag_template is None and (output_tag is None or output_tag == 'auto'):
             raise ValueError('At least one of tag_template and output_tag must be set')
 
-        if output_tag is None or output_tag == 'auto'
+        if output_tag is None or output_tag == 'auto':
             self._filename = tag_template
         else:
             self._filename = output_tag
