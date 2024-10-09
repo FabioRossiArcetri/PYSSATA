@@ -89,6 +89,9 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
                 default_target_device.use()
             else:
                 self.trigger_code()
+        else:
+            if self.verbose:
+                print(f'No inputs have been refreshed, skipping trigger')
                     
     @property
     def verbose(self):

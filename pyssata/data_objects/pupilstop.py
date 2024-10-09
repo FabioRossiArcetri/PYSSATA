@@ -32,8 +32,10 @@ class Pupilstop(Layer):
             mask_amp = self._input_mask
         else:
             mask_amp = make_mask(pixel_pupil, obs_diam, mask_diam, xp=self.xp)
-        print('mask_amp', type(mask_amp))
         self.A = mask_amp
+
+        # Initialise time for at least the first iteration
+        self._generation_time = 0
 
     def save(self, filename, hdr=None):
         if hdr is None:
