@@ -270,7 +270,6 @@ class Modalrec(BaseProcessingObj):
         if intmat:
             m = slope_ptr @ intmat
         else:
-            matrix.recmat = self.xp.array(matrix.recmat, dtype=self.dtype)
             m = slope_ptr @ self.xp.transpose(matrix.recmat)
 
         return m

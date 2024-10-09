@@ -12,8 +12,11 @@ class Intmat:
                  slope_mm = None,
                  slope_rms = None,
                  pupdata_tag: str = '',
-                 norm_factor: float= 0.0):
-        self._intmat = intmat
+                 norm_factor: float= 0.0,
+                 target_device_idx=None,
+                 precision=None):
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
+        self._intmat = self.xp.array(intmat)
         self._slope_mm = slope_mm
         self._slope_rms = slope_rms
         self._pupdata_tag = pupdata_tag

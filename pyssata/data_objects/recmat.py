@@ -12,7 +12,7 @@ class Recmat(BaseDataObj):
                  target_device_idx=None,
                  precision=None):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
-        self._recmat = recmat
+        self._recmat = self.xp.array(recmat)
         self._modes2recLayer = modes2recLayer
         self._im_tag = ''
         self._proj_list = []
