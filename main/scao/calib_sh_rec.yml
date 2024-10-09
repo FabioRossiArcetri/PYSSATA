@@ -1,0 +1,23 @@
+
+
+pushpull:
+  class:     'FuncGenerator'
+  func_type: 'PUSHPULL'
+  nmodes:     54
+  amp:        0.1
+
+
+sh_rec:
+  class: 'ImRecCalibrator'
+  nmodes: 54
+  output_tag:     'scao_sh_rec'
+  #tag_template:    'subap_{main.tag}_n{modes}'
+  inputs:
+    in_slopes: 'slopec.out_slopes'
+    in_commands: 'pushpull.output'
+
+
+remove: ['atmo', 'rec']
+ 
+
+
