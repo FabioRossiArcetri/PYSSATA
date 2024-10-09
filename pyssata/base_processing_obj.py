@@ -129,6 +129,13 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         print(f"Problem with {self}: please implement run_check() in your derived class!")
         return 1
 
+    def finalize(self):
+        '''
+        Override this method to perform any actions after
+        the simulation is completed
+        '''
+        pass
+
     def save(self, filename):
         hdr = fits.Header()
         hdr['VERBOSE'] = self._verbose

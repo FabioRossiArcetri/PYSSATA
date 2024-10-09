@@ -255,8 +255,8 @@ class Simul():
         if store.has_key('sr'):
             print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']])) * 100.}")
 
-        # Saving method with a single sav file
-        store.save('save_file.pickle')
+        for obj in self.objs.values():
+            obj.finalize()
 
         # Alternative saving method:
         # tn = store.save_tracknum(dir=dir, params=params, nodlm=True, noolformat=True, compress=True, saveFloat=saveFloat)
