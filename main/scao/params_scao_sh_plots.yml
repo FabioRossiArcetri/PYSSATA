@@ -130,3 +130,35 @@ psf:
   inputs:
       in_ef:  'prop.on_axis_source'
 
+# sc_disp:
+#   class:            'SlopecDisplay'
+#   inputs:
+#     slopec:       'slopec'
+#   disp_factor:      4
+sr_disp:
+  class:            'PlotDisplay'
+  inputs:
+    value:       'psf.out_sr'
+  window:           11
+  title:            'SR'
+# ph_disp:
+#   class:            'PhaseDisplay'
+#   inputs:
+#     phase:       "prop.on_axis_source"
+#   window:           12
+#   title:            'PUPIL PHASE'
+#   disp_factor:      2
+# dm_disp:
+#   class:            'PhaseDisplay'
+#   inputs:
+#     phase:       "dm.out_layer"
+#   window:           13
+#   title:            'DM'
+#   disp_factor:      2
+# psf_disp:
+#   class:            'PsfDisplay'
+#   inputs:
+#     psf:       "psf.out_psf"
+#   window:           14
+#   title:            'PSF'
+#   disp_factor:      2

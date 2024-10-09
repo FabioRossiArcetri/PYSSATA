@@ -4,10 +4,21 @@ pushpull:
   class:     'FuncGenerator'
   func_type: 'PUSHPULL'
   nmodes:     54
-  amp:        0.1
+  vect_amplitude:  [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
+                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
+                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
+                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
+                      0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
+                      0.5,0.5,0.5,0.5] 
 
+main_override:
+  total_time:  0.108
 
-sh_rec:
+dm_override:
+  inputs:
+      in_command: 'pushpull.output'
+
+calibrator:
   class: 'ImRecCalibrator'
   nmodes: 54
   output_tag:     'scao_sh_rec'
