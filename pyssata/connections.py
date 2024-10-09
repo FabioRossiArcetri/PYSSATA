@@ -9,9 +9,13 @@ class InputValue():
         self.wrapped_type = type
         self.wrapped_value = None
 
-    def get(self, target_device):
+    def get_time(self):
         if not self.wrapped_value is None:
-            return self.wrapped_value.copyTo(target_device)
+            return self.wrapped_value.generation_time        
+
+    def get(self, target_device_idx):
+        if not self.wrapped_value is None:
+            return self.wrapped_value.copyTo(target_device_idx)
 
     def set(self, value):
         if not isinstance(value, self.wrapped_type):
@@ -30,9 +34,13 @@ class InputList():
         self.wrapped_type = type
         self.wrapped_list = None
 
-    def get(self, target_device):
+    def get_time(self):
+        if not self.wrapped_type is None:
+            return [x.generation_time for x in self.wrapped_list]
+
+    def get(self, target_device_idx):
         if not self.wrapped_list is None:            
-            return [x.copyTo(target_device) for x in self.wrapped_list]
+            return [x.copyTo(target_device_idx) for x in self.wrapped_list]
 
     def set(self, new_list):
         for value in new_list:

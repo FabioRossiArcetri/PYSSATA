@@ -132,8 +132,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self._mod_steps = int(mod_step)
         self._ttexp = None
         self.cache_ttexp()
-#       uncomment when the code is a stream
-        super().build_stream()
+
 
     @property
     def mod_amp(self):
@@ -415,17 +414,14 @@ class ModulatedPyramid(BaseProcessingObj):
             self._flux_factor_vector = self.xp.ones(self._mod_steps, dtype=self.dtype)
 
     def trigger_code(self):
-        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
-        if in_ef.generation_time != self.current_time:
-            return
+        in_ef = self.local_inputs['in_ef']
+        s = in_ef.size
 
         if self._extended_source_in_on and self._extSourcePsf is not None:
             if self._extSourcePsf.generation_time == self.current_time:
                 if self.xp.sum(self.xp.abs(self._extSourcePsf.value)) > 0:
                     self._extSource.updatePsf(self._extSourcePsf.value)
                     self._flux_factor_vector = self._extSource.coeff_flux
-
-        s = in_ef.size
 
         if self._rotAnglePhInDeg != 0:
             A = (self.ROT_AND_SHIFT_IMAGE(in_ef.A, self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(self.xp.uint8)
@@ -451,7 +447,6 @@ class ModulatedPyramid(BaseProcessingObj):
         fp_mask = self._fp_mask[self.xp.newaxis, :,:]
         my_exp = self._myexp[self.xp.newaxis, :,:]
 
-
         #plan1 = get_fft_plan(u_tlt, axes=(0, 1), value_type='C2C')            
         #plan2 = get_fft_plan(u_tlt, axes=(0, 1), value_type='C2C')            
         ffv = self.xp.where(self._flux_factor_vector > mean_value, self._flux_factor_vector, 0)
@@ -462,7 +457,7 @@ class ModulatedPyramid(BaseProcessingObj):
         u_tlt[:, 0:ss[1], 0:ss[2]] = tmp
         #with plan1:
         u_fp = self.xp.fft.fftshift(self.xp.fft.fft2(u_tlt, axes=(-2, -1)), axes=(-2, -1))                                       
-        if self._target_device_idx>-1:
+        if self._target_device_idx>=0:
             u_fp_pyr, fpsf = pyr1_fused(u_fp, ffv, my_exp, fp_mask)
         else:
             psf = self.xp.real(u_fp * self.xp.conj(u_fp))
@@ -475,7 +470,7 @@ class ModulatedPyramid(BaseProcessingObj):
         psf_tot = self.xp.sum(fpsf*fp_mask, axis=2)
         # self.xp.cuda.runtime.deviceSynchronize()
 
-        pup_pyr_tot = self.xp.roll(pup_pyr_tot, self.xp.array( [self._fft_padding//2, self._fft_padding//2], dtype=self.xp.int64), [0,1] )
+        pup_pyr_tot = self.xp.roll(pup_pyr_tot, self.roll_array, [0,1] )
 
         factor = 1.0 / self.xp.sum(self._flux_factor_vector)
         pup_pyr_tot *= factor
@@ -503,9 +498,7 @@ class ModulatedPyramid(BaseProcessingObj):
             image = self.interpolate(image, self.xp.arange(self._fft_totsize + 2) - pup_shiftx, 
                                      self.xp.arange(self._fft_totsize + 2) - pup_shifty, grid=True, missing=0)
             pup_pyr_tot = image[1:-1, 1:-1]
-
-
-        self._toccd_side = int(self._toccd_side)
+        
         ccd_internal = toccd(pup_pyr_tot, (self._toccd_side, self._toccd_side), xp=self.xp)
 
         if self._final_ccd_side > self._toccd_side:
@@ -528,6 +521,10 @@ class ModulatedPyramid(BaseProcessingObj):
         self._out_transmission.generation_time = self.current_time
 
     def run_check(self, time_step):
+        self.prepare_trigger(0)
+        self.roll_array = self.xp.array( [self._fft_padding//2, self._fft_padding//2], dtype=self.xp.int64)
+        self._toccd_side = int(self._toccd_side)        
+        # super().build_stream()
         if self._extended_source_in_on:
             return 1
         elif self._mod_steps < self.xp.around(2 * self.xp.pi * self._mod_amp):

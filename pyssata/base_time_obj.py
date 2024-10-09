@@ -28,8 +28,7 @@ class BaseTimeObj:
         #print(self.__class__.__name__)
         #print('target_device_idx', target_device_idx)
         #print('precision', precision)
-
-        self.stream  = None
+        
         self.cuda_graph = None
         self.current_time = 0
         self.current_time_seconds = 0
@@ -54,13 +53,6 @@ class BaseTimeObj:
             self.dtype = cpu_float_dtype_list[self._precision]
             self.complex_dtype = cpu_complex_dtype_list[self._precision]
             self.xp = np
-        
-    def build_stream(self):
-        if self._target_device_idx>=0:
-            self._target_device.use()
-            self.stream = cp.cuda.Stream(non_blocking=True)
-            self.capture_stream()
-            default_target_device.use()
 
     def copyTo(self, target_device_idx):
         cloned = self
@@ -121,29 +113,6 @@ class BaseTimeObj:
             self.dtype = cpu_float_dtype_list[self._precision]
             self.complex_dtype = cpu_complex_dtype_list[self._precision]
             self.xp = np
-
-    def prepare_trigger(self, t):
-        self.current_time = t
-        self.current_time_seconds = self.t_to_seconds(self.current_time)
-
-    def trigger_code(self):
-        pass
-
-    def capture_stream(self):
-        with self.stream:
-            self.stream.begin_capture()
-            self.trigger_code()
-            self.cuda_graph = self.stream.end_capture()
-
-    def trigger(self, t):
-        self.prepare_trigger(t)
-        if self._target_device_idx>=0 and self.cuda_graph:
-            self._target_device.use()
-            self.cuda_graph.launch(stream=self.stream)
-#            self.stream.synchronize()
-            default_target_device.use()
-        else:
-            self.trigger_code()
 
     def t_to_seconds(self, t):
         return float(t) / float(self._time_resolution)
