@@ -3,6 +3,7 @@ import re
 import typing
 import inspect
 import importlib
+from copy import deepcopy
 from pyssata.base_processing_obj import BaseProcessingObj
 
 from pyssata.loop_control import LoopControl
@@ -18,8 +19,10 @@ class Simul():
     '''
     Simulation organizer
     '''
-    def __init__(self, param_file):        
-        self.param_file = param_file
+    def __init__(self, *param_files):
+        if len(param_files) < 1:
+            raise ValueError('At least one Yaml parameter file must be present')
+        self.param_files = param_files
         self.objs = {}
 
     def _camelcase_to_snakecase(self, s):
@@ -50,6 +53,13 @@ class Simul():
             hints.update(typing.get_type_hints(getattr(x, '__init__')))
         return hints
     
+    def output_owner(self, output_name):
+        if '.' in output_name:
+            obj_name, attr_name = output_name.split('.')
+            return obj_name
+        else:
+            return output_name
+
     def resolve_output(self, output_name):
         if '.' in output_name:
             obj_name, attr_name = output_name.split('.')
@@ -76,7 +86,6 @@ class Simul():
         for key, pars in params.items():
             if key == 'main':
                 continue
-            print(key, pars)
             try:
                 classname = pars['class']
             except KeyError:
@@ -155,11 +164,70 @@ class Simul():
 
                 self.objs[dest_object].inputs[input_name].set(output_ref)
 
+    def remove_inputs(self, params, obj_to_remove):
+        '''
+        Modify params removing all references to the specificed object name
+        '''
+        for objname, obj in params.items():
+            for key in ['inputs', 'store']:
+                if key not in obj:
+                    continue
+                obj_inputs_copy = deepcopy(obj[key])
+                for input_name, output_name in obj[key].items():
+                    if isinstance(output_name, str):
+                        owner = self.output_owner(output_name)
+                        if owner == obj_to_remove:
+                            del obj_inputs_copy[input_name]
+                            print(f'Deleted {input_name} from {obj[key]}')
+                    elif isinstance(output_name, list):
+                        newlist = [x for x in output_name if self.output_owner(x) != obj_to_remove]
+                        diff = set(output_name).difference(set(newlist))
+                        obj_inputs_copy[input_name] = newlist
+                        if len(diff) > 0:
+                            print(f'Deleted {diff} from {obj[key]}')
+                obj[key] = obj_inputs_copy
+        return params
+
+    def combine_params(self, params, additional_params):
+        '''
+        Add/update/remove params with additional_params
+        '''
+        for name, values in additional_params.items():
+            if name == 'remove':
+                for objname in values:
+                    if objname not in params:
+                        raise ValueError(f'Parameter file has no object named {objname}')
+                    del params[objname]
+                    print(f'Removed {objname}')
+
+                    # Remove corresponding inputs
+                    params = self.remove_inputs(params, objname)
+
+            elif name.endswith('_override'):
+                objname = name[:-9]
+                if objname not in params:
+                    raise ValueError(f'Parameter file has no object named {objname}')
+                for k, v in values.items():
+                    if k not in params[objname]:
+                        raise ValueError(f'Object {objname} has not parameter {k} to override')
+                params[objname].update(values)
+            else:
+                if name in params:
+                    raise ValueError(f'Parameter file already has an object named {name}')
+                params[name] = values
+        
     def run(self):
         params = {}
-        # Read YAML file
-        with open(self.param_file, 'r') as stream:
+        # Read YAML file(s)
+        print('Reading parameters from', self.param_files[0])
+        with open(self.param_files[0], 'r') as stream:
             params = yaml.safe_load(stream)
+                
+        for filename in self.param_files[1:]:
+            print('Reading additional parameters from', self.param_files[0])
+            with open(filename, 'r') as stream:
+                additional_params = yaml.safe_load(stream)
+                self.combine_params(params, additional_params)
 
         # Initialize housekeeping objects
         loop = LoopControl(run_time=params['main']['total_time'], dt=params['main']['time_step'])
