@@ -1,5 +1,4 @@
-import numpy as np
-from pyssata import cp, cpuArray, fuse
+from pyssata import cpuArray, fuse
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
@@ -14,13 +13,14 @@ from pyssata.lib.toccd import toccd
 # import cupyx.scipy.fft
 
 @fuse(kernel_name='pyr1_fused')
-def pyr1_fused(u_fp, ffv, myexp, fp_mask):
-    psf = cp.real(u_fp * cp.conj(u_fp))
+def pyr1_fused(u_fp, ffv, myexp, fp_mask, xp):
+    psf = xp.real(u_fp * xp.conj(u_fp))
     fpsf = psf * ffv
     u_fp *= fp_mask
     u_fp_pyr = u_fp * myexp
     return u_fp_pyr, fpsf                                                
-            
+
+
 class ModulatedPyramid(BaseProcessingObj):
     def __init__(self,
                  pixel_pupil: int,
@@ -457,13 +457,7 @@ class ModulatedPyramid(BaseProcessingObj):
         u_tlt[:, 0:ss[1], 0:ss[2]] = tmp
         #with plan1:
         u_fp = self.xp.fft.fftshift(self.xp.fft.fft2(u_tlt, axes=(-2, -1)), axes=(-2, -1))                                       
-        if self._target_device_idx>=0:
-            u_fp_pyr, fpsf = pyr1_fused(u_fp, ffv, my_exp, fp_mask)
-        else:
-            psf = self.xp.real(u_fp * self.xp.conj(u_fp))
-            fpsf = psf * ffv
-            u_fp *= fp_mask
-            u_fp_pyr = u_fp * my_exp
+        u_fp_pyr, fpsf = pyr1_fused(u_fp, ffv, my_exp, fp_mask, xp=self.xp)
         #with plan2:
         pup_pyr_tot = self.xp.sum( self.xp.abs(self.xp.fft.ifft2(u_fp_pyr, axes=(-2, -1))) ** 2 * ffv, axis=0)            
         psf_bfm = self.xp.sum(fpsf , axis=2)
