@@ -1,7 +1,7 @@
 import os
 
 from pyssata.base_processing_obj import BaseProcessingObj
-from pyssata.data_objects.ef import ElectricField
+from pyssata.data_objects.intensity import Intensity
 from pyssata.data_objects.lenslet import Lenslet
 from pyssata.connections import InputValue
 from pyssata.data_objects.subap_data import SubapData
@@ -9,7 +9,6 @@ from pyssata.data_objects.subap_data import SubapData
 
 class ShSubapCalibrator(BaseProcessingObj):
     def __init__(self,
-                 wavelengthInNm: float,
                  subap_on_diameter: int,
                  energy_th: float,
                  data_dir: str,         # Set by main simul object
@@ -19,7 +18,6 @@ class ShSubapCalibrator(BaseProcessingObj):
                  precision: int = None
                 ):
         super().__init__(target_device_idx=target_device_idx, precision=precision)        
-        self._wavelengthInNm = wavelengthInNm
         self._subap_on_diameter = subap_on_diameter
         self._lenslet = Lenslet(subap_on_diameter)
         self._energy_th = energy_th
@@ -31,13 +29,16 @@ class ShSubapCalibrator(BaseProcessingObj):
             self._filename = tag_template
         else:
             self._filename = output_tag
-        self.inputs['in_ef'] = InputValue(type=ElectricField)
+        self.inputs['in_i'] = InputValue(type=Intensity)
 
     def trigger_code(self):
         
-        image = self.local_inputs['in_ef'].ef_at_lambda(self._wavelengthInNm)
+        image = self.local_inputs['in_i'].i
         subaps = self._detect_subaps(image, self._energy_th)
-        subaps.save(os.path.join(self._data_dir, self._filename))
+        filename = self._filename
+        if not filename.endswith('.fits'):
+            filename += '.fits'
+        subaps.save(os.path.join(self._data_dir, filename))
         
     def _detect_subaps(self, image, energy_th):
         np = image.shape[0]

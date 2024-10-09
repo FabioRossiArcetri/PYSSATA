@@ -74,7 +74,6 @@ class SH(BaseProcessingObj):
         self._kernel_precalc_fft = False
         self._debugOutput = False
         self._noprints = False
-        self._subap_idx = None
         self._idx_valid = False
         self._scale_ovs = 1.0
         self._floatShifts = False
@@ -290,9 +289,12 @@ class SH(BaseProcessingObj):
         in_ef = self.inputs['in_ef'].get(self._target_device_idx)
         s = in_ef.size
 
-        # Calculate subap chunks (all of equal x/y size)
+        # Calculate subap chunks
         # subap_chunks = [ (x slice, y slice), (x slice, y slice) ... ]
-        # All chunks must have the same size and shape
+        # All chunks must have the same number of subapertures.
+        # As a future update, it may be possible to have different shapes by replacing
+        # the "ef_whole" indexing, or a different number of subapertures setting "n"
+        # to the max and only using a part of it for each chunk
         self._subap_chunks = []
 
         # Test: chunks of 2 full rows each
@@ -336,27 +338,13 @@ class SH(BaseProcessingObj):
         fp4_pixel_pitch = self._wavelengthInNm / 1e9 / (wf1.pixel_pitch * fft_size)
         fov_complete = fft_size * fp4_pixel_pitch
 
-        # Calculate subaperture indexes
-        self._subap_idx = self.xp.zeros((self._lenslet.dimx, self._lenslet.dimy, np_sub * np_sub), dtype=int)
-        for i in range(self._lenslet.dimx):
-            for j in range(self._lenslet.dimy):
-                lens = self._lenslet.get(i, j)  # [x, y, size]
-                x = wf1.size[0] / 2.0 * (1 + lens[0])
-                y = wf1.size[1] / 2.0 * (1 + lens[1])
-
-                f = self.xp.zeros(wf1.size, dtype=int)
-                f[int(np.round(x - np_sub / 2.)):int(np.round(x + np_sub / 2.)),
-                  int(np.round(y - np_sub / 2.)):int(np.round(y + np_sub / 2.))] = 1
-                idx = self.xp.ravel_multi_index(f.nonzero(), f.shape)
-                self._subap_idx[i, j, :] = idx
-
         sensor_subap_fov = sensor_pxscale * subap_npx
         fov_cut = fov_complete - sensor_subap_fov
         
         print(f'{fft_size=} {fp4_pixel_pitch=} {fov_cut=} {fov_complete=} {sensor_subap_fov=} {sensor_pxscale=} {subap_npx=}')
         self._cutpixels = int(np.round(fov_cut / fp4_pixel_pitch) / 2 * 2)
         self._cutsize = fft_size - self._cutpixels
-        self._psfimage = self.xp.zeros((self._cutsize * self._lenslet.dimx, self._cutsize * self._lenslet.dimy))
+        self._psfimage = self.xp.zeros((self._cutsize * self._lenslet.dimx, self._cutsize * self._lenslet.dimy), dtype=self.dtype)
         
         # 1/2 Px tilt
         self._tltf = self.get_tlt_f(np_sub, fft_size - np_sub)

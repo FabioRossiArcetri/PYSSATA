@@ -244,9 +244,12 @@ class Simul():
         self.connect_datastore(store, params)
 
         # Build loop
+        if 'pushpull' in self.objs:
+            loop.add(self.objs['pushpull'])
         for name, obj in self.objs.items():
             if isinstance(obj, BaseProcessingObj):
-                loop.add(obj)
+                if name != 'pushpull':
+                    loop.add(obj)
         loop.add(store)
 
         # Run simulation loop

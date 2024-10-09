@@ -1,6 +1,8 @@
 
+import numpy as np
 from astropy.io import fits
 
+from pyssata import cpuArray
 from pyssata.data_objects.base_data_obj import BaseDataObj
 
 
@@ -69,6 +71,10 @@ class Recmat(BaseDataObj):
         self._recmat = recmat[:, :nmodes - nModesToBeDiscarded]
 
     def save(self, filename, hdr=None):
+        
+        if not filename.endswith('.fits'):
+            filename += '.fits'
+
         if hdr is None:
             hdr = fits.Header()
         hdr['VERSION'] = 1
@@ -76,11 +82,10 @@ class Recmat(BaseDataObj):
         hdr['TAG'] = self._tag
         hdr['NORMFACT'] = self._norm_factor
 
-        super().save(filename, hdr)
-
-        fits.append(filename, self._recmat)
+        fits.writeto(filename, np.zeros(2), hdr)
+        fits.append(filename, cpuArray(self._recmat.T))
         if self._modes2recLayer is not None:
-            fits.append(filename, self._modes2recLayer)
+            fits.append(filename, cpuArray(self._modes2recLayer))
 
     @staticmethod
     def restore(filename, target_device_idx=None):
@@ -90,9 +95,9 @@ class Recmat(BaseDataObj):
             raise ValueError(f"Error: unknown version {version} in file {filename}")
 
         norm_factor = float(hdr['NORMFACT'])
-        recmat = fits.getdata(filename, ext=0)
-        if len(fits.open(filename)) >= 1:
-            mode2reLayer = fits.getdata(filename, ext=1)
+        recmat = fits.getdata(filename, ext=1)
+        if len(fits.open(filename)) >= 3:
+            mode2reLayer = fits.getdata(filename, ext=2)
         else:
             mode2reLayer = None
         return Recmat(recmat, mode2reLayer, norm_factor, target_device_idx=target_device_idx)

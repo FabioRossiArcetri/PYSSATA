@@ -1,13 +1,12 @@
-import numpy as np
 
-from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
-from pyssata import xp
+from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.lib.modal_pushpull_signal import modal_pushpull_signal
 
 class FuncGenerator(BaseProcessingObj):
     def __init__(self, func_type='SIN', nmodes=None, time_hist=None, psd=None, fr_psd=None, continuous_psd=None, 
                 constant=None, amp=None, freq=None, offset=None, vect_amplitude=None, 
-                seed=None, ncycles=None,
+                seed=None, ncycles=1,
                 target_device_idx=None, 
                 precision=None
                 ):
@@ -21,10 +20,13 @@ class FuncGenerator(BaseProcessingObj):
             self._repeat_ncycles = False
         self._active = True
 
-        self._amp = self.xp.array(0)
-        self._freq = self.xp.array(0)
-        self._offset = self.xp.array(0)
-        self._constant = self.xp.array(0)
+        self._constant = self.xp.array(constant) if constant is not None else 0.0
+        self._amp = self.xp.array(amp) if amp is not None else 0.0
+        self._freq = self.xp.array(freq) if freq is not None else 0.0
+        self._offset = self.xp.array(offset) if offset is not None else 0.0
+        self._vect_amplitude = self.xp.array(vect_amplitude) if vect_amplitude is not None else None
+        self._time_hist = self.xp.array(time_hist) if time_hist is not None else None
+
         self._output = BaseValue(target_device_idx=target_device_idx, value=self.xp.array(0))
 
         if seed is not None:
@@ -34,18 +36,12 @@ class FuncGenerator(BaseProcessingObj):
 
         # Initialize attributes based on the type
         if self._type == 'SIN':
-            self.constant = self.xp.array(constant) if constant is not None else 0.0
-            self.amp = self.xp.array(amp) if amp is not None else 0.0
-            self.freq = self.xp.array(freq) if freq is not None else 0.0
-            self.offset = self.xp.array(offset) if offset is not None else 0.0
+            pass
 
         elif self._type == 'LINEAR':
-            self.constant = self.xp.array(constant) if constant is not None else 0.0
             self.slope = 0.0
 
         elif self._type == 'RANDOM':
-            self.amp = self.xp.array(amp) if amp is not None else 0.0
-            self.constant = self.xp.array(constant) if constant is not None else 0.0
             self.seed = self.xp.array(seed) if seed is not None else 0.0
 
         elif self._type == 'VIB_HIST':
@@ -69,23 +65,18 @@ class FuncGenerator(BaseProcessingObj):
                 raise ValueError('NMODES keyword is mandatory for type PUSH')
             if amp is None and vect_amplitude is None:
                 raise ValueError('AMP or VECT_AMPLITUDE keyword is mandatory for type PUSH')
-            self._time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, only_push=True, ncycles=ncycles)
-            self._amp = self.xp.array(amp)
-            self._vect_amplitude = self.xp.array(ect_amplitude)
+            self._time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, only_push=True, ncycles=ncycles, xp=self.xp)
 
         elif self._type == 'PUSHPULL':
             if nmodes is None:
                 raise ValueError('NMODES keyword is mandatory for type PUSHPULL')
             if amp is None and vect_amplitude is None:
                 raise ValueError('AMP or VECT_AMPLITUDE keyword is mandatory for type PUSHPULL')
-            self._time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, ncycles=ncycles, repeat_ncycles=self._repeat_ncycles)
-            self._amp = self.xp.array(amp)
-            self._vect_amplitude = self.xp.array(vect_amplitude)
+            self._time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, ncycles=ncycles, repeat_ncycles=self._repeat_ncycles, xp=self.xp)
 
         elif self._type == 'TIME_HIST':
             if time_hist is None:
                 raise ValueError('TIME_HIST keyword is mandatory for type TIME_HIST')
-            self._time_hist = self.xp.array(time_hist)
 
         else:
             raise ValueError(f'Unknown function type: {self._type}')
@@ -102,7 +93,7 @@ class FuncGenerator(BaseProcessingObj):
             if not self._active:
                 s = 0.0
             else:
-                s = self.xp.array(self._amp, dtype=self.dtype)*self.xp.sin(self._freq*2*self.xp.pi*self.current_time_seconds + self._offset)+self.xp.array(self._constant, dtype=self.dtype)
+                s = self._amp * self.xp.sin(self._freq * 2 * self.xp.pi* self.current_time_seconds + self._offset) + self._constant
 
         elif self._type == 'LINEAR':
             if not self._active:
@@ -117,7 +108,7 @@ class FuncGenerator(BaseProcessingObj):
                 s = self.xp.random.normal(size=len(self._amp)) * self._amp + self._constant
 
         elif self._type in ['VIB_HIST', 'VIB_PSD', 'PUSH', 'PUSHPULL', 'TIME_HIST']:
-            s = self.get_time_hist_at_time(t)
+            s = self.get_time_hist_at_time(self.current_time)
 
         else:
             raise ValueError(f'Unknown function generator type: {self._type}')
@@ -129,7 +120,7 @@ class FuncGenerator(BaseProcessingObj):
         if not self._active:
             return self.xp.zeros_like(self._time_hist[0])
         i = self.xp.around(t / self._loop_dt)
-        return self._time_hist[i]
+        return self._time_hist[int(i)]
 
     # Getters and Setters for the attributes
     @property

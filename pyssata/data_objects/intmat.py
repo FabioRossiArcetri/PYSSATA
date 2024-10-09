@@ -1,12 +1,11 @@
-import numpy as np
 
-from pyssata import xp
 
 from astropy.io import fits
 
+from pyssata.data_objects.base_data_obj import BaseDataObj
 from pyssata.data_objects.recmat import Recmat
 
-class Intmat:
+class Intmat(BaseDataObj):
     def __init__(self,
                  intmat,
                  slope_mm = None,
@@ -80,20 +79,20 @@ class Intmat:
 
     def pseudo_invert(self, matrix, n_modes_to_drop=0, w_vec=None, interactive=False):
         # TODO handle n_modes_to_drop, and w_vec
-        return xp.linalg.pinv(matrix)
+        return self.xp.linalg.pinv(matrix)
 
     def build_from_slopes(self, slopes, disturbance):
         times = list(slopes.keys())
         nslopes = len(slopes[times[0]])
         nmodes = len(disturbance[times[0]])
-        intmat = xp.zeros((nmodes, nslopes), dtype=self.dtype)
-        iter_per_mode = xp.zeros(nmodes, dtype=self.dtype)
-        slope_mm = xp.zeros((nmodes, 2), dtype=self.dtype)
-        slope_rms = xp.zeros(nmodes, dtype=self.dtype)
+        intmat = self.xp.zeros((nmodes, nslopes), dtype=self.dtype)
+        iter_per_mode = self.xp.zeros(nmodes, dtype=self.dtype)
+        slope_mm = self.xp.zeros((nmodes, 2), dtype=self.dtype)
+        slope_rms = self.xp.zeros(nmodes, dtype=self.dtype)
 
         for t in times:
             amp = disturbance[t]
-            mode = xp.where(amp)[0][0]
+            mode = self.xp.where(amp)[0][0]
             intmat[mode, :] += slopes[t] / amp[mode]
             iter_per_mode[mode] += 1
 
