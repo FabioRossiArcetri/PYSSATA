@@ -65,14 +65,16 @@ class FuncGenerator(BaseProcessingObj):
                 raise ValueError('NMODES keyword is mandatory for type PUSH')
             if amp is None and vect_amplitude is None:
                 raise ValueError('AMP or VECT_AMPLITUDE keyword is mandatory for type PUSH')
-            self._time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, only_push=True, ncycles=ncycles, xp=self.xp)
+            self._time_hist = modal_pushpull_signal(nmodes, amplitude=self._amp, vect_amplitude=self._vect_amplitude,
+                                                    only_push=True, ncycles=ncycles, xp=self.xp)
 
         elif self._type == 'PUSHPULL':
             if nmodes is None:
                 raise ValueError('NMODES keyword is mandatory for type PUSHPULL')
             if amp is None and vect_amplitude is None:
                 raise ValueError('AMP or VECT_AMPLITUDE keyword is mandatory for type PUSHPULL')
-            self._time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, ncycles=ncycles, repeat_ncycles=self._repeat_ncycles, xp=self.xp)
+            self._time_hist = modal_pushpull_signal(nmodes, amplitude=self._amp, vect_amplitude=self._vect_amplitude,
+                                                    ncycles=ncycles, repeat_ncycles=self._repeat_ncycles, xp=self.xp)
 
         elif self._type == 'TIME_HIST':
             if time_hist is None:

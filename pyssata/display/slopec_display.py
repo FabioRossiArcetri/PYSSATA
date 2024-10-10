@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
+plt.ion()
 
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.processing_objects.pyr_slopec import PyrSlopec
+from pyssata.processing_objects.sh_slopec import ShSlopec
 from pyssata.display.pupil_display import pupil_display
 import numpy as np
 
@@ -81,13 +83,18 @@ class SlopecDisplay(BaseProcessingObj):
                 sy = s.yslopes
                 if isinstance(slopec, PyrSlopec):
                     map_data = slopec.pupdata.ind_pup[:, 1]
-                    slope_side = None  # Auto scaled
+                elif isinstance(slopec, ShSlopec):
+                   nx = slopec.subapdata.nx
+                   map_data = slopec.subapdata.map
+                   np_sub = slopec.subapdata.np_sub
+                   map_data = (map_data // nx) * nx * np_sub + (map_data % nx)
+                else:
+                    raise ValueError(f'Cannot display data for slope computer class {slopec.__class__.__name__}')
 #                TODO --- these SlopeC are not available yet
-#                elif isinstance(self._slopec, (IdealWfsSlopec, ShSlopec, ShSlopec)):
-#                    nx = self._slopec.subapdata.nx
-#                    map_data = self._slopec.subapdata.map
+#                elif isinstance(self._slopec, IdealWfsSlopec):
+#                    nx = slopec.subapdata.nx
+#                    map_data = slopec.subapdata.map
 #                    map_data = (map_data // nx) * nx * 2 + (map_data % nx)
-#                    slope_side = nx * 2
 
                 if self.fig is not None:
                     TARGET = (self.fig, self.ax)

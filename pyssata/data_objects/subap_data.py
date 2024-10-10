@@ -38,6 +38,7 @@ class SubapData(BaseDataObj):
     @property
     def np_sub(self):
         return int(math.sqrt(self._idxs.shape[1]))
+
     @property
     def map(self):
         return self._map

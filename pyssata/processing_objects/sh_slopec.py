@@ -382,8 +382,8 @@ class ShSlopec(Slopec):
                 pixels *= accumulated_pixels_weight
 
         # Calculate flux and max flux per subaperture
-        flux_per_subaperture_vector = self.xp.sum(pixels, axis=1)
-        max_flux_per_subaperture_vector = self.xp.max(pixels, axis=1)
+        flux_per_subaperture_vector = self.xp.sum(pixels, axis=0)
+        max_flux_per_subaperture = self.xp.max(flux_per_subaperture_vector)
 
         if self._winMatWindowed is not None:
             if self._verbose:
@@ -392,7 +392,7 @@ class ShSlopec(Slopec):
 
         # Thresholding logic
         if self._thr_ratio_value > 0:
-            thr = self._thr_ratio_value * max_flux_per_subaperture_vector
+            thr = self._thr_ratio_value * max_flux_per_subaperture
             thr = thr[:, self.xp.newaxis] * self.xp.ones((1, np_sub * np_sub))
         elif self._thr_pedestal or self._thr_value > 0:
             thr = self._thr_value
