@@ -35,19 +35,29 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         # Will be populated by derived class
         self.inputs = {}
         self.local_inputs = {}
+        self.last_seen = {}
         self.outputs = {}
         self.stream  = None
 
     def checkInputTimes(self):        
         if len(self.inputs)==0:
             return True
-        for input_obj in self.inputs.values():            
+        for input_name, input_obj in self.inputs.items():
+            print(input_name)
             if type(input_obj) is InputValue:
-                if input_obj.get_time() == self.current_time:
+                if input_name not in self.last_seen and input_obj.get_time() is not None and input_obj.get_time() >= 0:  # First time
+                    return True
+                if input_name in self.last_seen and input_obj.get_time() > self.last_seen[input_name]:
                     return True
             elif type(input_obj) is InputList:
-                for tt in input_obj.get_time():
-                    if tt == self.current_time:
+                if input_name not in self.last_seen:
+                    for tt in input_obj.get_time():
+                        if tt >= 0:
+                            return True
+#                if input_name not in self.last_seen and input_obj.get_time() >= 0:  # First time
+#                    return True
+                for tt, last in zip(input_obj.get_time(), self.last_seen[input_name]):
+                    if tt > last:
                         return True
         return False
 
@@ -56,11 +66,16 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         for input_name, input_obj in self.inputs.items():
             if type(input_obj) is InputValue:
                 self.local_inputs[input_name] =  input_obj.get(self._target_device_idx)
+                if self.local_inputs[input_name] is not None:
+                    self.last_seen[input_name] = self.local_inputs[input_name].generation_time
             elif type(input_obj) is InputList:
                 self.local_inputs[input_name] = []
+                self.last_seen[input_name] = []
                 for tt in input_obj.get(self._target_device_idx):
                     self.local_inputs[input_name].append(tt)
-        
+                    if self.local_inputs[input_name] is not None:
+                        self.last_seen[input_name].append(tt.generation_time)
+
     def trigger_code(self):
         pass
 

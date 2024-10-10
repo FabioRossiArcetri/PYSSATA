@@ -130,11 +130,11 @@ psf:
   inputs:
       in_ef:  'prop.on_axis_source'
 
-# sc_disp:
-#   class:            'SlopecDisplay'
-#   inputs:
-#     slopec:       'slopec'
-#   disp_factor:      4
+sc_disp:
+  class:            'SlopecDisplay'
+  inputs:
+    slopec:       'slopec'
+  disp_factor:      4
 sr_disp:
   class:            'PlotDisplay'
   inputs:
