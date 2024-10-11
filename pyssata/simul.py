@@ -298,6 +298,7 @@ class Simul():
         self.connect_datastore(store, params)
 
         trigger_order = self.trigger_order(params)
+        print(f'{trigger_order=}')
 
         # Build loop
         for name in trigger_order:
