@@ -3,7 +3,7 @@ import numpy as np
 from pyssata import xp
 
 from pyssata.base_parameter_obj import BaseParameterObj
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 from pyssata.lib.n_phot import n_phot
 
 

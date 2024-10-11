@@ -443,7 +443,7 @@ class ModulatedPyramid(BaseProcessingObj):
 
         u_tlt = self.xp.zeros((self.mod_steps, self._fft_totsize, self._fft_totsize), dtype=self.complex_dtype)
         
-        mean_value = self.xp.median(self._flux_factor_vector) * 1e-3
+        mean_value = self.xp.mean(self._flux_factor_vector) * 1e-3
         fp_mask = self._fp_mask[self.xp.newaxis, :,:]
         my_exp = self._myexp[self.xp.newaxis, :,:]
 

@@ -1,6 +1,6 @@
 from astropy.io import fits
 
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 
 class PupData(BaseDataObj):
     '''
@@ -91,8 +91,8 @@ class PupData(BaseDataObj):
         fits.append(filename, self._cx)
         fits.append(filename, self._cy)
 
-    def read(self, filename, hdr=None, exten=0):
-        hdr, exten = super().read(filename)
+    def read(self, filename, hdr=None, exten=1):
+        #hdr, exten = super().read(filename)
 
         self._ind_pup = self.xp.array(fits.getdata(filename, ext=exten))
         self._radius = self.xp.array(fits.getdata(filename, ext=exten + 1))
