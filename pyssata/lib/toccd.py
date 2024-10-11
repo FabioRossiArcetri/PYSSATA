@@ -146,7 +146,7 @@ void rebin2D_step1_TYPE(TYPE *g_in, TYPE *g_tmp, int inx, int iny, int outx, int
     kernel_step2  = r'''
 extern "C" __global__
 void rebin2D_step2_TYPE(TYPE *g_tmp, TYPE* g_out, int outx, int outy,
-                   int dy_in, int dy_out, float f) {
+                   int dy_in, int dy_out, TYPE f) {
 
    int y = blockIdx.y * blockDim.y + threadIdx.y;
    int x = blockIdx.x * blockDim.x + threadIdx.x;
