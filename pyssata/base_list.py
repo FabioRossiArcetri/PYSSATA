@@ -1,5 +1,5 @@
 
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 
 
 class BaseList(list, BaseDataObj):

@@ -1,7 +1,7 @@
 
 from astropy.io import fits
 
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 
 
 class Recmat(BaseDataObj):
@@ -88,8 +88,7 @@ class Recmat(BaseDataObj):
         if self._modes2recLayer is not None:
             fits.append(filename, self._modes2recLayer)
 
-    def read(self, filename, hdr=None, exten=0):
-        hdr, exten = super().read(filename)
+    def read(self, filename, hdr=None, exten=1):
 
         self._recmat = fits.getdata(filename, ext=exten)
         self.set_recmat(self._recmat)
