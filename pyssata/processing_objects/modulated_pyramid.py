@@ -324,7 +324,8 @@ class ModulatedPyramid(BaseProcessingObj):
             i[idx] = 0
         self._flux_factor_vector = i
         self.ffv = self._flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
-
+        self.factor = 1.0 / self.xp.sum(self._flux_factor_vector)
+        
 
     def get_pyr_tlt(self, p, c):
         A = int((p + c) // 2)
@@ -423,19 +424,19 @@ class ModulatedPyramid(BaseProcessingObj):
 
             self._flux_factor_vector = self.xp.ones(self._mod_steps, dtype=self.dtype)
             self.ffv = self._flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
+            self.factor = 1.0 / self.xp.sum(self._flux_factor_vector)
 
 
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
-        self.in_ef = self.local_inputs['in_ef']
-        self.ef_size = self.in_ef.size
+        self.ef_size = self.local_inputs['in_ef'].size
         if self._extended_source_in_on and self._extSourcePsf is not None:
             if self._extSourcePsf.generation_time == self.current_time:
                 if self.xp.sum(self.xp.abs(self._extSourcePsf.value)) > 0:
                     self._extSource.updatePsf(self._extSourcePsf.value)
                     self._flux_factor_vector = self._extSource.coeff_flux
                     self.ffv = self._flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
-
+                    self.factor = 1.0 / self.xp.sum(self._flux_factor_vector)
 
         if self._rotAnglePhInDeg != 0:
             A = (self.ROT_AND_SHIFT_IMAGE(in_ef.A, self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(self.xp.uint8)
@@ -447,28 +448,12 @@ class ModulatedPyramid(BaseProcessingObj):
                 self.ef = self.xp.complex64(self.xp.rebin(in_ef.A, (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) + 
                                   self.xp.rebin(in_ef.phi_at_lambda(self._wavelength_in_nm), (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) * 1j)
             else:
-                ef = self.in_ef.ef_at_lambda(self._wavelength_in_nm)
-
-        u_tlt_const = ef * self._tlt_f
-
-        pup_pyr_tot = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-        psf_bfm = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-        psf_tot = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-
-        u_tlt = self.xp.zeros((self.mod_steps, self._fft_totsize, self._fft_totsize), dtype=self.complex_dtype)
-        
-        mean_value = self.xp.median(self._flux_factor_vector) * 1e-3
-        fp_mask = self._fp_mask[self.xp.newaxis, :,:]
-        my_exp = self._myexp[self.xp.newaxis, :,:]
-
-        #plan1 = get_fft_plan(u_tlt, axes=(0, 1), value_type='C2C')            
-        #plan2 = get_fft_plan(u_tlt, axes=(0, 1), value_type='C2C')            
-        ffv = self.xp.where(self._flux_factor_vector > mean_value, self._flux_factor_vector, 0)
-        ffv = ffv[:, self.xp.newaxis, self.xp.newaxis]
-        tmp = self.xp.repeat(u_tlt_const[self.xp.newaxis, :, :], ffv.shape[0], axis=0)            
-        tmp = tmp * self._ttexp
+                self.ef = self.local_inputs['in_ef'].ef_at_lambda(self._wavelength_in_nm)
+        u_tlt_const = self.ef * self._tlt_f
+        tmp = u_tlt_const[self.xp.newaxis, :, :] * self._ttexp
         ss = tmp.shape
         self.u_tlt[:, 0:ss[1], 0:ss[2]] = tmp
+
         
     def trigger_code(self):
         with self.plan1:
@@ -477,23 +462,21 @@ class ModulatedPyramid(BaseProcessingObj):
         with self.plan1:
             self.aa = self.xp.fft.ifft2(self.u_fp_pyr, axes=(-2, -1))
         self.bb = self.xp.abs(self.aa) ** 2 * self.ffv
-
+        
     def post_trigger(self):
+        super().post_trigger()
         self.xp.sum(self.bb, axis=0, out=self.pup_pyr_tot)
         self.xp.sum(self.fpsf, axis=0, out=self.psf_bfm)
         self.xp.sum(self.fpsf*self._fp_mask, axis=0, out=self.psf_tot)
         self.pup_pyr_tot = self.xp.roll(self.pup_pyr_tot, self.roll_array, [0,1] )
-        factor = 1.0 / self.xp.sum(self._flux_factor_vector)
-        self.pup_pyr_tot *= factor
-        self.psf_tot *= factor
-        self.psf_bfm *= factor
+        self.pup_pyr_tot *= self.factor
+        self.psf_tot *= self.factor
+        self.psf_bfm *= self.factor
         self.transmission = self.xp.sum(self.psf_tot) / self.xp.sum(self.psf_bfm)
-        phot = self.in_ef.S0 * self.in_ef.masked_area()
+        phot = self.local_inputs['in_ef'].S0 * self.local_inputs['in_ef'].masked_area()
         self.pup_pyr_tot *= (phot / self.xp.sum(self.pup_pyr_tot)) * self.transmission
-
 #        if phot == 0: slows down?
 #            print('WARNING: total intensity at PYR entrance is zero')
-
         # TODO handle shifts as an input from a func generator (for time-varying shifts)
         if self._pup_shifts is not None and self._pup_shifts != (0.0, 0.0):
             image = self.xp.pad(self.pup_pyr_tot, 1, mode='constant')

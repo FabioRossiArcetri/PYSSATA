@@ -66,6 +66,15 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
 
     def post_trigger(self):
         pass
+#        if self.checkInputTimes():
+#         if self._target_device_idx>=0 and self.cuda_graph:
+#             self.stream.synchronize()
+#             self._target_device.synchronize()
+#             self.xp.cuda.runtime.deviceSynchronize()
+## at the end of the derevide method should call this?
+#            default_target_device.use()
+#            self.xp.cuda.runtime.deviceSynchronize()                
+#            cp.cuda.Stream.null.synchronize()
 
     def build_stream(self):
         if self._target_device_idx>=0:
@@ -85,21 +94,15 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         self.current_time = t
         if self.checkInputTimes():
             self._target_device.use()
-            #self._target_device.synchronize()
-            #self.xp.cuda.runtime.deviceSynchronize()
             self.prepare_trigger(t)
             if self._target_device_idx>=0 and self.cuda_graph:
                 self.cuda_graph.launch(stream=self.stream)
-#                self.stream.synchronize()
             else:
                 self.trigger_code()
-#                cp.cuda.Stream.null.synchronize()
             self.post_trigger()
         else:
             if self.verbose:
                 print(f'No inputs have been refreshed, skipping trigger')
-#        self.xp.cuda.runtime.deviceSynchronize()                
-        default_target_device.use()
                     
     @property
     def verbose(self):
