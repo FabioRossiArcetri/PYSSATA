@@ -1,6 +1,6 @@
 
 from astropy.io import fits
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 
 class BaseValue(BaseDataObj):
     def __init__(self, description='', value=None, target_device_idx=None):
