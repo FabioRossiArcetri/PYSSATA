@@ -100,15 +100,13 @@ class AtmoEvolution(BaseProcessingObj):
         
         # Initialize layer list with correct heights
         self._layer_list = BaseList(target_device_idx=self._target_device_idx)
-
         for i in range(self._n_phasescreens):
             layer = Layer(self._pixel_layer[i], self._pixel_layer[i], pixel_pitch, heights[i], precision=self._precision, target_device_idx=self._target_device_idx)
             self._layer_list.append(layer)
+        self.outputs['layer_list'] = self.layer_list
         
         if seed is not None:
             self.seed = seed
-
-        self.outputs['layer_list'] = self.layer_list
         self._last_position = self.xp.zeros(self._n_phasescreens, dtype=self.dtype)
 
     @property
@@ -274,24 +272,21 @@ class AtmoEvolution(BaseProcessingObj):
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
         self.delta_time = self.t_to_seconds(self.current_time - self._last_t) + self._extra_delta_time        
-        self.seeing = self.local_inputs['seeing'].value
-        self.wind_speed = self.local_inputs['wind_speed'].value
-        self.wind_direction = self.local_inputs['wind_direction'].value
     
     def trigger_code(self):
         # if len(self._phasescreens) != len(wind_speed) or len(self._phasescreens) != len(wind_direction):
         #     raise ValueError('Error: number of elements of wind speed and/or direction does not match the number of phasescreens')
-        r0 = 0.9759 * 0.5 / (self.seeing * 4.848) * self._airmass**(-3./5.) # if seeing > 0 else 0.0
+        r0 = 0.9759 * 0.5 / (self.local_inputs['seeing'].value * 4.848) * self._airmass**(-3./5.) # if seeing > 0 else 0.0
         r0wavelength = r0 * (self._wavelengthInNm / 500.0)**(6./5.)
         scale_coeff = (self._pixel_pitch / r0wavelength)**(5./6.) # if seeing > 0 else 0.0
         # Compute the delta position in pixels
-        delta_position = self.wind_speed * self.delta_time / self._pixel_pitch  # [pixel]
+        delta_position = self.local_inputs['wind_speed'].value * self.delta_time / self._pixel_pitch  # [pixel]
         new_position = self._last_position + delta_position
         # Get quotient and remainder
         new_position_quo = self.xp.floor(new_position).astype(int)
         new_position_rem = new_position - new_position_quo
-        wdf, wdi = self.xp.modf(self.wind_direction/90.0)
-        wdf_full, wdi_full = self.xp.modf(self.wind_direction)
+        wdf, wdi = self.xp.modf(self.local_inputs['wind_direction'].value/90.0)
+        wdf_full, wdi_full = self.xp.modf(self.local_inputs['wind_direction'].value)
         # Check if we need to cycle the screens
         # print(ii, new_position[ii], self._pixel_layer[ii], p.shape[1]) # Verbose?
         if self._cycle_screens:
@@ -364,6 +359,6 @@ class AtmoEvolution(BaseProcessingObj):
         if not check:
             raise ValueError(errmsg)
           
-        #super().build_stream()
+        # super().build_stream()
         return check
 

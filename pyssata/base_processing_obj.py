@@ -68,11 +68,28 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
     def trigger_code(self):
         pass
 
+    def post_trigger(self):
+        return
+        # even if this should be done, is skipped at the moment 
+        # since it is only slowing down the computation        
+        if self._target_device_idx>=0 and self.cuda_graph:
+            self.stream.synchronize()
+
+#        if self.checkInputTimes():
+#         if self._target_device_idx>=0 and self.cuda_graph:
+#             self.stream.synchronize()
+#             self._target_device.synchronize()
+#             self.xp.cuda.runtime.deviceSynchronize()
+## at the end of the derevide method should call this?
+#            default_target_device.use()
+#            self.xp.cuda.runtime.deviceSynchronize()                
+#            cp.cuda.Stream.null.synchronize()
+
     def build_stream(self):
         if self._target_device_idx>=0:
             #self.prepare_trigger(0)
             self._target_device.use()
-            self.stream = cp.cuda.Stream(non_blocking=True)
+            self.stream = cp.cuda.Stream(non_blocking=False)
             self.capture_stream()
             default_target_device.use()
 
@@ -85,14 +102,13 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
     def trigger(self, t):
         self.current_time = t
         if self.checkInputTimes():
+            self._target_device.use()
             self.prepare_trigger(t)
             if self._target_device_idx>=0 and self.cuda_graph:
-                self._target_device.use()
                 self.cuda_graph.launch(stream=self.stream)
-                self.stream.synchronize()
-                default_target_device.use()
             else:
                 self.trigger_code()
+            self.post_trigger()
         else:
             if self.verbose:
                 print(f'No inputs have been refreshed, skipping trigger')

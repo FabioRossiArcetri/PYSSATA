@@ -1,6 +1,8 @@
 from astropy.io import fits
 
 from pyssata.base_time_obj import BaseTimeObj
+from copy import copy
+from pyssata import cp, np
 
 def get_properties(cls):
     result = []
