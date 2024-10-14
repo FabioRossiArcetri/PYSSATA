@@ -28,6 +28,10 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         self.RegularGridInterpolator = RegularGridInterpolator
 
         BaseParameterObj.__init__(self)
+
+        self.current_time = 0
+        self.current_time_seconds = 0
+
         self._verbose = 0
         self._loop_dt = int(0)
         self._loop_niters = 0
