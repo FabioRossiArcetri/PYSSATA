@@ -4,12 +4,12 @@ pushpull:
   class:     'FuncGenerator'
   func_type: 'PUSHPULL'
   nmodes:     54
-  vect_amplitude:  [200,200,200,200,200,200,200,200,200,200,
-                      200,200,200,200,200,200,200,200,200,200,
-                      200,200,200,200,200,200,200,200,200,200,
-                      200,200,200,200,200,200,200,200,200,200,
-                      200,200,200,200,200,200,200,200,200,200,
-                      200,200,200,200] 
+  vect_amplitude:  [50,50,50,50,50,50,50,50,50,50,
+                      50,50,50,50,50,50,50,50,50,50,
+                      50,50,50,50,50,50,50,50,50,50,
+                      50,50,50,50,50,50,50,50,50,50,
+                      50,50,50,50,50,50,50,50,50,50,
+                      50,50,50,50] 
 
 main_override:
   total_time:  0.108
@@ -38,7 +38,15 @@ sc_disp:
     slopec:       'slopec'
   disp_factor:      4
 
-remove: ['atmo', 'rec']
+dm_disp:
+  class:            'PhaseDisplay'
+  inputs:
+    phase:       "dm.out_layer"
+  window:           13
+  title:            'DM'
+  disp_factor:      2
+
+remove: ['atmo', 'rec', 'sc_disp', 'dm_disp']
  
 
 

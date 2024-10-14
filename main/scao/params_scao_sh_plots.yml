@@ -57,7 +57,7 @@ prop:
   inputs:
     layer_list: ['atmo.layer_list',
                   'pupilstop',
-                  'dm.out_layer']
+                  'dm.out_layer:-1']
   
 sh:
   class:             'SH'
@@ -148,13 +148,13 @@ sr_disp:
 #   window:           12
 #   title:            'PUPIL PHASE'
 #   disp_factor:      2
-# dm_disp:
-#   class:            'PhaseDisplay'
-#   inputs:
-#     phase:       "dm.out_layer"
-#   window:           13
-#   title:            'DM'
-#   disp_factor:      2
+dm_disp:
+  class:            'PhaseDisplay'
+  inputs:
+    phase:       "dm.out_layer"
+  window:           13
+  title:            'DM'
+  disp_factor:      2
 # psf_disp:
 #   class:            'PsfDisplay'
 #   inputs:
