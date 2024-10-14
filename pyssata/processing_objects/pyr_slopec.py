@@ -40,6 +40,9 @@ class PyrSlopec(Slopec):
             self.pup_idx1 = self._pupdata.ind_pup[:, 1]
             self.pup_idx2 = self._pupdata.ind_pup[:, 2]
             self.pup_idx3 = self._pupdata.ind_pup[:, 3]
+            self.n_pup = self._pupdata.ind_pup.shape[1]
+            self.n_subap = self._pupdata.ind_pup.shape[0]
+
         if filtmat_tag:
             self.set_filtmat(self._cm.read_data(filtmat_tag))   # TODO
 
@@ -109,69 +112,71 @@ class PyrSlopec(Slopec):
         self.flat_pixels = self.local_inputs['in_pixels'].pixels.flatten()
 
     def trigger_code(self):
+        # outpus:
+        # total_counts : computed here
+        # subap_counts : computed in post_trigger
+        # slopes : computed here
+
         if not self._pupdata:
             return
 #        if self._verbose:
 #            print('Average pixel counts:', self.xp.sum(pixels) / len(self._pupdata.ind_pup))
         self.threshold = self._thr_value if self._thr_value != -1 else None
         self._total_counts.value = self.xp.sum(self.flat_pixels[self.pup_idx])
-        self.flux = self._subap_counts.value = self._total_counts.value / self._pupdata.n_subap
+
         if self.threshold is not None:
             self.flat_pixels -= self.threshold
-            clamp_generic_less(0,0,self.flat_pixels, xp=self.xp)
+
+        clamp_generic_less(0,0,self.flat_pixels, xp=self.xp)
         A = self.flat_pixels[self.pup_idx0]
         B = self.flat_pixels[self.pup_idx1]
         C = self.flat_pixels[self.pup_idx2]
         D = self.flat_pixels[self.pup_idx3]
+
         # Compute total intensity
-        # self.flux = self.xp.sum(A+B+C+D)
-        per_subap_sum = A+B+C+D
-        self.total_intensity = self.xp.sum(per_subap_sum)
-        clamp_generic_less(0, 0, self.total_intensity, xp=self.xp)
-        if self._norm_factor is not None:
-            factor = 1.0 / self._norm_factor
-        elif self._slopes_from_intensity:
-            factor = 4 * n_subap # / self.total_intensity
+        self.total_intensity = self.xp.sum(self.flat_pixels[self.pup_idx])
+
+        if self._slopes_from_intensity:
+            inv_factor = self.total_intensity / (4 * self.n_subap)
+            factor = 1.0 / inv_factor
             self.sx = factor * self.xp.concatenate([A, B])
             self.sy = factor * self.xp.concatenate([C, D])
-            # self.sx *= self.total_intensity
-            # self.sy *= self.total_intensity
-            self._slopes.slopes = [self.sx, self.sy]
         else:
-            if not self._shlike:
-                n_subap = self._pupdata.ind_pup.shape[0]
-                factor = n_subap / self.total_intensity
-                self.sx = (A+B-C-D).astype(self.dtype) * factor
-                self.sy = (B+C-A-D).astype(self.dtype) * factor
-                clamp_generic_more(0, 1, self.total_intensity, xp=self.xp)
-                self.sx *= self.total_intensity
-                self.sy *= self.total_intensity
-            else:
-                inv_factor = per_subap_sum                
-                clamp_generic_less(0, 1e-6, inv_factor, self.xp)
+            if self._norm_factor is not None:
+                inv_factor = self._norm_factor
                 factor = 1.0 / inv_factor
-                clamp_generic_less(0,0, factor)
-                self.sx = (A+B-C-D).astype(self.dtype) * factor
-                self.sy = (B+C-A-D).astype(self.dtype) * factor
-                clamp_generic_more(0, 1, self.total_intensity, xp=self.xp)
-                self.sx *= self.total_intensity
-                self.sy *= self.total_intensity
-                    
-            self._slopes.xslopes = self.sx
-            self._slopes.yslopes = self.sy 
-        if self._do_rec:
-            self._slopes.slopes = self.xp.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
+            elif not self._shlike:
+                inv_factor = self.total_intensity /  self.n_subap
+                factor = 1.0 / inv_factor
+            else:
+                inv_factor = A+B+C+D                                
+                factor = 1.0 / inv_factor
 
+            self.sx = (A+B-C-D).astype(self.dtype) * factor
+            self.sy = (B+C-A-D).astype(self.dtype) * factor
+
+        clamp_generic_more(0, 1, inv_factor, xp=self.xp)
+        self.sx *= inv_factor
+        self.sy *= inv_factor
+
+        self._slopes.xslopes = self.sx
+        self._slopes.yslopes = self.sy 
+
+        
     def post_trigger(self):
         super().post_trigger()
-        self._flux_per_subaperture_vector.value = self.flux
-        self._flux_per_subaperture_vector.generation_time = self.current_time
-        self._slopes.generation_time = self.current_time
+        self._subap_counts.value = self._total_counts.value / self._pupdata.n_subap
+        
         self._total_counts.generation_time = self.current_time
         self._subap_counts.generation_time = self.current_time
+        self._slopes.generation_time = self.current_time
 
-    def _compute_flux_per_subaperture(self):
-        return self._flux_per_subaperture_vector
+        # self._flux_per_subaperture_vector.value = ? # is this needed ?
+        # self._flux_per_subaperture_vector.generation_time = self.current_time
+
+
+    # def _compute_flux_per_subaperture(self):
+    #     return self._flux_per_subaperture_vector
 
     def run_check(self, time_step, errmsg=''):
         if self._shlike and self._slopes_from_intensity:

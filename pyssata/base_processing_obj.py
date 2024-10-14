@@ -65,7 +65,12 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         pass
 
     def post_trigger(self):
-        pass
+        return
+        # even if this should be done, is skipped at the moment 
+        # since it is only slowing down the computation        
+        if self._target_device_idx>=0 and self.cuda_graph:
+            self.stream.synchronize()
+
 #        if self.checkInputTimes():
 #         if self._target_device_idx>=0 and self.cuda_graph:
 #             self.stream.synchronize()
