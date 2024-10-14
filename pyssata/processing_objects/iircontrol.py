@@ -6,8 +6,8 @@ from pyssata.connections import InputValue
 from pyssata.base_value import BaseValue
 from pyssata.lib.calc_loop_delay import calc_loop_delay
 
-gxp = np
-gdtype = np.float64
+gxp = None
+gdtype = None
 
 def compute_comm(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_den):
     global gxp, gdtype
