@@ -208,8 +208,8 @@ class IIRControl(BaseProcessingObj):
             modal_start_time_[i] = self.seconds_to_t(modal_start_time[i])
         self._modal_start_time = modal_start_time_
 
-#    def prepare_trigger(self, t):
-#        super().prepare_trigger(t)
+    def prepare_trigger(self, t):
+        super().prepare_trigger(t)
 
         if self._opticalgain is not None:
             if self._opticalgain.value > 0:
