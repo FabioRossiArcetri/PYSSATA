@@ -151,9 +151,6 @@ class CCD(BaseProcessingObj):
         self.outputs['out_pixels'] = self._pixels
         self.outputs['integrated_i'] = self._integrated_i
 
-#       uncomment when the code is a stream
-#        super().build_stream()
-
 
     @property
     def dt(self):
@@ -189,7 +186,7 @@ class CCD(BaseProcessingObj):
 
     def trigger_code(self):
         if self._start_time <= 0 or self.current_time >= self._start_time:
-            in_i = self.inputs['in_i'].get(self._target_device_idx)
+            in_i = self.local_inputs['in_i']
             if in_i.generation_time == self.current_time:
                 if self._loop_dt == 0:
                     raise ValueError('ccd object loop_dt property must be set.')
@@ -293,6 +290,7 @@ class CCD(BaseProcessingObj):
         self._pixelGains = pixelGains
 
     def run_check(self, time_step, errmsg=''):
+        self.prepare_trigger(0)
         in_i = self.inputs['in_i'].get(self._target_device_idx)
         if self._loop_dt == 0:
             self._loop_dt = time_step
@@ -312,5 +310,6 @@ class CCD(BaseProcessingObj):
                        (self._dt > 0) and (self._dt % time_step == 0) and
                        (not self._cte_noise or self._cte_mat is not None))
         print(errmsg)
+        # super().build_stream()
         return is_check_ok
 

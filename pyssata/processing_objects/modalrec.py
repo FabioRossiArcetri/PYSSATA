@@ -181,58 +181,54 @@ class Modalrec(BaseProcessingObj):
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
 
-        slopes = self.inputs['in_slopes'].get(self._target_device_idx)
+        slopes = self.local_inputs['in_slopes']
         
-        if slopes.generation_time == self.current_time:
-            comm_new = []
-            if len(self._control_list) > 0:
-                for control in self._control_list:
-                    comm_new.append(control.get_past_state(0))
+        comm_new = []
+        if len(self._control_list) > 0:
+            for control in self._control_list:
+                comm_new.append(control.get_past_state(0))
 
-            if self._modes_first_step.generation_time != self.current_time:
-                if self._polc:
-                    self.compute_pseudo_ol_slopes(self.current_time)
-                    m = self.compute_modes(self._recmat, self._pseudo_ol_slopes.ptr_slopes)
-                    self._pseudo_ol_modes.value = m
-                    self._pseudo_ol_modes.generation_time = self.current_time
+        if self._modes_first_step.generation_time != self.current_time:
+            if self._polc:
+                self.compute_pseudo_ol_slopes(self.current_time)
+                m = self.compute_modes(self._recmat, self._pseudo_ol_slopes.ptr_slopes)
+                self._pseudo_ol_modes.value = m
+                self._pseudo_ol_modes.generation_time = self.current_time
 
-                    if len(m) == len(comm_new):
-                        self._modes_first_step.value = m - comm_new
-                    else:
-                        self._modes_first_step.value = m
+                if len(m) == len(comm_new):
+                    self._modes_first_step.value = m - comm_new
                 else:
-                    m = self.compute_modes(self._recmat, slopes.slopes)
                     self._modes_first_step.value = m
-
-                self._modes_first_step.generation_time = self.current_time
-
-                if self._layer_modes_list is not None:
-                    for i, idx_list in enumerate(self._layer_idx_list):
-                        self._layer_modes_list[i].value = self._modes_first_step.value[idx_list]
-                        self._layer_modes_list[i].generation_time = self.current_time
-
-            if self._projmat is None:
-                if self._verbose:
-                    n = len(self._modes_first_step.value)
-                    print(f"(no projmat) first {min(6, n)} residual values: {self._modes_first_step.value[:min(5, n)]}")
-                self._modes.value = self._modes_first_step.value
-                self._modes.generation_time = self._modes_first_step.generation_time
             else:
-                mp = self.compute_modes(self._projmat, self._modes_first_step.ptr_value)
-                if self._verbose:
-                    print(f"first {min(6, len(mp))} residual values after projection: {mp[:min(5, len(mp))]}")
-                self._modes.value = mp
-                self._modes.generation_time = self.current_time
+                m = self.compute_modes(self._recmat, slopes.slopes)
+                self._modes_first_step.value = m
 
-            if self._polc and len(self._modes_first_step.value) != len(comm_new):
-                self._modes.value -= self._control_list[self._dm_idx].get_past_state(0)
-        else:
+            self._modes_first_step.generation_time = self.current_time
+
+            if self._layer_modes_list is not None:
+                for i, idx_list in enumerate(self._layer_idx_list):
+                    self._layer_modes_list[i].value = self._modes_first_step.value[idx_list]
+                    self._layer_modes_list[i].generation_time = self.current_time
+
+        if self._projmat is None:
             if self._verbose:
-                print(f"slope generation time: {slopes.generation_time} is not equal to {self.current_time}")
+                n = len(self._modes_first_step.value)
+                print(f"(no projmat) first {min(6, n)} residual values: {self._modes_first_step.value[:min(5, n)]}")
+            self._modes.value = self._modes_first_step.value
+            self._modes.generation_time = self._modes_first_step.generation_time
+        else:
+            mp = self.compute_modes(self._projmat, self._modes_first_step.ptr_value)
+            if self._verbose:
+                print(f"first {min(6, len(mp))} residual values after projection: {mp[:min(5, len(mp))]}")
+            self._modes.value = mp
+            self._modes.generation_time = self.current_time
+
+        if self._polc and len(self._modes_first_step.value) != len(comm_new):
+            self._modes.value -= self._control_list[self._dm_idx].get_past_state(0)
 
     def compute_pseudo_ol_slopes(self, t, slopes=None):
         if slopes is None:
-            slopes = self.inputs['in_slopes'].get(self._target_device_idx)
+            slopes = self.local_inputs['in_slopes']
 
         if isinstance(slopes, Slopes):
             self._pseudo_ol_slopes.slopes = slopes.slopes

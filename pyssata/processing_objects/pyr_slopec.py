@@ -32,6 +32,7 @@ class PyrSlopec(Slopec):
         self._shlike = shlike
         self._norm_factor = norm_factor
         self._thr_value = int(thr_value)
+        self.threshold = self._thr_value if self._thr_value != -1 else None
         self._slopes_from_intensity = slopes_from_intensity
         if pupdata is not None:
             self.pupdata = pupdata  # Property set
@@ -117,11 +118,11 @@ class PyrSlopec(Slopec):
         # subap_counts : computed in post_trigger
         # slopes : computed here
 
-        if not self._pupdata:
-            return
+#        if not self._pupdata:
+#            return
 #        if self._verbose:
 #            print('Average pixel counts:', self.xp.sum(pixels) / len(self._pupdata.ind_pup))
-        self.threshold = self._thr_value if self._thr_value != -1 else None
+
         self._total_counts.value = self.xp.sum(self.flat_pixels[self.pup_idx])
 
         if self.threshold is not None:
@@ -149,11 +150,13 @@ class PyrSlopec(Slopec):
                 inv_factor = self.total_intensity /  self.n_subap
                 factor = 1.0 / inv_factor
             else:
-                inv_factor = A+B+C+D                                
+                inv_factor = self.xp.sum(self.flat_pixels[self.pup_idx])
                 factor = 1.0 / inv_factor
 
-            self.sx = (A+B-C-D).astype(self.dtype) * factor
-            self.sy = (B+C-A-D).astype(self.dtype) * factor
+            # self.sx = (A+B-C-D).astype(self.dtype) * factor
+            # self.sy = (B+C-A-D).astype(self.dtype) * factor
+            self.sx = (A+B-C-D) * factor
+            self.sy = (B+C-A-D) * factor
 
         clamp_generic_more(0, 1, inv_factor, xp=self.xp)
         self.sx *= inv_factor
@@ -166,17 +169,10 @@ class PyrSlopec(Slopec):
     def post_trigger(self):
         super().post_trigger()
         self._subap_counts.value = self._total_counts.value / self._pupdata.n_subap
-        
         self._total_counts.generation_time = self.current_time
         self._subap_counts.generation_time = self.current_time
         self._slopes.generation_time = self.current_time
 
-        # self._flux_per_subaperture_vector.value = ? # is this needed ?
-        # self._flux_per_subaperture_vector.generation_time = self.current_time
-
-
-    # def _compute_flux_per_subaperture(self):
-    #     return self._flux_per_subaperture_vector
 
     def run_check(self, time_step, errmsg=''):
         if self._shlike and self._slopes_from_intensity:

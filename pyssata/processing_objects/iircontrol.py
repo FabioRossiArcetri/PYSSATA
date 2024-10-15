@@ -9,11 +9,11 @@ from pyssata.lib.calc_loop_delay import calc_loop_delay
 gxp = None
 gdtype = None
 
-def compute_comm(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_den):
+def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_den, delay, state, total_length):
     global gxp, gdtype
 #        nfilter = _iirfilter.num.shape[0]
 #        ninput = input.size
-    output = input*0
+    comm = input*0
 #        if nfilter < ninput:
 #            raise ValueError(f"Error: IIR filter needs no more than {nfilter} coefficients ({ninput} given)")
 
@@ -60,10 +60,38 @@ def compute_comm(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_den):
 #            _ost = temp_ost
 #            _ist = temp_ist
 #        else:
-    output[_idx_finite] = temp_output
+    comm[_idx_finite] = temp_output
     _ost[_idx_finite] = temp_ost
-    _ist[_idx_finite] = temp_ist    
-    return output
+    _ist[_idx_finite] = temp_ist
+
+    finite_mask = gxp.isfinite(comm)
+    if gxp.any(finite_mask):
+        if delay > 0:
+            state[:, 1:total_length] = state[:, 0:total_length-1]
+
+        state[finite_mask, 0] = comm[finite_mask]
+
+    remainder_delay = delay % 1
+    if remainder_delay == 0:
+        comm = state[:, int(delay)]
+    else:
+
+        comm = (remainder_delay * state[:, int(np.ceil(delay))] + (1 - remainder_delay) * state[:, int(np.ceil(delay))-1])
+
+#    if offset is not None and gxp.all(comm == 0):
+#        comm[:self._offset.shape[0]] += offset
+#        print("WARNING (IIRCONTROL): self.newc is a null vector, applying offset.")
+
+#        if self._verbose:
+#            n_self.newc = self.newc.size
+#            print(f"first {min(6, n_delta_comm)} delta_comm values: {self.delta_comm[:min(6, n_delta_comm)]}")
+#            print(f"first {min(6, n_newc)} comm values: {self.newc[:min(6, n_newc)]}")
+#        else:
+#            if self._verbose:
+#                print(f"delta comm generation time: {self.local_inputs['delta_comm'].generation_time} is not equal to {t}")
+#            self.newc = self.last_state
+
+    return comm, state
 
 
 class IIRControl(BaseProcessingObj):
@@ -81,9 +109,9 @@ class IIRControl(BaseProcessingObj):
         gxp = self.xp
         gdtype = self.dtype
         if self.xp==np:
-            self.compute_comm = jit(compute_comm, nopython=True, cache=True)
+            self.trigger_function = jit(trigger_function, nopython=True, cache=True)
         else:
-            self.compute_comm = compute_comm
+            self.trigger_function = trigger_function
 
         self._delay = delay if delay is not None else 0
         self._n = iirfilter.nfilter
@@ -134,16 +162,6 @@ class IIRControl(BaseProcessingObj):
 
         return result
 
-    def state_update(self, comm):
-        finite_mask = self.xp.isfinite(comm)
-        if self.xp.any(finite_mask):
-            if self._delay > 0:
-                self._state[:, 1:self._total_length] = self._state[:, 0:self._total_length-1]
-
-            self._state[finite_mask, 0] = comm[finite_mask]
-
-        self._comm = self.get_past_state(self._delay)
-
     @property
     def delay(self):
         return self._delay
@@ -155,14 +173,6 @@ class IIRControl(BaseProcessingObj):
     @property
     def state(self):
         return self._state
-
-    def get_past_state(self, past_step):
-        remainder_delay = past_step % 1
-        if remainder_delay == 0:
-            return self._state[:, int(past_step)]
-        else:
-            return (remainder_delay * self._state[:, int(np.ceil(past_step))] +
-                    (1 - remainder_delay) * self._state[:, int(np.ceil(past_step))-1])
 
     @property
     def comm(self):
@@ -198,34 +208,33 @@ class IIRControl(BaseProcessingObj):
             modal_start_time_[i] = self.seconds_to_t(modal_start_time[i])
         self._modal_start_time = modal_start_time_
 
-    def prepare_trigger(self, t):
-        super().prepare_trigger(t)
+#    def prepare_trigger(self, t):
+#        super().prepare_trigger(t)
 
-    def trigger_code(self):
         if self._opticalgain is not None:
             if self._opticalgain.value > 0:
-                delta_comm = self.local_inputs['delta_comm'].value * 1.0 / self._opticalgain.value
+                self.delta_comm = self.local_inputs['delta_comm'].value * 1.0 / self._opticalgain.value
                 if self._og_shaper is not None:
-                    delta_comm *= self._og_shaper
-                self.local_inputs['delta_comm'].value = delta_comm
+                    self.delta_comm *= self._og_shaper
+                self.local_inputs['delta_comm'].value = self.delta_comm
                 print(f"WARNING: optical gain compensation has been applied (g_opt = {self._opticalgain.value:.5f}).")
         if self._start_time > 0 and self._start_time > t:
-            # newc = self.xp.zeros_like(in_delta_comm.value)
+            # self.newc = self.xp.zeros_like(delta_comm.value)
             print(f"delta comm generation time: {self.local_inputs['delta_comm'].generation_time} is not greater than {self._start_time}")
         else:
             # should this be a copy? works like this too
-            delta_comm = self.local_inputs['delta_comm'].value
+            self.delta_comm = self.local_inputs['delta_comm'].value
 
         if self._modal_start_time is not None:
             for i in range(len(self._modal_start_time)):
                 if self._modal_start_time[i] > t:
-                    delta_comm[i] = 0
-                    print(f"delta comm generation time: {self.in_delta_comm.generation_time} is not greater than {self._modal_start_time[i]}")
+                    self.delta_comm[i] = 0
+                    print(f"delta comm generation time: {self.delta_comm.generation_time} is not greater than {self._modal_start_time[i]}")
                     print(f" -> value of mode no. {i} is set to 0.")
 
         if self._skipOneStep:
             if self._StepIsNotGood:
-                delta_comm *= 0
+                self.delta_comm *= 0
                 self._StepIsNotGood = False
                 print("WARNING: the delta commands of this step is set to 0 because skipOneStep key is active.")
             else:
@@ -240,42 +249,28 @@ class IIRControl(BaseProcessingObj):
                 idx = idx[-1]
                 if bootstrap_scale[idx] != 1:
                     print(f"ATTENTION: a scale factor of {bootstrap_scale[idx]} is applied to delta commands for bootstrap purpose.")
-                    delta_comm *= bootstrap_scale[idx]
+                    self.delta_comm *= bootstrap_scale[idx]
                 else:
                     print("no scale factor applied")
 
         if self._do_gmt_init_mod_manager:
             time_idx = self._time_gmt_imm if self._time_gmt_imm is not None else self.xp.zeros(0, dtype=self.dtype)
             gain_idx = self._gain_gmt_imm if self._gain_gmt_imm is not None else self.xp.zeros(0, dtype=self.dtype)
-            delta_comm *= gmt_init_mod_manager(self.t_to_seconds(t), len(delta_comm), time_idx=time_idx, gain_idx=gain_idx)
+            self.delta_comm *= gmt_init_mod_manager(self.t_to_seconds(t), len(self.delta_comm), time_idx=time_idx, gain_idx=gain_idx)
 
-        n_delta_comm = delta_comm.size
+        n_delta_comm = self.delta_comm.size
         if n_delta_comm < self._iirfilter.nfilter:
-            delta_comm = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
-            delta_comm[:n_delta_comm] = self.local_inputs['delta_comm'].value
+            self.delta_comm = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
+            self.delta_comm[:n_delta_comm] = self.local_inputs['delta_comm'].value
 
         if self._offset is not None:
-            n_offset = self._offset.shape[0]
-            delta_comm[:n_offset] += self._offset
-        
-        newc = self.compute_comm(delta_comm, self._outFinite, self._ist, self._ost, self._iirfilter.num, self._iirfilter.den)
+            self.delta_comm[:self._offset.shape[0]] += self._offset
 
-            #if self.xp.all(newc == 0) and self._offset is not None:
-            #    newc[:n_offset] += self._offset
-            #    print("WARNING (IIRCONTROL): newc is a null vector, applying offset.")
+    def trigger_code(self):
+        self._out_comm.value, self._state = self.trigger_function(self.delta_comm, self._outFinite, self._ist, self._ost, 
+                                                       self._iirfilter.num, self._iirfilter.den, self._delay, 
+                                                       self._state, self._total_length)
 
-#            if self._verbose:
-#                n_newc = newc.size
-#                print(f"first {min(6, n_delta_comm)} delta_comm values: {delta_comm[:min(6, n_delta_comm)]}")
-#                print(f"first {min(6, n_newc)} comm values: {newc[:min(6, n_newc)]}")
-#        else:
-#            if self._verbose:
-#                print(f"delta comm generation time: {self.local_inputs['delta_comm'].generation_time} is not equal to {t}")
-#            newc = self.last_state
-
-        self.state_update(newc)
-
-        self._out_comm.value = self.comm
         self._out_comm.generation_time = self.current_time
 
 #        if self._verbose:

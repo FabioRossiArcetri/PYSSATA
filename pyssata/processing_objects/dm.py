@@ -50,43 +50,19 @@ class DM(BaseProcessingObj):
         self._sign = -1
         self.inputs['in_command'] = InputValue(type=BaseValue)
         self.outputs['out_layer'] = self._layer
-#       uncomment when the code is a stream
-#        super().build_stream()
-    
-    def compute_shape(self):
-        commands_input = self.inputs['in_command'].get(self._target_device_idx)
-        commands = commands_input.value
-
-        temp_matrix = self.xp.zeros(self._layer.size, dtype=self.dtype)
-        
-        # Compute phase only if commands vector is not zero
-        #if self.xp.sum(self.xp.abs(commands)) != 0:
-        #    if len(commands) > len(self._if_commands):
-        #        raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
-        
-        self._if_commands[:len(commands)] = self._sign * commands
-        
-        temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
-
-        self._layer.phaseInNm = temp_matrix
+        self.temp_matrix = self.xp.zeros(self._layer.size, dtype=self.dtype)
 
     def trigger_code(self):
-        command = self.inputs['in_command'].get(self._target_device_idx)
-        if self._verbose:
-            print(f"time: {self.current_time_seconds}")
-            print(f"command generation time: {self.t_to_seconds(command.generation_time)}")
-            commands = command.value
-            
-            if commands.size > 0:
-                print(f"first {min(6, commands.size)} command values: {commands[:min(5, commands.size)]}")
-        
-        if command.generation_time == self.current_time:
-            if self._verbose:
-                print("---> command applied to DM")
-            self.compute_shape()
-            self._layer.generation_time = self.current_time
-        elif self._verbose:
-            print(f"command not applied to DM, command generation time: {command.generation_time} is not equal to {t}")
+        commands = self.local_inputs['in_command'].value
+        self.temp_matrix *=0
+        # Compute phase only if commands vector is not zero
+        # if self.xp.sum(self.xp.abs(commands)) != 0:
+        #    if len(commands) > len(self._if_commands):
+        #        raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self._if_commands)})")
+        self._if_commands[:len(commands)] = self._sign * commands
+        self.temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self._if_commands, self._ifunc.ptr_ifunc)
+        self._layer.phaseInNm = self.temp_matrix
+        self._layer.generation_time = self.current_time
     
     # Getters and Setters for the attributes
     @property

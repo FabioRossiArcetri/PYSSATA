@@ -283,7 +283,7 @@ class AtmoEvolution(BaseProcessingObj):
         delta_position = self.local_inputs['wind_speed'].value * self.delta_time / self._pixel_pitch  # [pixel]
         new_position = self._last_position + delta_position
         # Get quotient and remainder
-        new_position_quo = self.xp.floor(new_position).astype(int)
+        new_position_quo = self.xp.floor(new_position).astype(self.xp.int64)
         new_position_rem = new_position - new_position_quo
         wdf, wdi = self.xp.modf(self.local_inputs['wind_direction'].value/90.0)
         wdf_full, wdi_full = self.xp.modf(self.local_inputs['wind_direction'].value)
@@ -301,13 +301,13 @@ class AtmoEvolution(BaseProcessingObj):
             pos = int(new_position_quo[ii])
             ipli = int(self._pixel_layer[ii])
             ipli_p = int(pos + self._pixel_layer[ii])
-            layer = (1.0 - new_position_rem) * p[0: ipli, pos: ipli_p] + new_position_rem[ii] * p[0: ipli, pos + 1: ipli_p + 1]
-            layer = self.xp.rot90(layer, wdi)
+            layer_phase = (1.0 - new_position_rem) * p[0: ipli, pos: ipli_p] + new_position_rem[ii] * p[0: ipli, pos + 1: ipli_p + 1]
+            layer_phase = self.xp.rot90(layer_phase, wdi)
             # is the rotate function is already checking for 0 angles? should we set very small rotations to 0?
             # this looks fast on the default example
             if not wdf_full[ii]==0:
-                layer = self.rotate(layer, wdf_full[ii], reshape=False, order=1)
-            self._layer_list[ii].phaseInNm = layer * scale_coeff
+                layer_phase = self.rotate(layer_phase, wdf_full[ii], reshape=False, order=1)
+            self._layer_list[ii].phaseInNm = layer_phase * scale_coeff
             self._layer_list[ii].generation_time = self.current_time
 
         # print(f'Phasescreen_shift: {new_position=}') # Verbose?
