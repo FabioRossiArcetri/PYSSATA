@@ -75,7 +75,6 @@ def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_d
     if remainder_delay == 0:
         comm = state[:, int(delay)]
     else:
-
         comm = (remainder_delay * state[:, int(np.ceil(delay))] + (1 - remainder_delay) * state[:, int(np.ceil(delay))-1])
 
 #    if offset is not None and gxp.all(comm == 0):
@@ -210,20 +209,19 @@ class IIRControl(BaseProcessingObj):
 
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
+        self.delta_comm = self.local_inputs['delta_comm'].value
 
         if self._opticalgain is not None:
             if self._opticalgain.value > 0:
-                self.delta_comm = self.local_inputs['delta_comm'].value * 1.0 / self._opticalgain.value
+                self.delta_comm *= 1.0 / self._opticalgain.value
                 if self._og_shaper is not None:
                     self.delta_comm *= self._og_shaper
-                self.local_inputs['delta_comm'].value = self.delta_comm
+                # should not modify an input, right?
+                # self.local_inputs['delta_comm'].value = self.delta_comm
                 print(f"WARNING: optical gain compensation has been applied (g_opt = {self._opticalgain.value:.5f}).")
         if self._start_time > 0 and self._start_time > t:
             # self.newc = self.xp.zeros_like(delta_comm.value)
             print(f"delta comm generation time: {self.local_inputs['delta_comm'].generation_time} is not greater than {self._start_time}")
-        else:
-            # should this be a copy? works like this too
-            self.delta_comm = self.local_inputs['delta_comm'].value
 
         if self._modal_start_time is not None:
             for i in range(len(self._modal_start_time)):
@@ -258,10 +256,11 @@ class IIRControl(BaseProcessingObj):
             gain_idx = self._gain_gmt_imm if self._gain_gmt_imm is not None else self.xp.zeros(0, dtype=self.dtype)
             self.delta_comm *= gmt_init_mod_manager(self.t_to_seconds(t), len(self.delta_comm), time_idx=time_idx, gain_idx=gain_idx)
 
-        n_delta_comm = self.delta_comm.size
-        if n_delta_comm < self._iirfilter.nfilter:
-            self.delta_comm = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
-            self.delta_comm[:n_delta_comm] = self.local_inputs['delta_comm'].value
+# this is probable useless
+#        n_delta_comm = self.delta_comm.size
+#        if n_delta_comm < self._iirfilter.nfilter:
+#            self.delta_comm = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
+#            self.delta_comm[:n_delta_comm] = self.local_inputs['delta_comm'].value
 
         if self._offset is not None:
             self.delta_comm[:self._offset.shape[0]] += self._offset

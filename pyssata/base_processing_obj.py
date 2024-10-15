@@ -41,6 +41,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         self.local_inputs = {}
         self.outputs = {}
         self.stream  = None
+        self.ready = False
 
     def checkInputTimes(self):        
         if len(self.inputs)==0:
@@ -99,19 +100,25 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
             self.trigger_code()
             self.cuda_graph = self.stream.end_capture()
 
-    def trigger(self, t):
+    def check_ready(self, t):
         self.current_time = t
         if self.checkInputTimes():
             self._target_device.use()
             self.prepare_trigger(t)
+            self.ready = True
+        else:
+            if self.verbose:
+                print(f'No inputs have been refreshed, skipping trigger')
+        return self.ready
+    
+    def trigger(self):        
+        if self.ready:
             if self._target_device_idx>=0 and self.cuda_graph:
                 self.cuda_graph.launch(stream=self.stream)
             else:
                 self.trigger_code()
             self.post_trigger()
-        else:
-            if self.verbose:
-                print(f'No inputs have been refreshed, skipping trigger')
+            self.ready = False
                     
     @property
     def verbose(self):
