@@ -9,8 +9,6 @@ from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.make_mask import make_mask
 from pyssata.lib.toccd import toccd
 
-from cupyx.scipy.fft import get_fft_plan
-# import cupyx.scipy.fft
 
 @fuse(kernel_name='pyr1_fused')
 def pyr1_fused(u_fp, ffv, myexp, fp_mask, xp):
@@ -138,8 +136,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self.psf_bfm = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
         self.psf_tot = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
         self.u_tlt = self.xp.zeros((self.mod_steps, self._fft_totsize, self._fft_totsize), dtype=self.complex_dtype)
-        self.plan1 = get_fft_plan(self.u_tlt, axes=(-2, -1), value_type='C2C')            
-        #self.plan2 = get_fft_plan(self.u_tlt, axes=(-2, -1), value_type='C2C')            
+        self.plan1 = self.get_fft_plan(self.u_tlt, axes=(-2, -1), value_type='C2C')
         self.roll_array = [self._fft_padding//2, self._fft_padding//2]
         self.roll_axis = [0,1]
 
@@ -432,25 +429,26 @@ class ModulatedPyramid(BaseProcessingObj):
         super().prepare_trigger(t)
         self.in_ef = self.local_inputs['in_ef']
         self.ef_size = self.in_ef.size
-        if self._extended_source_in_on and self._extSourcePsf is not None:
-            if self._extSourcePsf.generation_time == self.current_time:
-                if self.xp.sum(self.xp.abs(self._extSourcePsf.value)) > 0:
-                    self._extSource.updatePsf(self._extSourcePsf.value)
-                    self._flux_factor_vector = self._extSource.coeff_flux
-                    self.ffv = self._flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
-                    self.factor = 1.0 / self.xp.sum(self._flux_factor_vector)
+        #if self._extended_source_in_on and self._extSourcePsf is not None:
+        #    if self._extSourcePsf.generation_time == self.current_time:
+        #        if self.xp.sum(self.xp.abs(self._extSourcePsf.value)) > 0:
+        #            self._extSource.updatePsf(self._extSourcePsf.value)
+        #            self._flux_factor_vector = self._extSource.coeff_flux
+        #            self.ffv = self._flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
+        #            self.factor = 1.0 / self.xp.sum(self._flux_factor_vector)
 
-        if self._rotAnglePhInDeg != 0:
-            A = (self.ROT_AND_SHIFT_IMAGE(self.in_ef.A, self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(self.xp.uint8)
-            phi_at_lambda = self.ROT_AND_SHIFT_IMAGE(self.in_ef.phi_at_lambda(self._wavelength_in_nm), self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True)
-            self.ef = self.xp.complex64(self.xp.rebin(A, (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) + 
-                              self.xp.rebin(phi_at_lambda, (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) * 1j)
-        else:
-            if self._fov_res != 1:
-                self.ef = self.xp.complex64(self.xp.rebin(self.in_ef.A, (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) + 
-                                  self.xp.rebin(self.in_ef.phi_at_lambda(self._wavelength_in_nm), (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) * 1j)
-            else:
-                self.ef = self.in_ef.ef_at_lambda(self._wavelength_in_nm)
+        #if self._rotAnglePhInDeg != 0:
+        #    A = (self.ROT_AND_SHIFT_IMAGE(self.in_ef.A, self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(self.xp.uint8)
+        #    phi_at_lambda = self.ROT_AND_SHIFT_IMAGE(self.in_ef.phi_at_lambda(self._wavelength_in_nm), self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True)
+        #    self.ef = self.xp.complex64(self.xp.rebin(A, (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) + 
+        #                      self.xp.rebin(phi_at_lambda, (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) * 1j)
+        #else:
+        #if self._fov_res != 1:
+        #self.ef = self.xp.complex64(self.xp.rebin(self.in_ef.A, (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) + 
+        #                        self.xp.rebin(self.in_ef.phi_at_lambda(self._wavelength_in_nm), (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) * 1j)
+        #else:
+        self.ef = self.in_ef.ef_at_lambda(self._wavelength_in_nm)
+        ##
 
         self.phot = self.in_ef.S0 * self.xp.sum(self.in_ef._A) * (self.in_ef.pixel_pitch ** 2)
         u_tlt_const = self.ef * self._tlt_f
@@ -468,7 +466,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self.bb = self.xp.abs(self.aa) ** 2 * self.ffv
 
     def post_trigger(self):
-        super().post_trigger()
+        # super().post_trigger()
         self.xp.sum(self.bb, axis=0, out=self.pup_pyr_tot)
         self.xp.sum(self.fpsf, axis=0, out=self.psf_bfm)
         self.xp.sum(self.fpsf*self._fp_mask, axis=0, out=self.psf_tot)
@@ -481,16 +479,15 @@ class ModulatedPyramid(BaseProcessingObj):
 #        if phot == 0: slows down?
 #            print('WARNING: total intensity at PYR entrance is zero')
         # TODO handle shifts as an input from a func generator (for time-varying shifts)
-        if self._pup_shifts is not None and self._pup_shifts != (0.0, 0.0):
-            image = self.xp.pad(self.pup_pyr_tot, 1, mode='constant')
-            imscale = float(self._fft_totsize) / float(self._toccd_side)
+        #if self._pup_shifts is not None and self._pup_shifts != (0.0, 0.0):
+        #    image = self.xp.pad(self.pup_pyr_tot, 1, mode='constant')
+        #    imscale = float(self._fft_totsize) / float(self._toccd_side)
+#            pup_shiftx = self._pup_shifts[0] * imscale
+#            pup_shifty = self._pup_shifts[1] * imscale
 
-            pup_shiftx = self._pup_shifts[0] * imscale
-            pup_shifty = self._pup_shifts[1] * imscale
-
-            image = self.interpolate(image, self.xp.arange(self._fft_totsize + 2) - pup_shiftx, 
-                                     self.xp.arange(self._fft_totsize + 2) - pup_shifty, grid=True, missing=0)
-            self.pup_pyr_tot = image[1:-1, 1:-1]
+#            image = self.interpolate(image, self.xp.arange(self._fft_totsize + 2) - pup_shiftx, 
+#                                     self.xp.arange(self._fft_totsize + 2) - pup_shifty, grid=True, missing=0)
+#            self.pup_pyr_tot = image[1:-1, 1:-1]
         
         ccd_internal = toccd(self.pup_pyr_tot, (self._toccd_side, self._toccd_side), xp=self.xp)
 

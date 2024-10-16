@@ -99,7 +99,7 @@ class PyrSlopec(Slopec):
 
     def run_check(self, time_step, errmsg=''):
         self.prepare_trigger(0)
-        super().build_stream()
+        #super().build_stream()
         if self._use_sn and not self._sn:
             errmsg += 'Slopes null are not valid'
         if self._weight_from_accumulated and self._accumulate:
@@ -167,7 +167,7 @@ class PyrSlopec(Slopec):
 
         
     def post_trigger(self):
-        super().post_trigger()
+        # super().post_trigger()
         self._subap_counts.value = self._total_counts.value / self._pupdata.n_subap
         self._total_counts.generation_time = self.current_time
         self._subap_counts.generation_time = self.current_time

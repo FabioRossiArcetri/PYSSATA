@@ -10,7 +10,7 @@ from pyssata.data_objects.layer import Layer
 from pyssata.lib.cv_coord import cv_coord
 from pyssata.lib.phasescreen_manager import phasescreens_manager
 from pyssata.connections import InputValue
-
+from pyssata import cpuArray
 
 class AtmoEvolution(BaseProcessingObj):
     def __init__(self, L0, pixel_pitch, heights, Cn2, pixel_pupil, data_dir, source_list, wavelengthInNm: float=500.0,
@@ -22,7 +22,7 @@ class AtmoEvolution(BaseProcessingObj):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
         
         self._n_phasescreens = len(heights)
-        self._last_position = xp.zeros(self._n_phasescreens)
+        self._last_position = np.zeros(self._n_phasescreens)
         self._last_t = 0
         self._extra_delta_time = 0
         self._cycle_screens = True
@@ -48,7 +48,7 @@ class AtmoEvolution(BaseProcessingObj):
             print(f'Atmo_Evolution: airmass is: {self._airmass}')
         else:
             self._airmass = 1.0
-        heights = self.xp.array(heights, dtype=self.dtype) * self._airmass
+        heights = np.array(heights, dtype=self.dtype) * self._airmass
 
         # Conversion coefficient from arcseconds to radians
         sec2rad = 4.848e-6
@@ -68,14 +68,14 @@ class AtmoEvolution(BaseProcessingObj):
         rad_alpha_fov = alpha_fov * sec2rad
 
         # Compute layers dimension in pixels
-        self._pixel_layer = self.xp.ceil((pixel_pupil + 2 * self.xp.sqrt(self.xp.sum(self.xp.array(pupil_position, dtype=self.dtype) * 2)) / pixel_pitch + 
+        self._pixel_layer = np.ceil((pixel_pupil + 2 * np.sqrt(np.sum(np.array(pupil_position, dtype=self.dtype) * 2)) / pixel_pitch + 
                                2.0 * abs(heights) / pixel_pitch * rad_alpha_fov) / 2.0) * 2.0
         if fov_in_m is not None:
-            self._pixel_layer = self.xp.full_like(heights, long(fov_in_m / pixel_pitch / 2.0) * 2)
+            self._pixel_layer = np.full_like(heights, long(fov_in_m / pixel_pitch / 2.0) * 2)
         
         self._L0 = L0
         self._heights = heights
-        self._Cn2 = self.xp.array(Cn2, dtype=self.dtype)
+        self._Cn2 = np.array(Cn2, dtype=self.dtype)
         self._pixel_pupil = pixel_pupil
         self._data_dir = data_dir
         self._make_cycle = make_cycle
@@ -107,7 +107,7 @@ class AtmoEvolution(BaseProcessingObj):
         
         if seed is not None:
             self.seed = seed
-        self._last_position = self.xp.zeros(self._n_phasescreens, dtype=self.dtype)
+        self._last_position = np.zeros(self._n_phasescreens, dtype=self.dtype)
 
     @property
     def seed(self):
@@ -264,7 +264,7 @@ class AtmoEvolution(BaseProcessingObj):
                     self._phasescreens.append(temp_screen)
                     self._phasescreens_sizes.append(temp_screen.shape[1])
 
-        self._phasescreens_sizes_array = self.xp.asarray(self._phasescreens_sizes)
+        self._phasescreens_sizes_array = np.asarray(self._phasescreens_sizes)
     
 #        for p in self._phasescreens:
         self._phasescreens_array = self.xp.asarray(self._phasescreens)
@@ -281,19 +281,19 @@ class AtmoEvolution(BaseProcessingObj):
         scale_coeff = (self._pixel_pitch / r0wavelength)**(5./6.) # if seeing > 0 else 0.0
         # Compute the delta position in pixels
         delta_position = self.local_inputs['wind_speed'].value * self.delta_time / self._pixel_pitch  # [pixel]
-        new_position = self._last_position + delta_position
+        new_position = self._last_position + cpuArray(delta_position)
         # Get quotient and remainder
-        new_position_quo = self.xp.floor(new_position).astype(self.xp.int64)
+        new_position_quo = np.floor(new_position).astype(np.int64)
         new_position_rem = new_position - new_position_quo
-        wdf, wdi = self.xp.modf(self.local_inputs['wind_direction'].value/90.0)
-        wdf_full, wdi_full = self.xp.modf(self.local_inputs['wind_direction'].value)
+        wdf, wdi = np.modf(self.local_inputs['wind_direction'].value/90.0)
+        wdf_full, wdi_full = np.modf(self.local_inputs['wind_direction'].value)
         # Check if we need to cycle the screens
         # print(ii, new_position[ii], self._pixel_layer[ii], p.shape[1]) # Verbose?
         if self._cycle_screens:
-            new_position = self.xp.where(new_position + self._pixel_layer > self._phasescreens_sizes_array,  0, new_position)
+            new_position = np.where(new_position + self._pixel_layer > self._phasescreens_sizes_array,  0, new_position)
 #        for ii, p in enumerate(self._phasescreens):
-        #    print(f'phasescreens size: {self.xp.around(p.shape[0], 2)}')
-        #    print(f'requested position: {self.xp.around(new_position[ii], 2)}')
+        #    print(f'phasescreens size: {np.around(p.shape[0], 2)}')
+        #    print(f'requested position: {np.around(new_position[ii], 2)}')
         #    raise ValueError(f'phasescreens_shift cannot go out of the {ii}-th phasescreen!')            
         # print(pos, self._pixel_layer) # Verbose?
 
@@ -301,10 +301,8 @@ class AtmoEvolution(BaseProcessingObj):
             pos = int(new_position_quo[ii])
             ipli = int(self._pixel_layer[ii])
             ipli_p = int(pos + self._pixel_layer[ii])
-            layer_phase = (1.0 - new_position_rem) * p[0: ipli, pos: ipli_p] + new_position_rem[ii] * p[0: ipli, pos + 1: ipli_p + 1]
+            layer_phase = (1.0 - new_position_rem[ii]) * p[0: ipli, pos: ipli_p] + new_position_rem[ii] * p[0: ipli, pos + 1: ipli_p + 1]
             layer_phase = self.xp.rot90(layer_phase, wdi)
-            # is the rotate function is already checking for 0 angles? should we set very small rotations to 0?
-            # this looks fast on the default example
             if not wdf_full[ii]==0:
                 layer_phase = self.rotate(layer_phase, wdf_full[ii], reshape=False, order=1)
             self._layer_list[ii].phaseInNm = layer_phase * scale_coeff
@@ -348,8 +346,8 @@ class AtmoEvolution(BaseProcessingObj):
             errmsg += ' Missing input wind direction.'
         if not isinstance(self._wind_speed, BaseValue):
             errmsg += ' Missing input speed.'
-        if not self.xp.isclose(self.xp.sum(self._Cn2), 1.0, atol=1e-6):
-            errmsg += f' Cn2 total must be 1. Instead is: {self.xp.sum(self._Cn2)}.'
+        if not np.isclose(np.sum(self._Cn2), 1.0, atol=1e-6):
+            errmsg += f' Cn2 total must be 1. Instead is: {np.sum(self._Cn2)}.'
 
         seeing = self.inputs['seeing'].get(self._target_device_idx)
         wind_speed = self.inputs['wind_speed'].get(self._target_device_idx)

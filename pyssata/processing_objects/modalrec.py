@@ -87,8 +87,6 @@ class Modalrec(BaseProcessingObj):
         self.outputs['out_modes'] = self.out_modes
         self.outputs['out_pseudo_ol_modes'] = self.pseudo_ol_modes
         self.outputs['out_modes_first_step'] = self.modes_first_step
-#       uncomment when the code is a stream
-#        super().build_stream()
 
 
     def set_layer_modes_list(self):
@@ -288,6 +286,9 @@ class Modalrec(BaseProcessingObj):
             out &= bool(self._intmat) and bool(self._control_list)
         if errmsg:
             print(", ".join(errmsg))
+
+#        super().build_stream()
+
         return out
 
 

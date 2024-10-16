@@ -243,7 +243,7 @@ class Slopec(BaseProcessingObj):
         raise NotImplementedError(f'{self.repr()} Please implement calc_slopes in your derived class!')
         
     def post_trigger(self):
-        super().post_trigger()
+        # super().post_trigger()
         if self._do_rec:
             m = self.xp.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
             self._slopes.slopes = m

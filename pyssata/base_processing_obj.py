@@ -4,6 +4,7 @@ from pyssata.base_time_obj import BaseTimeObj
 from pyssata.base_parameter_obj import BaseParameterObj
 from pyssata import default_target_device, cp
 from pyssata.connections import InputValue, InputList
+from contextlib import nullcontext
 
 class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
     def __init__(self, target_device_idx=None, precision=None):
@@ -19,13 +20,16 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         if self._target_device_idx>=0:
             from cupyx.scipy.ndimage import rotate
             from cupyx.scipy.interpolate import RegularGridInterpolator
+            from cupyx.scipy.fft import get_fft_plan
         else:
             from scipy.ndimage import rotate
             from scipy.interpolate import RegularGridInterpolator
+            get_fft_plan = None
 
 
         self.rotate = rotate        
         self.RegularGridInterpolator = RegularGridInterpolator
+        self._get_fft_plan = get_fft_plan
 
         BaseParameterObj.__init__(self)
 
@@ -43,6 +47,12 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         self.stream  = None
         self.ready = False
 
+    def get_fft_plan(self, a, shape=None, axes=None, value_type='C2C'):
+        if self._get_fft_plan:
+            return self._get_fft_plan(a, shape, axes, value_type)
+        else:
+            return nullcontext()
+
     def checkInputTimes(self):        
         if len(self.inputs)==0:
             return True
@@ -56,7 +66,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
                         return True
         return False
 
-    def prepare_trigger(self, t):                
+    def prepare_trigger(self, t):
         self.current_time_seconds = self.t_to_seconds(self.current_time)
         for input_name, input_obj in self.inputs.items():
             if type(input_obj) is InputValue:
@@ -70,9 +80,6 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         pass
 
     def post_trigger(self):
-        return
-        # even if this should be done, is skipped at the moment 
-        # since it is only slowing down the computation        
         if self._target_device_idx>=0 and self.cuda_graph:
             self.stream.synchronize()
 
@@ -88,7 +95,6 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
 
     def build_stream(self):
         if self._target_device_idx>=0:
-            #self.prepare_trigger(0)
             self._target_device.use()
             self.stream = cp.cuda.Stream(non_blocking=False)
             self.capture_stream()
