@@ -44,6 +44,9 @@ class AtmoPropagation(BaseProcessingObj):
         self._rotAnglePhInDeg_list = []
         self._magnification_list = []
         self._pupil_position = pupil_position
+        self.pupil_position_arr = np.array(self._pupil_position)
+        self.pupil_position_cond = self.pupil_position_arr.any()
+
         self._doFresnel = doFresnel
         self._wavelengthInNm = wavelengthInNm
         self._propagators = None
@@ -109,61 +112,52 @@ class AtmoPropagation(BaseProcessingObj):
     def trigger_code(self):
         #if self._doFresnel:
         #    self.doFresnel_setup()
-
-        pupil_position = np.array(self._pupil_position)
         self._layer_list = self.local_inputs['layer_list']
         j=-1
         kk=len(self._layer_list)
         for name, source in self._source_dict.items():
             j+=1
-            self.height_star = source.height
             self.polar_coordinate = source.polar_coordinate
             r_angle = self.polar_coordinate[0] * sec2rad
             phi_angle = self.polar_coordinate[1] * degree2rad
             self.update_ef = self._pupil_dict[name]
             self.update_ef.reset()
-            #if pupil_position is not None:
-            #    warnings.warn('WARNING: pupil_position is not null')
             for i, layer in enumerate(self._layer_list):
 #                if self._propagators:
 #                    propagator = self._propagators[i]
 #                else:
 #                    propagator = None
-                self.height_layer = layer.height
                 self.pixel_pitch = layer.pixel_pitch
-                self.diff_height = self.height_star - self.height_layer
+                self.diff_height = self.height_star[j] - self.height_layer[i]
 
-                if (self.height_layer == 0 or (np.isinf(self.height_star) and self.polar_coordinate[0] == 0)) and \
-                    not np.any(self._shiftXY_list[i]) and \
-                    not pupil_position.any() and \
-                    self._rotAnglePhInDeg_list[i] == 0 and \
-                    self._magnification_list[i] == 1:
-
+                if (self.height_layer[i] == 0 or (not self.height_star_cond[j] and self.polar_coordinate[0] == 0)) and \
+                                not self._shiftXY_cond[i] and \
+                                not self.pupil_position_cond and \
+                                self._rotAnglePhInDeg_list[i] == 0 and \
+                                self._magnification_list[i] == 1:
                     topleft = [(self._layer_sizes[i][0] - self._pixel_pupil_size) // 2, (self._layer_sizes[i][1] - self._pixel_pupil_size) // 2]
                     self.update_ef.product(layer, subrect=topleft)
-
                 elif self.diff_height > 0:
-
                     pixel_layer = self._layer_sizes[i][0]
                     half_pixel_layer = np.array([(pixel_layer - 1) / 2., (pixel_layer - 1) / 2.]) 
                     if self._shiftXY_list[i] is not None:
                         half_pixel_layer -= self._shiftXY_list[i]
 
-                    if pupil_position is not None and pixel_layer > self._pixel_pupil_size and np.isfinite(self.height_star):
-                        pixel_position_s = r_angle * self.height_layer / self.pixel_pitch
-                        pixel_position = pixel_position_s * np.array( [np.cos(phi_angle), np.sin(phi_angle)]) + pupil_position / self.pixel_pitch
-                    elif pupil_position is not None and pixel_layer > self._pixel_pupil_size and not np.isfinite(self.height_star):
-                        pixel_position_s = r_angle * self.height_star / self.pixel_pitch
+                    if pixel_layer > self._pixel_pupil_size and self.height_star_cond[j]:
+                        pixel_position_s = r_angle * self.height_layer[i] / self.pixel_pitch
+                        pixel_position = pixel_position_s * np.array( [np.cos(phi_angle), np.sin(phi_angle)]) + self.pupil_position_arr / self.pixel_pitch
+                    elif pixel_layer > self._pixel_pupil_size and not self.height_star_cond[j]:
+                        pixel_position_s = r_angle * self.height_star[j] / self.pixel_pitch
                         sky_pixel_position = pixel_position_s * np.array( [np.cos(phi_angle), np.sin(phi_angle)])
-                        pupil_pixel_position = pupil_position / self.pixel_pitch
-                        pixel_position = (sky_pixel_position - pupil_pixel_position) * self.height_layer / self.height_star + pupil_pixel_position
+                        pupil_pixel_position = self.pupil_position_arr / self.pixel_pitch
+                        pixel_position = (sky_pixel_position - pupil_pixel_position) * self.height_layer[i] / self.height_star[j] + pupil_pixel_position
                     else:
-                        pixel_position_s = r_angle * self.height_layer / self.pixel_pitch
+                        pixel_position_s = r_angle * self.height_layer[i] / self.pixel_pitch
                         pixel_position = pixel_position_s * np.array( [np.cos(phi_angle), np.sin(phi_angle)])
-                    if np.isfinite(self.height_star):
+                    if self.height_star_cond[j]:
                         pixel_pupmeta = self._pixel_pupil_size
                     else:
-                        cone_coeff = abs(self.height_star - abs(self.height_layer)) / self.height_star
+                        cone_coeff = abs(self.height_star[j] - abs(self.height_layer[i])) / self.height_star[j]
                         pixel_pupmeta = self._pixel_pupil_size * cone_coeff
                     if self._magnification_list[i] is not None:
                         pixel_pupmeta /= self._magnification_list[i]
@@ -178,8 +172,6 @@ class AtmoPropagation(BaseProcessingObj):
                         interpolator_phase = self.RegularGridInterpolator(self.LL[i], layer.phaseInNm, bounds_error=False, fill_value=0)
                         self.update_ef.A *= interpolator_A(points).reshape(self._pixel_pupil_size, self._pixel_pupil_size)
                         self.update_ef.phaseInNm += interpolator_phase(points).reshape(self._pixel_pupil_size, self._pixel_pupil_size)
-
-
         #self._target_device.synchronize()
 #                if self._doFresnel:
 #                    self.update_ef.physical_prop(self.wavelengthInNm, propagator, temp_array=None)
@@ -192,10 +184,16 @@ class AtmoPropagation(BaseProcessingObj):
         # TODO here for no better place, we need something like a "setup()" method called before the loop starts        
         self._layer_list = self.inputs['layer_list'].get(self._target_device_idx)        
         self._shiftXY_list = [layer.shiftXYinPixel if hasattr(layer, 'shiftXYinPixel') else np.array([0, 0]) for layer in self._layer_list]
+        self._shiftXY_cond = [np.any(layer.shiftXYinPixel) if hasattr(layer, 'shiftXYinPixel')  else False for layer in self._layer_list]
         self._rotAnglePhInDeg_list = [ (-layer.rotInDeg % 360) * degree2rad if hasattr(layer, 'rotInDeg') else 0 for layer in self._layer_list]
         self._magnification_list = [max(layer.magnification, 1.0) if hasattr(layer, 'magnification') else 1.0 for layer in self._layer_list]
         self._layer_sizes = [layer.size if hasattr(layer, 'size') else [0, 0] for layer in self._layer_list]
+        self.height_layer = [layer.height for layer in self._layer_list]
 
+        self.height_star = [source.height for source in self._source_dict.values() ]
+        self.height_star_cond = [np.isfinite(source.height) for source in self._source_dict.values() ]
+
+#        self._condition1 = [ for i in range(len(self._layer_list)) ]
         self.LL=[]
         for i, ls in enumerate(self._layer_sizes):
             self.LL.append( (self.xp.arange(self._layer_sizes[i][0]), self.xp.arange(self._layer_sizes[i][1])) )
