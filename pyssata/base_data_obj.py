@@ -47,7 +47,7 @@ class BaseDataObj(BaseTimeObj):
             self._time_resolution = int(hdr.get('TIME_RES', 0))
 
 
-    def transferDataTo(self, target_device_idx, destobj):
+    def transferDataTo(self, destobj):
         excluded = ['_tag']
         #if target_device_idx==self._target_device_idx:
         #    return self
@@ -56,7 +56,7 @@ class BaseDataObj(BaseTimeObj):
         for attr in dir(self):
             if attr not in excluded and attr not in pp:
                 aType = type(getattr(self, attr))
-                if target_device_idx==-1:
+                if destobj._target_device_idx==-1:
                     if aType==cp.ndarray:
                         setattr(destobj, attr, cp.asnumpy( getattr(self, attr) ) )                            
                 elif self._target_device_idx==-1:
