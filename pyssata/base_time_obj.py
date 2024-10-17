@@ -1,5 +1,5 @@
 from astropy.io import fits
-from pyssata import np, cp, xp, global_precision, default_target_device, default_target_device_idx, cpuArray
+from pyssata import np, cp, xp, global_precision, default_target_device, default_target_device_idx
 from pyssata import cpu_float_dtype_list, gpu_float_dtype_list
 from pyssata import cpu_complex_dtype_list, gpu_complex_dtype_list
 from copy import copy, deepcopy

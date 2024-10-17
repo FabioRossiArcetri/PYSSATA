@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import cpuArray, fuse
+from pyssata import fuse
 from pyssata.processing_objects.slopec import Slopec
 from pyssata.data_objects.slopes import Slopes
 from  pyssata.base_value import BaseValue

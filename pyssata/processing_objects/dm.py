@@ -54,7 +54,6 @@ class DM(BaseProcessingObj):
 
     def trigger_code(self):
         commands = self.local_inputs['in_command'].value
-        self.temp_matrix *=0
         # Compute phase only if commands vector is not zero
         # if self.xp.sum(self.xp.abs(commands)) != 0:
         #    if len(commands) > len(self._if_commands):

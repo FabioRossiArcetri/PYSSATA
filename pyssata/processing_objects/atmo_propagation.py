@@ -117,9 +117,8 @@ class AtmoPropagation(BaseProcessingObj):
         kk=len(self._layer_list)
         for name, source in self._source_dict.items():
             j+=1
-            self.polar_coordinate = source.polar_coordinate
-            r_angle = self.polar_coordinate[0] * sec2rad
-            phi_angle = self.polar_coordinate[1] * degree2rad
+            r_angle = source.polar_coordinate_t[0]
+            phi_angle = source.polar_coordinate_t[1]
             self.update_ef = self._pupil_dict[name]
             self.update_ef.reset()
             for i, layer in enumerate(self._layer_list):
@@ -130,7 +129,7 @@ class AtmoPropagation(BaseProcessingObj):
                 self.pixel_pitch = layer.pixel_pitch
                 self.diff_height = self.height_star[j] - self.height_layer[i]
 
-                if (self.height_layer[i] == 0 or (not self.height_star_cond[j] and self.polar_coordinate[0] == 0)) and \
+                if (self.height_layer[i] == 0 or (not self.height_star_cond[j] and r_angle == 0)) and \
                                 not self._shiftXY_cond[i] and \
                                 not self.pupil_position_cond and \
                                 self._rotAnglePhInDeg_list[i] == 0 and \

@@ -78,6 +78,7 @@ class BaseDataObj(BaseTimeObj):
                     aType = type(getattr(self, attr))
                     if target_device_idx==-1:
                         if aType==cp.ndarray:
+                            setattr(cloned, attr, cp._cupyx.zeros_like_pinned( getattr(cloned, attr) ) )
                             setattr(cloned, attr, cp.asnumpy( getattr(cloned, attr) ) )
                             # print('Member', attr, 'of class', type(cloned).__name__, 'is now on CPU')
                     elif self._target_device_idx==-1:

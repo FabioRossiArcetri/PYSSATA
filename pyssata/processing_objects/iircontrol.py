@@ -211,6 +211,8 @@ class IIRControl(BaseProcessingObj):
         super().prepare_trigger(t)
         self.delta_comm = self.local_inputs['delta_comm'].value
 
+        return
+
         if self._opticalgain is not None:
             if self._opticalgain.value > 0:
                 self.delta_comm *= 1.0 / self._opticalgain.value
@@ -256,7 +258,7 @@ class IIRControl(BaseProcessingObj):
             gain_idx = self._gain_gmt_imm if self._gain_gmt_imm is not None else self.xp.zeros(0, dtype=self.dtype)
             self.delta_comm *= gmt_init_mod_manager(self.t_to_seconds(t), len(self.delta_comm), time_idx=time_idx, gain_idx=gain_idx)
 
-# this is probable useless
+# this is probably useless
 #        n_delta_comm = self.delta_comm.size
 #        if n_delta_comm < self._iirfilter.nfilter:
 #            self.delta_comm = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
