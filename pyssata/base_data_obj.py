@@ -49,45 +49,49 @@ class BaseDataObj(BaseTimeObj):
 
     def transferDataTo(self, destobj):
         excluded = ['_tag']
-        #if target_device_idx==self._target_device_idx:
+        #if target_device_idx==self.target_device_idx:
         #    return self
         #else:
         pp = get_properties(type(self))            
         for attr in dir(self):
             if attr not in excluded and attr not in pp:
-                aType = type(getattr(self, attr))
-                if destobj._target_device_idx==-1:
+                concrete_attr = getattr(self, attr)
+                cloned_attr = getattr(destobj, attr)
+                aType = type(concrete_attr)
+                if destobj.target_device_idx==-1:
                     if aType==cp.ndarray:
-                        setattr(destobj, attr, cp.asnumpy( getattr(self, attr) ) )                            
-                elif self._target_device_idx==-1:
+                        setattr(destobj, attr, concrete_attr.get(blocking=True) )
+                elif self.target_device_idx==-1:
                     if aType==np.ndarray:
-                        setattr(destobj, attr, cp.asarray( getattr(self, attr) ) )                            
+                        setattr(destobj, attr, cp.asarray( concrete_attr ) )                            
         return destobj
 
 
     def copyTo(self, target_device_idx):
         cloned = self
         excluded = ['_tag']
-        if target_device_idx==self._target_device_idx:
+        if target_device_idx==self.target_device_idx:
             return self
         else:
             pp = get_properties(type(self))
             cloned = copy(self)
             for attr in dir(self):
                 if attr not in excluded and attr not in pp:
-                    aType = type(getattr(self, attr))
+                    concrete_attr = getattr(self, attr)
+                    cloned_attr = getattr(cloned, attr)
+                    aType = type(concrete_attr)
                     if target_device_idx==-1:
                         if aType==cp.ndarray:
-                            setattr(cloned, attr, cp._cupyx.zeros_like_pinned( getattr(cloned, attr) ) )
-                            setattr(cloned, attr, cp.asnumpy( getattr(cloned, attr) ) )
+                            setattr(cloned, attr, cp._cupyx.zeros_like_pinned( cloned_attr ) )
+                            setattr(cloned, attr, cp.asnumpy( cloned_attr ) )
                             # print('Member', attr, 'of class', type(cloned).__name__, 'is now on CPU')
-                    elif self._target_device_idx==-1:
+                    elif self.target_device_idx==-1:
                         if aType==np.ndarray:
-                            setattr(cloned, attr, cp.asarray( getattr(cloned, attr) ) )
+                            setattr(cloned, attr, cp.asarray( cloned_attr ) )
                             # print('Member', attr, 'of class', type(cloned).__name__, 'is now on GPU')
             if target_device_idx >= 0:
                 cloned.xp = cp
             else:
                 cloned.xp = np
-            cloned._target_device_idx = target_device_idx
+            cloned.target_device_idx = target_device_idx
             return cloned

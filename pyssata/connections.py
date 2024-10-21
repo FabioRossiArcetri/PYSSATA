@@ -17,7 +17,7 @@ class InputValue():
 
     def get(self, target_device_idx):
         if not self.wrapped_value is None:
-            if self.wrapped_value._target_device_idx == target_device_idx:
+            if self.wrapped_value.target_device_idx == target_device_idx:
                 return self.wrapped_value
             else:
                 if self.cloned_value is None:

@@ -29,42 +29,27 @@ class PyrSlopec(Slopec):
                  precision=None,
                 **kwargs):
         super().__init__(target_device_idx=target_device_idx, precision=precision, **kwargs)
-        self._shlike = shlike
-        self._norm_factor = norm_factor
-        self._thr_value = int(thr_value)
-        self.threshold = self._thr_value if self._thr_value != -1 else None
-        self._slopes_from_intensity = slopes_from_intensity
+        self.shlike = shlike
+        self.norm_factor = norm_factor
+        self.thr_value = int(thr_value)
+        self.threshold = self.thr_value if self.thr_value != -1 else None
+        self.slopes_from_intensity = slopes_from_intensity
         if pupdata is not None:
             self.pupdata = pupdata  # Property set
-            self.pup_idx  = self._pupdata.ind_pup.flatten().astype(self.xp.int64)
-            self.pup_idx0 = self._pupdata.ind_pup[:, 0]
-            self.pup_idx1 = self._pupdata.ind_pup[:, 1]
-            self.pup_idx2 = self._pupdata.ind_pup[:, 2]
-            self.pup_idx3 = self._pupdata.ind_pup[:, 3]
-            self.n_pup = self._pupdata.ind_pup.shape[1]
-            self.n_subap = self._pupdata.ind_pup.shape[0]
+            self.pup_idx  = self.pupdata.ind_pup.flatten().astype(self.xp.int64)
+            self.pup_idx0 = self.pupdata.ind_pup[:, 0]
+            self.pup_idx1 = self.pupdata.ind_pup[:, 1]
+            self.pup_idx2 = self.pupdata.ind_pup[:, 2]
+            self.pup_idx3 = self.pupdata.ind_pup[:, 3]
+            self.n_pup = self.pupdata.ind_pup.shape[1]
+            self.n_subap = self.pupdata.ind_pup.shape[0]
 
         if filtmat_tag:
-            self.set_filtmat(self._cm.read_data(filtmat_tag))   # TODO
+            self.set_filtmat(self.cm.read_data(filtmat_tag))   # TODO
 
-        self._total_counts = BaseValue()
-        self._subap_counts = BaseValue()
+        self.total_counts = BaseValue()
+        self.subap_counts = BaseValue()
 
-    @property
-    def shlike(self):
-        return self._shlike
-
-    @shlike.setter
-    def shlike(self, value):
-        self._shlike = value
-
-    @property
-    def norm_factor(self):
-        return self._norm_factor
-
-    @norm_factor.setter
-    def norm_factor(self, value):
-        self._norm_factor = value
 
     @property
     def thr_value(self):
@@ -75,14 +60,6 @@ class PyrSlopec(Slopec):
         self._thr_value = int(value)
 
     @property
-    def slopes_from_intensity(self):
-        return self._slopes_from_intensity
-
-    @slopes_from_intensity.setter
-    def slopes_from_intensity(self, value):
-        self._slopes_from_intensity = value
-
-    @property
     def pupdata(self):
         return self._pupdata
 
@@ -91,22 +68,22 @@ class PyrSlopec(Slopec):
         if p is not None:
             self._pupdata = p
             # TODO replace this resize with an earlier initialization
-            if self._slopes_from_intensity:
-                self._slopes.resize(len(self._pupdata.ind_pup) * 4)
+            if self.slopes_from_intensity:
+                self.slopes.resize(len(self.pupdata.ind_pup) * 4)
             else:
-                self._slopes.resize(len(self._pupdata.ind_pup) * 2)
-            self._accumulated_slopes.resize(len(self._pupdata.ind_pup) * 2)
+                self.slopes.resize(len(self.pupdata.ind_pup) * 2)
+            self.accumulated_slopes.resize(len(self.pupdata.ind_pup) * 2)
 
     def run_check(self, time_step, errmsg=''):
         self.prepare_trigger(0)
         #super().build_stream()
-        if self._use_sn and not self._sn:
+        if self.use_sn and not self.sn:
             errmsg += 'Slopes null are not valid'
-        if self._weight_from_accumulated and self._accumulate:
+        if self.weight_from_accumulated and self.accumulate:
             errmsg += 'weightFromAccumulated and accumulate must not be set together'
         if errmsg != '':
             print(errmsg)
-        return not (self._weight_from_accumulated and self._accumulate) and self.local_inputs['in_pixels'] and self._slopes and ((not self._use_sn) or (self._use_sn and self._sn))
+        return not (self.weight_from_accumulated and self.accumulate) and self.local_inputs['in_pixels'] and self.slopes and ((not self.use_sn) or (self.use_sn and self.sn))
 
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
@@ -118,12 +95,12 @@ class PyrSlopec(Slopec):
         # subap_counts : computed in post_trigger
         # slopes : computed here
 
-#        if not self._pupdata:
+#        if not self.pupdata:
 #            return
-#        if self._verbose:
-#            print('Average pixel counts:', self.xp.sum(pixels) / len(self._pupdata.ind_pup))
+#        if self.verbose:
+#            print('Average pixel counts:', self.xp.sum(pixels) / len(self.pupdata.ind_pup))
 
-        self._total_counts.value = self.xp.sum(self.flat_pixels[self.pup_idx])
+        self.total_counts.value = self.xp.sum(self.flat_pixels[self.pup_idx])
 
         if self.threshold is not None:
             self.flat_pixels -= self.threshold
@@ -137,16 +114,16 @@ class PyrSlopec(Slopec):
         # Compute total intensity
         self.total_intensity = self.xp.sum(self.flat_pixels[self.pup_idx])
 
-        if self._slopes_from_intensity:
+        if self.slopes_from_intensity:
             inv_factor = self.total_intensity / (4 * self.n_subap)
             factor = 1.0 / inv_factor
             self.sx = factor * self.xp.concatenate([A, B])
             self.sy = factor * self.xp.concatenate([C, D])
         else:
-            if self._norm_factor is not None:
-                inv_factor = self._norm_factor
+            if self.norm_factor is not None:
+                inv_factor = self.norm_factor
                 factor = 1.0 / inv_factor
-            elif not self._shlike:
+            elif not self.shlike:
                 inv_factor = self.total_intensity /  self.n_subap
                 factor = 1.0 / inv_factor
             else:
@@ -162,28 +139,28 @@ class PyrSlopec(Slopec):
         self.sx *= inv_factor
         self.sy *= inv_factor
 
-        self._slopes.xslopes = self.sx
-        self._slopes.yslopes = self.sy 
+        self.slopes.xslopes = self.sx
+        self.slopes.yslopes = self.sy 
 
         
     def post_trigger(self):
         # super().post_trigger()
-        self._subap_counts.value = self._total_counts.value / self._pupdata.n_subap
-        self._total_counts.generation_time = self.current_time
-        self._subap_counts.generation_time = self.current_time
-        self._slopes.generation_time = self.current_time
+        self.subap_counts.value = self.total_counts.value / self.pupdata.n_subap
+        self.total_counts.generation_time = self.current_time
+        self.subap_counts.generation_time = self.current_time
+        self.slopes.generation_time = self.current_time
 
 
     def run_check(self, time_step, errmsg=''):
-        if self._shlike and self._slopes_from_intensity:
+        if self.shlike and self.slopes_from_intensity:
             errmsg += 'Both SHLIKE and SLOPES_FROM_INTENSITY parameters are set. Only one of these should be used.'
             return False
 
-        if self._shlike and self._norm_factor != 0:
+        if self.shlike and self.norm_factor != 0:
             errmsg += 'Both SHLIKE and NORM_FACTOR parameters are set. Only one of these should be used.'
             return False
 
-        if not self._pupdata:
+        if not self.pupdata:
             errmsg += 'Pupil data is not valid'
             return False
 

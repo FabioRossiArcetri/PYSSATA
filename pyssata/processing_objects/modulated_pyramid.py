@@ -66,23 +66,23 @@ class ModulatedPyramid(BaseProcessingObj):
         # Compute focal plane central obstruction dimension ratio                 
         fp_obsratio = fp_obs / (fft_totsize / fft_res) if fp_obs is not None else 0
 
-        self._wavelength_in_nm = wavelengthInNm
-        self._fov_res = fov_res
-        self._fp_masking = fp_masking
-        self._fp_obsratio = fp_obsratio
-        self._fft_res = fft_res
-        self._tilt_scale = tilt_scale
-        self._fft_sampling = fft_sampling
-        self._fft_padding = int(fft_padding)
-        self._fft_totsize = int(cpuArray(fft_totsize))
-        self._toccd_side = toccd_side
-        self._final_ccd_side = final_ccd_side
-        self._pyr_tlt_coeff = pyr_tlt_coeff
-        self._pyr_edge_def_ld = pyr_edge_def_ld
-        self._pyr_tip_def_ld = pyr_tip_def_ld
-        self._pyr_tip_maya_ld = pyr_tip_maya_ld
-        self._rotAnglePhInDeg = 0
-        self._pup_shifts = pup_shifts
+        self.wavelength_in_nm = wavelengthInNm
+        self.fov_res = fov_res
+        self.fp_masking = fp_masking
+        self.fp_obsratio = fp_obsratio
+        self.fft_res = fft_res
+        self.tilt_scale = tilt_scale
+        self.fft_sampling = fft_sampling
+        self.fft_padding = int(fft_padding)
+        self.fft_totsize = int(cpuArray(fft_totsize))
+        self.toccd_side = toccd_side
+        self.final_ccd_side = final_ccd_side
+        self.pyr_tlt_coeff = pyr_tlt_coeff
+        self.pyr_edge_def_ld = pyr_edge_def_ld
+        self.pyr_tip_def_ld = pyr_tip_def_ld
+        self.pyr_tip_maya_ld = pyr_tip_maya_ld
+        self.rotAnglePhInDeg = 0
+        self.pup_shifts = pup_shifts
 
         if not all([fft_res, fov_res, tilt_scale, fft_sampling, fft_totsize, toccd_side, final_ccd_side]):
             raise Exception('Not all geometry settings have been calculated')
@@ -101,100 +101,44 @@ class ModulatedPyramid(BaseProcessingObj):
 
         fft_totsize = int(fft_totsize)
         
-        self._out_i = Intensity(final_ccd_side, final_ccd_side, precision=self.precision, target_device_idx=self._target_device_idx)
-        self._psf_tot = BaseValue(self.xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype), target_device_idx=self._target_device_idx)
-        self._psf_bfm = BaseValue(self.xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype), target_device_idx=self._target_device_idx)
-        self._out_transmission = BaseValue(0, target_device_idx=self._target_device_idx)
+        self.out_i = Intensity(final_ccd_side, final_ccd_side, precision=self.precision, target_device_idx=self.target_device_idx)
+        self.psf_tot = BaseValue(self.xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype), target_device_idx=self.target_device_idx)
+        self.psf_bfm = BaseValue(self.xp.zeros((fft_totsize, fft_totsize), dtype=self.dtype), target_device_idx=self.target_device_idx)
+        self.out_transmission = BaseValue(0, target_device_idx=self.target_device_idx)
 
         self.inputs['in_ef'] = InputValue(type=ElectricField)
         self.outputs['out_i'] = self.out_i
-        self.outputs['out_psf_tot'] = self._psf_tot
-        self.outputs['out_psf_bfm'] = self._psf_bfm
-        self.outputs['out_transmission'] = self._out_transmission
+        self.outputs['out_psf_tot'] = self.psf_tot
+        self.outputs['out_psf_bfm'] = self.psf_bfm
+        self.outputs['out_transmission'] = self.out_transmission
 
-        self._pyr_tlt = self.get_pyr_tlt(fft_sampling, fft_padding)
-        self._tlt_f = self.get_tlt_f(fft_sampling, fft_padding)
-        self._tilt_x = self.get_modulation_tilt(fft_sampling, X=True)
-        self._tilt_y = self.get_modulation_tilt(fft_sampling, Y=True)
-        self._fp_mask = self.get_fp_mask(fft_totsize, fp_masking, obsratio=fp_obsratio)
-        self._fp_mask = self._fp_mask[self.xp.newaxis, :,:]
+        self.pyr_tlt = self.get_pyr_tlt(fft_sampling, fft_padding)
+        self.tlt_f = self.get_tlt_f(fft_sampling, fft_padding)
+        self.tilt_x = self.get_modulation_tilt(fft_sampling, X=True)
+        self.tilt_y = self.get_modulation_tilt(fft_sampling, Y=True)
+        self.fp_mask = self.get_fp_mask(fft_totsize, fp_masking, obsratio=fp_obsratio)
+        self.fp_mask = self.fp_mask[self.xp.newaxis, :,:]
 
-        self._extended_source_in_on = False
+        self.extended_source_in_on = False
         iu = 1j  # complex unit
-        self._myexp = self.xp.exp(-2 * self.xp.pi * iu * self._pyr_tlt, dtype=self.complex_dtype)
-        self._myexp = self._myexp[self.xp.newaxis, :,:]
+        self.myexp = self.xp.exp(-2 * self.xp.pi * iu * self.pyr_tlt, dtype=self.complex_dtype)
+        self.myexp = self.myexp[self.xp.newaxis, :,:]
 
         # Pre-computation of ttexp will be done when mod_steps will be set or re-set
         if int(mod_step) != mod_step:
             raise ValueError('Modulation step number is not an integer')
 
-        self._mod_amp = mod_amp
-        self._mod_steps = int(mod_step)
-        self._ttexp = None
+        self.mod_amp = mod_amp
+        self.mod_steps = int(mod_step)
+        self.ttexp = None
         self.cache_ttexp()
-        self.pup_pyr_tot = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-        self.psf_bfm = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-        self.psf_tot = self.xp.zeros((self._fft_totsize, self._fft_totsize), dtype=self.dtype)
-        self.u_tlt = self.xp.zeros((self.mod_steps, self._fft_totsize, self._fft_totsize), dtype=self.complex_dtype)
+        self.pup_pyr_tot = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+        self.psf_bfm_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+        self.psf_tot_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+        self.u_tlt = self.xp.zeros((self.mod_steps, self.fft_totsize, self.fft_totsize), dtype=self.complex_dtype)
         self.plan1 = self.get_fft_plan(self.u_tlt, axes=(-2, -1), value_type='C2C')
-        self.roll_array = [self._fft_padding//2, self._fft_padding//2]
+        self.roll_array = [self.fft_padding//2, self.fft_padding//2]
         self.roll_axis = [0,1]
-
-    @property
-    def mod_amp(self):
-        return self._mod_amp
-
-    @mod_amp.setter
-    def mod_amp(self, value):
-        if value != self._mod_amp:
-            self._mod_amp = value
-            self.cache_ttexp()
-
-    @property
-    def mod_steps(self):
-        return self._mod_steps
-
-    @mod_steps.setter
-    def mod_steps(self, value):
-        if value != self._mod_steps:
-            self._mod_steps = value
-            self.cache_ttexp()
-
-    @property
-    def fp_masking(self):
-        return self._fp_masking
-
-    @fp_masking.setter
-    def fp_masking(self, value):
-        self._fp_masking = value
-
-    @property
-    def pup_shifts(self):
-        return self._pup_shifts
-
-    @pup_shifts.setter
-    def pup_shifts(self, value):
-        self._pup_shifts = value
-
-    @property
-    def ext_source_psf(self):
-        return self._extSourcePsf
-
-    @ext_source_psf.setter
-    def ext_source_psf(self, value):
-        self._extSourcePsf = value
-
-    @property
-    def rot_angle_ph_in_deg(self):
-        return self._rotAnglePhInDeg
-
-    @rot_angle_ph_in_deg.setter
-    def rot_angle_ph_in_deg(self, value):
-        self._rotAnglePhInDeg = value
-
-    @property
-    def out_i(self):
-        return self._out_i
 
     def calc_geometry(self,
         DpupPix,                # number of pixels of input phase array
@@ -287,42 +231,42 @@ class ModulatedPyramid(BaseProcessingObj):
         return results
 
     def set_extended_source(self, source):
-        self._extSource = source
-        self._extended_source_in_on = True
+        self.extSource = source
+        self.extended_source_in_on = True
 
-        self._ext_xtilt = self.zern(2, make_xy(self._fft_sampling, 1.0), xp=self.xp)
-        self._ext_ytilt = self.zern(3, make_xy(self._fft_sampling, 1.0), xp=self.xp)
-        self._ext_focus = self.zern(4, make_xy(self._fft_sampling, 1.0), xp=self.xp)
+        self.ext_xtilt = self.zern(2, make_xy(self.fft_sampling, 1.0), xp=self.xp)
+        self.ext_ytilt = self.zern(3, make_xy(self.fft_sampling, 1.0), xp=self.xp)
+        self.ext_focus = self.zern(4, make_xy(self.fft_sampling, 1.0), xp=self.xp)
 
         if source.npoints == 0:
             raise ValueError('ERROR: number of points of extended source is 0!')
         else:
-            self._mod_steps = source.npoints
+            self.mod_steps = source.npoints
 
-        del self._ttexp
+        del self.ttexp
 
-        print(f'modulated_pyramid --> Setting up extended source with {self._mod_steps} points')
+        print(f'modulated_pyramid --> Setting up extended source with {self.mod_steps} points')
 
-        if self._mod_steps <= 0:
+        if self.mod_steps <= 0:
             return
 
         iu = 1j  # complex unit
         
-        self._ttexp = self.xp.ndarray(shape=(self._mod_steps, self._tilt_x.shape[0], self._tilt_x.shape[1]), dtype=self.complex_dtype)
+        self.ttexp = self.xp.ndarray(shape=(self.mod_steps, self.tilt_x.shape[0], self.tilt_x.shape[1]), dtype=self.complex_dtype)
 
-        for tt in range(self._mod_steps):
-            angle = 2 * self.xp.pi * (tt / self._mod_steps)
-            pup_tt = source.coeff_tiltx[tt] * self._ext_xtilt + source.coeff_tilty[tt] * self._ext_ytilt
-            pup_focus = -1 * source.coeff_focus[tt] * self._ext_focus
-            self._ttexp[tt, :, :] = self.xp.exp(-iu * (pup_tt + pup_focus))
+        for tt in range(self.mod_steps):
+            angle = 2 * self.xp.pi * (tt / self.mod_steps)
+            pup_tt = source.coeff_tiltx[tt] * self.ext_xtilt + source.coeff_tilty[tt] * self.ext_ytilt
+            pup_focus = -1 * source.coeff_focus[tt] * self.ext_focus
+            self.ttexp[tt, :, :] = self.xp.exp(-iu * (pup_tt + pup_focus))
 
         i = source.coeff_flux
         idx = self.xp.where(self.xp.abs(i) < self.xp.max(self.xp.abs(i)) * 1e-5)[0]
         if len(idx[0]) > 0:
             i[idx] = 0
-        self._flux_factor_vector = i
-        self.ffv = self._flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
-        self.factor = 1.0 / self.xp.sum(self._flux_factor_vector)
+        self.flux_factor_vector = i
+        self.ffv = self.flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
+        self.factor = 1.0 / self.xp.sum(self.flux_factor_vector)
         
 
     def get_pyr_tlt(self, p, c):
@@ -331,8 +275,8 @@ class ModulatedPyramid(BaseProcessingObj):
         #tlt_basis = self.xp.tile(self.xp.arange(A), (A, 1))
         y, x = self.xp.mgrid[0:A,0:A]
 
-        if self._pyr_tlt_coeff is not None:
-            k = self._pyr_tlt_coeff
+        if self.pyr_tlt_coeff is not None:
+            k = self.pyr_tlt_coeff
 
             tlt_basis -= self.xp.mean(tlt_basis)
 
@@ -360,26 +304,26 @@ class ModulatedPyramid(BaseProcessingObj):
         # distance from edge
         dx = self.xp.sqrt(xx ** 2)
         dy = self.xp.sqrt(yy ** 2)
-        idx_edge = self.xp.where((dx <= self._pyr_edge_def_ld * self._fft_res / 2) | 
-                            (dy <= self._pyr_edge_def_ld * self._fft_res / 2))[0]
+        idx_edge = self.xp.where((dx <= self.pyr_edge_def_ld * self.fft_res / 2) | 
+                            (dy <= self.pyr_edge_def_ld * self.fft_res / 2))[0]
         if len(idx_edge) > 0:
             pyr_tlt[idx_edge] = self.xp.max(pyr_tlt) * self.xp.random.rand(len(idx_edge[0]))
             print(f'get_pyr_tlt: {len(idx_edge[0])} pixels set to 0 to consider pyramid imperfect edges')
 
         # distance from tip
         d = self.xp.sqrt(xx ** 2 + yy ** 2)
-        idx_tip = self.xp.where(d <= self._pyr_tip_def_ld * self._fft_res / 2)[0]
+        idx_tip = self.xp.where(d <= self.pyr_tip_def_ld * self.fft_res / 2)[0]
         if len(idx_tip) > 0:
             pyr_tlt[idx_tip] = self.xp.max(pyr_tlt) * self.xp.random.rand(len(idx_tip[0]))
             print(f'get_pyr_tlt: {len(idx_tip[0])} pixels set to 0 to consider pyramid imperfect tip')
 
         # distance from tip
-        idx_tip_m = self.xp.where(d <= self._pyr_tip_maya_ld * self._fft_res / 2)[0]
+        idx_tip_m = self.xp.where(d <= self.pyr_tip_maya_ld * self.fft_res / 2)[0]
         if len(idx_tip_m) > 0:
             pyr_tlt[idx_tip_m] = self.xp.min(pyr_tlt[idx_tip_m])
             print(f'get_pyr_tlt: {len(idx_tip_m[0])} pixels set to 0 to consider pyramid imperfect tip')
 
-        return pyr_tlt / self._tilt_scale
+        return pyr_tlt / self.tilt_scale
 
     def get_tlt_f(self, p, c):
         iu = 1j  # complex unit
@@ -406,53 +350,53 @@ class ModulatedPyramid(BaseProcessingObj):
             return tilt_y
 
     def cache_ttexp(self):
-        if not self._extended_source_in_on:
-            del self._ttexp
-            if self._mod_steps <= 0:
+        if not self.extended_source_in_on:
+            del self.ttexp
+            if self.mod_steps <= 0:
                 return
 
             iu = 1j  # complex unit
 
-            self._ttexp = self.xp.ndarray(shape=(self._mod_steps, self._tilt_x.shape[0], self._tilt_x.shape[1]), dtype=self.complex_dtype)
-            for tt in range(self._mod_steps):
-                angle = 2 * self.xp.pi * (tt / self._mod_steps)
-                pup_tt = self._mod_amp * self.xp.sin(angle) * self._tilt_x + \
-                         self._mod_amp * self.xp.cos(angle) * self._tilt_y
-                self._ttexp[tt, :, :] = self.xp.exp(-iu * pup_tt, dtype=self.complex_dtype)
+            self.ttexp = self.xp.ndarray(shape=(self.mod_steps, self.tilt_x.shape[0], self.tilt_x.shape[1]), dtype=self.complex_dtype)
+            for tt in range(self.mod_steps):
+                angle = 2 * self.xp.pi * (tt / self.mod_steps)
+                pup_tt = self.mod_amp * self.xp.sin(angle) * self.tilt_x + \
+                         self.mod_amp * self.xp.cos(angle) * self.tilt_y
+                self.ttexp[tt, :, :] = self.xp.exp(-iu * pup_tt, dtype=self.complex_dtype)
 
-            self._flux_factor_vector = self.xp.ones(self._mod_steps, dtype=self.dtype)
-            self.ffv = self._flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
-            self.factor = 1.0 / self.xp.sum(self._flux_factor_vector)
+            self.flux_factor_vector = self.xp.ones(self.mod_steps, dtype=self.dtype)
+            self.ffv = self.flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
+            self.factor = 1.0 / self.xp.sum(self.flux_factor_vector)
 
 
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
         self.in_ef = self.local_inputs['in_ef']
         self.ef_size = self.in_ef.size
-        #if self._extended_source_in_on and self._extSourcePsf is not None:
-        #    if self._extSourcePsf.generation_time == self.current_time:
-        #        if self.xp.sum(self.xp.abs(self._extSourcePsf.value)) > 0:
-        #            self._extSource.updatePsf(self._extSourcePsf.value)
-        #            self._flux_factor_vector = self._extSource.coeff_flux
-        #            self.ffv = self._flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
-        #            self.factor = 1.0 / self.xp.sum(self._flux_factor_vector)
+        #if self.extended_source_in_on and self.extSourcePsf is not None:
+        #    if self.extSourcePsf.generation_time == self.current_time:
+        #        if self.xp.sum(self.xp.abs(self.extSourcePsf.value)) > 0:
+        #            self.extSource.updatePsf(self.extSourcePsf.value)
+        #            self.flux_factor_vector = self.extSource.coeff_flux
+        #            self.ffv = self.flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
+        #            self.factor = 1.0 / self.xp.sum(self.flux_factor_vector)
 
-        #if self._rotAnglePhInDeg != 0:
-        #    A = (self.ROT_AND_SHIFT_IMAGE(self.in_ef.A, self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(self.xp.uint8)
-        #    phi_at_lambda = self.ROT_AND_SHIFT_IMAGE(self.in_ef.phi_at_lambda(self._wavelength_in_nm), self._rotAnglePhInDeg, [0, 0], 1, use_interpolate=True)
-        #    self.ef = self.xp.complex64(self.xp.rebin(A, (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) + 
-        #                      self.xp.rebin(phi_at_lambda, (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) * 1j)
+        #if self.rotAnglePhInDeg != 0:
+        #    A = (self.ROT_AND_SHIFT_IMAGE(self.in_ef.A, self.rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(self.xp.uint8)
+        #    phi_at_lambda = self.ROT_AND_SHIFT_IMAGE(self.in_ef.phi_at_lambda(self.wavelength_in_nm), self.rotAnglePhInDeg, [0, 0], 1, use_interpolate=True)
+        #    self.ef = self.xp.complex64(self.xp.rebin(A, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) + 
+        #                      self.xp.rebin(phi_at_lambda, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) * 1j)
         #else:
-        #if self._fov_res != 1:
-        #self.ef = self.xp.complex64(self.xp.rebin(self.in_ef.A, (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) + 
-        #                        self.xp.rebin(self.in_ef.phi_at_lambda(self._wavelength_in_nm), (self.ef_size[0] * self._fov_res, self.ef_size[1] * self._fov_res)) * 1j)
+        #if self.fov_res != 1:
+        #self.ef = self.xp.complex64(self.xp.rebin(self.in_ef.A, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) + 
+        #                        self.xp.rebin(self.in_ef.phi_at_lambda(self.wavelength_in_nm), (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) * 1j)
         #else:
-        self.ef = self.in_ef.ef_at_lambda(self._wavelength_in_nm)
+        self.ef = self.in_ef.ef_at_lambda(self.wavelength_in_nm)
         ##
 
         self.phot = self.in_ef.S0 * self.xp.sum(self.in_ef._A) * (self.in_ef.pixel_pitch ** 2)
-        u_tlt_const = self.ef * self._tlt_f
-        tmp = u_tlt_const[self.xp.newaxis, :, :] * self._ttexp
+        u_tlt_const = self.ef * self.tlt_f
+        tmp = u_tlt_const[self.xp.newaxis, :, :] * self.ttexp
         ss = tmp.shape
         self.u_tlt[:, 0:ss[1], 0:ss[2]] = tmp
 
@@ -460,7 +404,7 @@ class ModulatedPyramid(BaseProcessingObj):
     def trigger_code(self):
         with self.plan1:
             self.u_fp = self.xp.fft.fftshift(self.xp.fft.fft2(self.u_tlt, axes=(-2, -1)), axes=(-2, -1))                                       
-        self.u_fp_pyr, self.fpsf = pyr1_fused(self.u_fp, self.ffv, self._myexp, self._fp_mask, xp=self.xp)
+        self.u_fp_pyr, self.fpsf = pyr1_fused(self.u_fp, self.ffv, self.myexp, self.fp_mask, xp=self.xp)
         with self.plan1:
             self.aa = self.xp.fft.ifft2(self.u_fp_pyr, axes=(-2, -1))
         self.bb = self.xp.abs(self.aa) ** 2 * self.ffv
@@ -468,61 +412,61 @@ class ModulatedPyramid(BaseProcessingObj):
     def post_trigger(self):
         # super().post_trigger()
         self.xp.sum(self.bb, axis=0, out=self.pup_pyr_tot)
-        self.xp.sum(self.fpsf, axis=0, out=self.psf_bfm)
-        self.xp.sum(self.fpsf*self._fp_mask, axis=0, out=self.psf_tot)
+        self.xp.sum(self.fpsf, axis=0, out=self.psf_bfm_arr)
+        self.xp.sum(self.fpsf*self.fp_mask, axis=0, out=self.psf_tot_arr)
         self.pup_pyr_tot = self.xp.roll(self.pup_pyr_tot, self.roll_array, self.roll_axis )
         self.pup_pyr_tot *= self.factor
-        self.psf_tot *= self.factor
-        self.psf_bfm *= self.factor
-        self.transmission = self.xp.sum(self.psf_tot) / self.xp.sum(self.psf_bfm)
+        self.psf_tot_arr *= self.factor
+        self.psf_bfm_arr *= self.factor
+        self.transmission = self.xp.sum(self.psf_tot_arr) / self.xp.sum(self.psf_bfm_arr)
         self.pup_pyr_tot *= (self.phot / self.xp.sum(self.pup_pyr_tot)) * self.transmission
 #        if phot == 0: slows down?
 #            print('WARNING: total intensity at PYR entrance is zero')
         # TODO handle shifts as an input from a func generator (for time-varying shifts)
-        #if self._pup_shifts is not None and self._pup_shifts != (0.0, 0.0):
+        #if self.pup_shifts is not None and self.pup_shifts != (0.0, 0.0):
         #    image = self.xp.pad(self.pup_pyr_tot, 1, mode='constant')
-        #    imscale = float(self._fft_totsize) / float(self._toccd_side)
-#            pup_shiftx = self._pup_shifts[0] * imscale
-#            pup_shifty = self._pup_shifts[1] * imscale
+        #    imscale = float(self.fft_totsize) / float(self.toccd_side)
+#            pup_shiftx = self.pup_shifts[0] * imscale
+#            pup_shifty = self.pup_shifts[1] * imscale
 
-#            image = self.interpolate(image, self.xp.arange(self._fft_totsize + 2) - pup_shiftx, 
-#                                     self.xp.arange(self._fft_totsize + 2) - pup_shifty, grid=True, missing=0)
+#            image = self.interpolate(image, self.xp.arange(self.fft_totsize + 2) - pup_shiftx, 
+#                                     self.xp.arange(self.fft_totsize + 2) - pup_shifty, grid=True, missing=0)
 #            self.pup_pyr_tot = image[1:-1, 1:-1]
         
-        ccd_internal = toccd(self.pup_pyr_tot, (self._toccd_side, self._toccd_side), xp=self.xp)
+        ccd_internal = toccd(self.pup_pyr_tot, (self.toccd_side, self.toccd_side), xp=self.xp)
 
-        if self._final_ccd_side > self._toccd_side:
-            delta = (self._final_ccd_side - self._toccd_side) // 2
-            ccd = self.xp.zeros((self._final_ccd_side, self._final_ccd_side), dtype=self.dtype)
+        if self.final_ccd_side > self.toccd_side:
+            delta = (self.final_ccd_side - self.toccd_side) // 2
+            ccd = self.xp.zeros((self.final_ccd_side, self.final_ccd_side), dtype=self.dtype)
             ccd[delta:delta + ccd_internal.shape[0], delta:delta + ccd_internal.shape[1]] = ccd_internal
-        elif self._final_ccd_side < self._toccd_side:
-            delta = (self._toccd_side - self._final_ccd_side) // 2
-            ccd = ccd_internal[delta:delta + self._final_ccd_side, delta:delta + self._final_ccd_side]
+        elif self.final_ccd_side < self.toccd_side:
+            delta = (self.toccd_side - self.final_ccd_side) // 2
+            ccd = ccd_internal[delta:delta + self.final_ccd_side, delta:delta + self.final_ccd_side]
         else:
             ccd = ccd_internal
-        self._out_i.i = ccd
-        self._out_i.generation_time = self.current_time
-        self._psf_tot.value = self.psf_tot
-        self._psf_tot.generation_time = self.current_time
-        self._psf_bfm.value = self.psf_bfm
-        self._psf_bfm.generation_time = self.current_time
-        self._out_transmission.value = self.transmission
-        self._out_transmission.generation_time = self.current_time
+        self.out_i.i = ccd
+        self.out_i.generation_time = self.current_time
+        self.psf_tot.value = self.psf_tot_arr
+        self.psf_tot.generation_time = self.current_time
+        self.psf_bfm.value = self.psf_bfm_arr
+        self.psf_bfm.generation_time = self.current_time
+        self.out_transmission.value = self.transmission
+        self.out_transmission.generation_time = self.current_time
 
     
     def run_check(self, time_step):
         self.prepare_trigger(0)
-        self._toccd_side = int(self._toccd_side)
+        self.toccd_side = int(self.toccd_side)
         super().build_stream()
-        if self._extended_source_in_on:
+        if self.extended_source_in_on:
             return 1
-        elif self._mod_steps < self.xp.around(2 * self.xp.pi * self._mod_amp):
-            raise Exception(f'Number of modulation steps is too small ({self._mod_steps}), it must be at least 2*pi times the modulation amplitude ({self.xp.around(2 * self.xp.pi * self._mod_amp)})!')
+        elif self.mod_steps < self.xp.around(2 * self.xp.pi * self.mod_amp):
+            raise Exception(f'Number of modulation steps is too small ({self.mod_steps}), it must be at least 2*pi times the modulation amplitude ({self.xp.around(2 * self.xp.pi * self.mod_amp)})!')
         return 1
 
     def hdr(self, hdr):
-        hdr['MODAMP'] = self._mod_amp
-        hdr['MODSTEPS'] = self._mod_steps
+        hdr['MODAMP'] = self.mod_amp
+        hdr['MODSTEPS'] = self.mod_steps
     
     def minmax(self, array):
         return self.xp.min(array), self.xp.max(array)

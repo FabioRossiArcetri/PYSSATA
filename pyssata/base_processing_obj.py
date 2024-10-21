@@ -17,7 +17,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         """
         BaseTimeObj.__init__(self, target_device_idx=target_device_idx, precision=precision)
 
-        if self._target_device_idx>=0:
+        if self.target_device_idx>=0:
             from cupyx.scipy.ndimage import rotate
             from cupyx.scipy.interpolate import RegularGridInterpolator
             from cupyx.scipy.fft import get_fft_plan
@@ -70,21 +70,21 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         self.current_time_seconds = self.t_to_seconds(self.current_time)
         for input_name, input_obj in self.inputs.items():
             if type(input_obj) is InputValue:
-                self.local_inputs[input_name] =  input_obj.get(self._target_device_idx)
+                self.local_inputs[input_name] =  input_obj.get(self.target_device_idx)
             elif type(input_obj) is InputList:
                 self.local_inputs[input_name] = []
-                for tt in input_obj.get(self._target_device_idx):
+                for tt in input_obj.get(self.target_device_idx):
                     self.local_inputs[input_name].append(tt)
         
     def trigger_code(self):
         pass
 
     def post_trigger(self):
-        if self._target_device_idx>=0 and self.cuda_graph:
+        if self.target_device_idx>=0 and self.cuda_graph:
             self.stream.synchronize()
 
 #        if self.checkInputTimes():
-#         if self._target_device_idx>=0 and self.cuda_graph:
+#         if self.target_device_idx>=0 and self.cuda_graph:
 #             self.stream.synchronize()
 #             self._target_device.synchronize()
 #             self.xp.cuda.runtime.deviceSynchronize()
@@ -94,7 +94,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
 #            cp.cuda.Stream.null.synchronize()
 
     def build_stream(self):
-        if self._target_device_idx>=0:
+        if self.target_device_idx>=0:
             self._target_device.use()
             self.stream = cp.cuda.Stream(non_blocking=False)
             self.capture_stream()
@@ -119,7 +119,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
     
     def trigger(self):        
         if self.ready:
-            if self._target_device_idx>=0 and self.cuda_graph:
+            if self.target_device_idx>=0 and self.cuda_graph:
                 self.cuda_graph.launch(stream=self.stream)
             else:
                 self.trigger_code()

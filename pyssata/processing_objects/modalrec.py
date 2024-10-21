@@ -272,7 +272,7 @@ class Modalrec(BaseProcessingObj):
 
     def run_check(self, time_step):
         errmsg = []
-        slopes = self.inputs['in_slopes'].get(self._target_device_idx)
+        slopes = self.inputs['in_slopes'].get(self.target_device_idx)
         if not slopes:
             errmsg.append("Slopes object not valid")
         if not self._recmat:

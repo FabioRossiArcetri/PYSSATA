@@ -291,7 +291,7 @@ class CCD(BaseProcessingObj):
 
     def run_check(self, time_step, errmsg=''):
         self.prepare_trigger(0)
-        in_i = self.inputs['in_i'].get(self._target_device_idx)
+        in_i = self.inputs['in_i'].get(self.target_device_idx)
         if self._loop_dt == 0:
             self._loop_dt = time_step
         if in_i is None:

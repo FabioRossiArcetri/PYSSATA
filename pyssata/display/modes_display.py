@@ -90,7 +90,7 @@ class ModesDisplay(BaseProcessingObj):
         plt.title(self._title if self._title != '' else 'modes')
 
     def trigger(self, t):
-        m = self.inputs['modes'].get(self._target_device_idx)
+        m = self.inputs['modes'].get(self.target_device_idx)
         if m.generation_time == t:
             if not self._opened and not self._oplot:
                 self.set_w()
@@ -108,7 +108,7 @@ class ModesDisplay(BaseProcessingObj):
             plt.pause(0.01)
 
     def run_check(self, time_step):
-        return self.inputs['modes'].get(self._target_device_idx) is not None
+        return self.inputs['modes'].get(self.target_device_idx) is not None
 
     @classmethod
     def from_dict(cls, params):
