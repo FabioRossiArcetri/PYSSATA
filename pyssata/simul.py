@@ -24,6 +24,7 @@ class Simul():
             raise ValueError('At least one Yaml parameter file must be present')
         self.param_files = param_files
         self.objs = {}
+        self.verbose = False  #TODO
 
     def _camelcase_to_snakecase(self, s):
         tokens = re.findall('[A-Z]+[0-9a-z]*', s)
@@ -60,7 +61,9 @@ class Simul():
         else:
             return output_name
 
-    def resolve_output(self, output_name):
+    def output_ref(self, output_name):
+        if ':' in output_name:
+            output_name = output_name.split(':')[0]
         if '.' in output_name:
             obj_name, attr_name = output_name.split('.')
             if not obj_name in self.objs:
@@ -72,10 +75,63 @@ class Simul():
             output_ref = self.objs[output_name]
         return output_ref
 
+    def output_delay(self, output_name):
+        if ':' in output_name:
+            return int(output_name.split(':')[1])
+        else:
+            return 0
+
+    def is_leaf(self, p):
+        '''
+        Returns True if the passed object parameter dictionary
+        does not specify any inputs for the current iterations.
+        Inputs coming from previous iterations (:-1 syntax) are ignored.
+        '''
+        if 'inputs' not in p:
+            return True
+
+        for input_name, output_name in p['inputs'].items():
+            if isinstance(output_name, str):
+                maxdelay = self.output_delay(output_name)
+            elif isinstance(output_name, list):
+                maxdelay = max([self.output_delay(x) for x in output_name])
+            if maxdelay == 0:
+                return False
+        return True
+    
+    def trigger_order(self, params_orig):
+        '''
+        Work on a copy of the parameter file.
+        1. Find leaves, add them to trigger
+        2. Remove leaves, remove their inputs from other objects
+          2a. Objects will become a leaf when all their inputs have been removed
+        3. Repeat from step 1. until there is no change
+        4. Check if any objects have been skipped
+        '''
+        order = []
+        order_index = []
+        ii = 0
+        params = deepcopy(params_orig)
+        del params['main']
+        while True:
+            start = len(params)
+            leaves = [name for name, pars in params.items() if self.is_leaf(pars)]
+            if len(leaves) == 0:
+                break
+            for leaf in leaves:
+                order.append(leaf)
+                order_index.append(ii)
+                del params[leaf]
+                self.remove_inputs(params, leaf)
+            ii+=1
+        if len(params) > 0:
+            print('Warning: the following objects will not be triggered:', params.keys())
+        return order, order_index
+
     def connect_datastore(self, store, params):
         if 'store' in params['main']:
             for name, output_ref in params['main']['store'].items():
-                output = self.resolve_output(output_ref)
+                output = self.output_ref(output_ref)
                 store.add(output, name=name)
 
     def build_objects(self, params):
@@ -103,15 +159,15 @@ class Simul():
                     continue
 
                 if name.endswith('_list_ref'):
-                    data = [self.resolve_output(x) for x in value]
+                    data = [self.output_ref(x) for x in value]
                     pars2[name[:-4]] = data
 
                 elif name.endswith('_dict_ref'):
-                    data = {x : self.resolve_output(x) for x in value}
+                    data = {x : self.output_ref(x) for x in value}
                     pars2[name[:-4]] = data
 
                 elif name.endswith('_ref'):
-                    data = self.resolve_output(value)
+                    data = self.output_ref(value)
                     pars2[name[:-4]] = data
 
                 elif name.endswith('_data'):
@@ -151,12 +207,12 @@ class Simul():
                 wanted_type = self.objs[dest_object].inputs[input_name].type()
                 
                 if isinstance(output_name, str):
-                    output_ref = self.resolve_output(output_name)
+                    output_ref = self.output_ref(output_name)
                     if not isinstance(output_ref, wanted_type):
                         raise ValueError(f'Input {input_name}: output {output_ref} is not of type {wanted_type}')
 
                 elif isinstance(output_name, list):
-                    outputs = [self.resolve_output(x) for x in output_name]
+                    outputs = [self.output_ref(x) for x in output_name]
                     output_ref = flatten(outputs)
                     for output in output_ref:
                         if not isinstance(output, wanted_type):
@@ -178,13 +234,15 @@ class Simul():
                         owner = self.output_owner(output_name)
                         if owner == obj_to_remove:
                             del obj_inputs_copy[input_name]
-                            print(f'Deleted {input_name} from {obj[key]}')
+                            if self.verbose:
+                                print(f'Deleted {input_name} from {obj[key]}')
                     elif isinstance(output_name, list):
                         newlist = [x for x in output_name if self.output_owner(x) != obj_to_remove]
                         diff = set(output_name).difference(set(newlist))
                         obj_inputs_copy[input_name] = newlist
                         if len(diff) > 0:
-                            print(f'Deleted {diff} from {obj[key]}')
+                            if self.verbose:
+                                print(f'Deleted {diff} from {obj[key]}')
                 obj[key] = obj_inputs_copy
         return params
 
@@ -243,14 +301,16 @@ class Simul():
         self.connect_objects(params)
         self.connect_datastore(store, params)
 
+        trigger_order, trigger_order_idx = self.trigger_order(params)
+        print(f'{trigger_order=}')
+        print(f'{trigger_order_idx=}')
+
         # Build loop
-        if 'pushpull' in self.objs:
-            loop.add(self.objs['pushpull'])
-        for name, obj in self.objs.items():
+        for name, idx in zip(trigger_order, trigger_order_idx):
+            obj = self.objs[name]
             if isinstance(obj, BaseProcessingObj):
-                if name != 'pushpull':
-                    loop.add(obj)
-        loop.add(store)
+                loop.add(obj, idx)
+        loop.add(store, trigger_order_idx[-1]+1)
 
         # Run simulation loop
         loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'], speed_report=True)

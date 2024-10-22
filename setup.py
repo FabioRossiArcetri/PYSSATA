@@ -81,6 +81,7 @@ setup(name=NAME,
                         "scipy",
                         "astropy",
                         "matplotlib",
+                        "numba"
                         ],
       include_package_data=True,
       test_suite='test',

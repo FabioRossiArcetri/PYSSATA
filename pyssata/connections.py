@@ -8,6 +8,8 @@ class InputValue():
         """
         self.wrapped_type = type
         self.wrapped_value = None
+        # self.cloned_values = {}
+        self.cloned_value = None
 
     def get_time(self):
         if not self.wrapped_value is None:
@@ -15,7 +17,14 @@ class InputValue():
 
     def get(self, target_device_idx):
         if not self.wrapped_value is None:
-            return self.wrapped_value.copyTo(target_device_idx)
+            if self.wrapped_value.target_device_idx == target_device_idx:
+                return self.wrapped_value
+            else:
+                if self.cloned_value is None:
+                    self.cloned_value = self.wrapped_value.copyTo(target_device_idx)
+                else:
+                    self.wrapped_value.transferDataTo(self.cloned_value)
+                return self.cloned_value
 
     def set(self, value):
         if not isinstance(value, self.wrapped_type):

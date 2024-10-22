@@ -3,7 +3,7 @@
 import numpy as np
 from astropy.io import fits
 
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 
 
 class Slopes(BaseDataObj):
@@ -16,10 +16,23 @@ class Slopes(BaseDataObj):
         self._interleave = interleave
         self._pupdata_tag = ''
 
+        if self._interleave:
+            self.indicesX = self.xp.arange(0, self.size // 2) * 2
+            self.indicesY = self.indicesX + 1
+        else:
+            self.indicesX = self.xp.arange(0, self.size // 2)
+            self.indicesY = self.indicesX + self.size // 2
+
     # TODO needed to support late SlopeC-derived class initialization
     # Replace with a full initialization in base class?
     def resize(self, new_size):
         self._slopes = self.xp.zeros(new_size, dtype=self.dtype)
+        if self._interleave:
+            self.indicesX = self.xp.arange(0, self.size // 2) * 2
+            self.indicesY = self.indicesX + 1
+        else:
+            self.indicesX = self.xp.arange(0, self.size // 2)
+            self.indicesY = self.indicesX + self.size // 2
         
     @property
     def slopes(self):
@@ -39,19 +52,19 @@ class Slopes(BaseDataObj):
 
     @property
     def xslopes(self):
-        return self._slopes[self.indx()]
+        return self._slopes[self.indicesX]
 
     @xslopes.setter
     def xslopes(self, value):
-        self._slopes[self.indx()] = value
+        self._slopes[self.indicesX] = value
 
     @property
     def yslopes(self):
-        return self._slopes[self.indy()]
+        return self._slopes[self.indicesY]
 
     @yslopes.setter
     def yslopes(self, value):
-        self._slopes[self.indy()] = value
+        self._slopes[self.indicesY] = value
 
     @property
     def interleave(self):
@@ -70,16 +83,10 @@ class Slopes(BaseDataObj):
         self._pupdata_tag = value
 
     def indx(self):
-        if self._interleave:
-            return self.xp.arange(0, self.size // 2) * 2
-        else:
-            return self.xp.arange(0, self.size // 2)
+        return self.indicesX
 
     def indy(self):
-        if self._interleave:
-            return self.indx() + 1
-        else:
-            return self.indx() + self.size // 2
+        return self.indicesY
 
     def sum(self, s2, factor):
         self._slopes += s2.slopes * factor

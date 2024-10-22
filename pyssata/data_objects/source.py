@@ -1,11 +1,13 @@
 import numpy as np
 
-from pyssata import xp
+from pyssata import xp, cpuArray
 
 from pyssata.base_parameter_obj import BaseParameterObj
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 from pyssata.lib.n_phot import n_phot
 
+sec2rad = 4.848e-6
+degree2rad = np.pi / 180.
 
 class Source(BaseDataObj, BaseParameterObj):
     '''source'''
@@ -40,6 +42,13 @@ class Source(BaseDataObj, BaseParameterObj):
         self._zeroPoint = zeroPoint
         self._band = band
         self._verbose = verbose
+        self._polar_coordinate_t = cpuArray(self.polar_coordinate)
+        self._polar_coordinate_t[0] *= sec2rad
+        self._polar_coordinate_t[1] *= degree2rad
+
+    @property
+    def polar_coordinate_t(self):
+        return self._polar_coordinate_t
 
     @property
     def polar_coordinate(self):
@@ -48,6 +57,9 @@ class Source(BaseDataObj, BaseParameterObj):
     @polar_coordinate.setter
     def polar_coordinate(self, value):
         self._polar_coordinate = xp.array(value, dtype=self.dtype)
+        self._polar_coordinate_t = cpuArray(self.polar_coordinate)
+        self._polar_coordinate_t[0] *= sec2rad
+        self._polar_coordinate_t[1] *= degree2rad
 
     @property
     def height(self):

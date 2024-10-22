@@ -3,7 +3,7 @@ import numpy as np
 from astropy.io import fits
 
 from pyssata import cpuArray
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 
 
 class Recmat(BaseDataObj):

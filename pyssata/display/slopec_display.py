@@ -65,7 +65,7 @@ class SlopecDisplay(BaseProcessingObj):
         self._circle_disp = circle_disp
 
     def trigger(self, t):
-        slopec = self.inputs['slopec'].get(self._target_device_idx)
+        slopec = self.inputs['slopec'].get(self.target_device_idx)
         s = slopec.out_slopes
         if s.generation_time == t:
             # TODO - ModalAnalysisSlopec not available yet
@@ -101,12 +101,12 @@ class SlopecDisplay(BaseProcessingObj):
                 else:
                     TARGET = None
                 title = self._title if self._title else 'Slope Display'
-                _, _, _, self.fig, self.ax = pupil_display(cpuArray(slopec.inputs['in_pixels'].get(self._target_device_idx).pixels), cpuArray(sx), cpuArray(sy), 
-                                                           cpuArray(map_data), slopec.inputs['in_pixels'].get(self._target_device_idx).pixels.shape[0], title=title, TARGET=TARGET,
+                _, _, _, self.fig, self.ax = pupil_display(cpuArray(slopec.inputs['in_pixels'].get(self.target_device_idx).pixels), cpuArray(sx), cpuArray(sy), 
+                                                           cpuArray(map_data), slopec.inputs['in_pixels'].get(self.target_device_idx).pixels.shape[0], title=title, TARGET=TARGET,
                                                            do_image_show=True)
 
     def run_check(self, time_step):
-        slopec = self.inputs['slopec'].get(self._target_device_idx)
+        slopec = self.inputs['slopec'].get(self.target_device_idx)
         return slopec is not None
 
     @classmethod

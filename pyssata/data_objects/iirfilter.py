@@ -1,7 +1,7 @@
 import numpy as np
 
 from pyssata import float_dtype
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 
 from astropy.io import fits
 

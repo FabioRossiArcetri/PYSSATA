@@ -63,8 +63,8 @@ class BaseOperation(BaseProcessingObj):
         return self._out_value
 
     def trigger(self, t):
-        value1 = self.inputs['in_value1'].get(self._target_device_idx)
-        value2 = self.inputs['in_value2'].get(self._target_device_idx)
+        value1 = self.inputs['in_value1'].get(self.target_device_idx)
+        value2 = self.inputs['in_value2'].get(self.target_device_idx)
         if value1 and value1.generation_time == t:
             if self._constant_mult is not None:
                 self._out_value.value = value1.value * self._constant_mult
@@ -100,7 +100,7 @@ class BaseOperation(BaseProcessingObj):
         Returns:
         bool: True if the check is successful, False otherwise
         """
-        return self._out_value is not None and self.inputs['in_value1'].get(self._target_device_idx) is not None
+        return self._out_value is not None and self.inputs['in_value1'].get(self.target_device_idx) is not None
 
     def save(self, filename):
         hdr = fits.Header()

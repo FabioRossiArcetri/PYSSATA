@@ -1,6 +1,6 @@
 from astropy.io import fits
 
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 
 class ElectricField(BaseDataObj):
     '''Electric field'''
@@ -90,7 +90,7 @@ class ElectricField(BaseDataObj):
 
     def square_modulus(self, wavelengthInNm):
         ef = self.ef_at_lambda(wavelengthInNm)
-        return self.xp.abs(ef) ** 2
+        return self.xp.real( ef *xp.conj(ef) )
 
     def sub_ef(self, xfrom=None, xto=None, yfrom=None, yto=None, idx=None):
         if idx is not None:
