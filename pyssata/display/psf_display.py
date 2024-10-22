@@ -79,7 +79,7 @@ class PsfDisplay(BaseProcessingObj):
         self.ax = self.fig.add_subplot(111)
 
     def trigger(self, t):
-        psf = self.inputs['psf'].get(self._target_device_idx)
+        psf = self.inputs['psf'].get(self.target_device_idx)
         if psf.generation_time == t:
 
             image = cpuArray(psf.value)
@@ -104,7 +104,7 @@ class PsfDisplay(BaseProcessingObj):
             plt.pause(0.001)
 
     def run_check(self, time_step):
-        psf = self.inputs['psf'].get(self._target_device_idx)
+        psf = self.inputs['psf'].get(self.target_device_idx)
         return psf is not None
 
     @classmethod

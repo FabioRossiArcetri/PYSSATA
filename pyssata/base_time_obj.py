@@ -1,5 +1,5 @@
 from astropy.io import fits
-from pyssata import np, cp, xp, global_precision, default_target_device, default_target_device_idx, cpuArray
+from pyssata import np, cp, xp, global_precision, default_target_device, default_target_device_idx
 from pyssata import cpu_float_dtype_list, gpu_float_dtype_list
 from pyssata import cpu_complex_dtype_list, gpu_complex_dtype_list
 from copy import copy, deepcopy
@@ -29,12 +29,12 @@ class BaseTimeObj:
             self._precision = precision
 
         if target_device_idx is None:
-            self._target_device_idx = default_target_device_idx
+            self.target_device_idx = default_target_device_idx
         else:
-            self._target_device_idx = target_device_idx
+            self.target_device_idx = target_device_idx
 
-        if self._target_device_idx>=0:
-            self._target_device = cp.cuda.Device(self._target_device_idx)      # GPU case
+        if self.target_device_idx>=0:
+            self._target_device = cp.cuda.Device(self.target_device_idx)      # GPU case
             self.dtype = gpu_float_dtype_list[self._precision]
             self.complex_dtype = gpu_complex_dtype_list[self._precision]
             self.xp = cp
@@ -59,8 +59,8 @@ class BaseTimeObj:
     @precision.setter
     def precision(self, value):
         self._precision = value
-        if not self._target_device_idx==-1:
-            self._target_device = cp.cuda.Device(self._target_device_idx)      # GPU case
+        if not self.target_device_idx==-1:
+            self._target_device = cp.cuda.Device(self.target_device_idx)      # GPU case
             self.dtype = gpu_float_dtype_list[self._precision]
             self.complex_dtype = gpu_complex_dtype_list[self._precision]
             self.xp = cp

@@ -109,6 +109,8 @@ class Simul():
         4. Check if any objects have been skipped
         '''
         order = []
+        order_index = []
+        ii = 0
         params = deepcopy(params_orig)
         del params['main']
         while True:
@@ -118,11 +120,13 @@ class Simul():
                 break
             for leaf in leaves:
                 order.append(leaf)
+                order_index.append(ii)
                 del params[leaf]
                 self.remove_inputs(params, leaf)
+            ii+=1
         if len(params) > 0:
             print('Warning: the following objects will not be triggered:', params.keys())
-        return order  
+        return order, order_index
 
     def connect_datastore(self, store, params):
         if 'store' in params['main']:
@@ -297,15 +301,16 @@ class Simul():
         self.connect_objects(params)
         self.connect_datastore(store, params)
 
-        trigger_order = self.trigger_order(params)
+        trigger_order, trigger_order_idx = self.trigger_order(params)
         print(f'{trigger_order=}')
+        print(f'{trigger_order_idx=}')
 
         # Build loop
-        for name in trigger_order:
+        for name, idx in zip(trigger_order, trigger_order_idx):
             obj = self.objs[name]
             if isinstance(obj, BaseProcessingObj):
-                loop.add(obj)
-        loop.add(store)
+                loop.add(obj, idx)
+        loop.add(store, trigger_order_idx[-1]+1)
 
         # Run simulation loop
         loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'], speed_report=True)

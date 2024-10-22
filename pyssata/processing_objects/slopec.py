@@ -20,56 +20,41 @@ class Slopec(BaseProcessingObj):
                 ):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
 
-        self._slopes = Slopes(2)  # TODO resized in derived class
-        self._slopes_ave = BaseValue()
-        self._sn = sn
-        self._cm = cm
-        self._total_counts = total_counts
-        self._subap_counts = subap_counts
-        self._flux_per_subaperture_vector = BaseValue()
-        self._max_flux_per_subaperture_vector = BaseValue()
-        self._use_sn = use_sn
-        self._accumulate = accumulate
-        self._weight_from_accumulated = weight_from_accumulated
-        self._weight_from_acc_with_window = weight_from_acc_with_window
-        self._remove_mean = remove_mean
-        self._return0 = return0
-        self._update_slope_high_speed = update_slope_high_speed
-        self._do_rec = do_rec
-        self._do_filter_modes = do_filter_modes
-        self._gain_slope_high_speed = gain_slope_high_speed
-        self._ff_slope_high_speed = ff_slope_high_speed
-        self._store_s = store_s
-        self._store_c = store_c
-        self._sn_scale_fact = sn_scale_fact
-        self._command_list = command_list
-        self._intmat = intmat
-        self._recmat = recmat
-        self._filt_recmat = filt_recmat
-        self._filt_intmat = filt_intmat
+        self.slopes = Slopes(2)  # TODO resized in derived class
+        self.slopes_ave = BaseValue()
+        self.sn = sn
+        self.cm = cm
+        self.total_counts = total_counts
+        self.subap_counts = subap_counts
+        self.flux_per_subaperture_vector = BaseValue()
+        self.max_flux_per_subaperture_vector = BaseValue()
+        self.use_sn = use_sn
+        self.accumulate = accumulate
+        self.weight_from_accumulated = weight_from_accumulated
+        self.weight_from_acc_with_window = weight_from_acc_with_window
+        self.remove_mean = remove_mean
+        self.return0 = return0
+        self.update_slope_high_speed = update_slope_high_speed
+        self.do_rec = do_rec
+        self.do_filter_modes = do_filter_modes
+        self.gain_slope_high_speed = gain_slope_high_speed
+        self.ff_slope_high_speed = ff_slope_high_speed
+        self.store_s = store_s
+        self.store_c = store_c
+        self.sn_scale_fact = sn_scale_fact
+        self.command_list = command_list
+        self.intmat = intmat
+        self.recmat = recmat
+        self.filt_recmat = filt_recmat
+        self.filt_intmat = filt_intmat
         self._accumulation_dt = accumulation_dt
-        self._accumulated_pixels = self.xp.array(accumulated_pixels, dtype=self.dtype)
-        self._accumulated_slopes = Slopes(2)   # TODO resized in derived class.
-        self._accumulated_pixels_ptr = None   # TODO, see do_accumulation() method
+        self.accumulated_pixels = self.xp.array(accumulated_pixels, dtype=self.dtype)
+        self.accumulated_slopes = Slopes(2)   # TODO resized in derived class.
+        self.accumulated_pixels_ptr = None   # TODO, see do_accumulation() method
 
         self.inputs['in_pixels'] = InputValue(type=Pixels)
-        self.outputs['out_slopes'] = self._slopes
+        self.outputs['out_slopes'] = self.slopes
 
-    @property
-    def in_sn(self):
-        return self._sn
-
-    @in_sn.setter
-    def in_sn(self, value):
-        self._sn = value
-
-    @property
-    def use_sn(self):
-        return self._use_sn
-
-    @use_sn.setter
-    def use_sn(self, value):
-        self._use_sn = value
 
     @property
     def sn_tag(self):
@@ -79,41 +64,6 @@ class Slopec(BaseProcessingObj):
     def sn_tag(self, value):
         self.load_sn(value)
 
-    @property
-    def cm(self):
-        return self._cm
-
-    @cm.setter
-    def cm(self, value):
-        self._cm = value
-
-    @property
-    def out_slopes(self):
-        return self._slopes
-
-    @property
-    def weight_from_accumulated(self):
-        return self._weight_from_accumulated
-
-    @weight_from_accumulated.setter
-    def weight_from_accumulated(self, value):
-        self._weight_from_accumulated = value
-
-    @property
-    def weight_from_acc_with_window(self):
-        return self._weight_from_acc_with_window
-
-    @weight_from_acc_with_window.setter
-    def weight_from_acc_with_window(self, value):
-        self._weight_from_acc_with_window = value
-
-    @property
-    def accumulate(self):
-        return self._accumulate
-
-    @accumulate.setter
-    def accumulate(self, value):
-        self._accumulate = value
 
     @property
     def accumulation_dt(self):
@@ -123,103 +73,15 @@ class Slopec(BaseProcessingObj):
     def accumulation_dt(self, value):
         self._accumulation_dt = self.seconds_to_t(value)
 
-    @property
-    def remove_mean(self):
-        return self._remove_mean
-
-    @remove_mean.setter
-    def remove_mean(self, value):
-        self._remove_mean = value
-
-    @property
-    def return0(self):
-        return self._return0
-
-    @return0.setter
-    def return0(self, value):
-        self._return0 = value
-
-    @property
-    def update_slope_high_speed(self):
-        return self._update_slope_high_speed
-
-    @update_slope_high_speed.setter
-    def update_slope_high_speed(self, value):
-        self._update_slope_high_speed = value
-
-    @property
-    def command_list(self):
-        return self._command_list
-
-    @command_list.setter
-    def command_list(self, value):
-        self._command_list = value
-
-    @property
-    def intmat(self):
-        return self._intmat
-
-    @intmat.setter
-    def intmat(self, value):
-        self._intmat = value
-
-    @property
-    def recmat(self):
-        return self._recmat
-
-    @recmat.setter
-    def recmat(self, value):
-        self._recmat = value
-
-    @property
-    def gain_slope_high_speed(self):
-        return self._gain_slope_high_speed
-
-    @gain_slope_high_speed.setter
-    def gain_slope_high_speed(self, value):
-        self._gain_slope_high_speed = value
-
-    @property
-    def ff_slope_high_speed(self):
-        return self._ff_slope_high_speed
-
-    @ff_slope_high_speed.setter
-    def ff_slope_high_speed(self, value):
-        self._ff_slope_high_speed = value
-
-    @property
-    def do_rec(self):
-        return self._do_rec
-
-    @do_rec.setter
-    def do_rec(self, value):
-        self._do_rec = value
-
-    @property
-    def filtmat(self):
-        return self._filtmat
-
-    @filtmat.setter
-    def filtmat(self, value):
-        self.set_filtmat(value)
-
-    @property
-    def in_sn_scale_fact(self):
-        return self._sn_scale_fact
-
-    @in_sn_scale_fact.setter
-    def in_sn_scale_fact(self, value):
-        self._sn_scale_fact = value
-
     def set_filtmat(self, filtmat):
-        self._filt_intmat = filtmat[:, :, 0]
-        self._filt_recmat = self.xp.transpose(filtmat[:, :, 1])
-        self._do_filter_modes = True
+        self.filt_intmat = filtmat[:, :, 0]
+        self.filt_recmat = self.xp.transpose(filtmat[:, :, 1])
+        self.do_filter_modes = True
 
     def remove_filtmat(self):
-        self._filt_intmat = None
-        self._filt_recmat = None
-        self._do_filter_modes = False
+        self.filt_intmat = None
+        self.filt_recmat = None
+        self.do_filter_modes = False
         print('doFilterModes set to 0')
 
     def build_and_save_filtmat(self, intmat, recmat, nmodes, filename):
@@ -243,18 +105,18 @@ class Slopec(BaseProcessingObj):
         raise NotImplementedError(f'{self.repr()} Please implement calc_slopes in your derived class!')
         
     def post_trigger(self):
-        super().post_trigger()
-        if self._do_rec:
-            m = self.xp.dot(self._slopes.ptr_slopes, self._recmat.ptr_recmat)
-            self._slopes.slopes = m
+        # super().post_trigger()
+        if self.do_rec:
+            m = self.xp.dot(self.slopes.ptr_slopes, self.recmat.ptr_recmat)
+            self.slopes.slopes = m
 
     def run_check(self, time_step, errmsg=''):
         self.prepare_trigger(0)
-        if self._use_sn and not self._sn:
+        if self.use_sn and not self.sn:
             errmsg += 'Slopes null are not valid'
-        if self._weight_from_accumulated and self._accumulate:
+        if self.weight_from_accumulated and self.accumulate:
             errmsg += 'weightFromAccumulated and accumulate must not be set together'
         if errmsg != '':
             print(errmsg)
-        return not (self._weight_from_accumulated and self._accumulate) and self.local_inputs['in_pixels'] and self._slopes and ((not self._use_sn) or (self._use_sn and self._sn))
+        return not (self.weight_from_accumulated and self.accumulate) and self.local_inputs['in_pixels'] and self.slopes and ((not self.use_sn) or (self.use_sn and self.sn))
 

@@ -4,6 +4,7 @@ import numpy as np
 
 class LoopControl:
     def __init__(self, run_time=None, dt=None, t0=None, verbose=False):
+        self._ordered_lists = {}
         self._list = []
         self._init_run_time = run_time if run_time is not None else 0.0
         self._init_dt = dt if dt is not None else 0.001
@@ -24,14 +25,24 @@ class LoopControl:
         self._old_time = 0
         self._elapsed = []
         self._nframes_cnt = -1
+        self._max_order = -1
 
-    def add(self, obj):
+    def add(self, obj, idx):
         if obj is None:
             raise ValueError("Cannot add null object to loop")
+        
         self._list.append(obj)
+        
+        if idx>self._max_order:
+            self._max_order = idx
+            self._ordered_lists[idx] = []
 
+        self._ordered_lists[idx].append(obj)
+        
+        
     def remove_all(self):
         self._list.clear()
+        self._ordered_lists.clear()
 
     def run_check(self, dt):
         for element in self._list:
@@ -106,9 +117,14 @@ class LoopControl:
             self.start_profiling()
             self._profiler_started = True
 
-        for element in self._list:
-            element.trigger(self._t)
-            # print('Trigger', element) # Verbose?
+        for i in range(self._max_order+1):
+
+            for element in self._ordered_lists[i]:
+                element.check_ready(self._t)
+
+            for element in self._ordered_lists[i]:
+                element.trigger()
+                # print('Trigger', element) # Verbose?
 
         if self._stop_on_data and self._stop_on_data.generation_time == self._t:
             return

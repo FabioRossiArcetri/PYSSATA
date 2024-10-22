@@ -100,6 +100,7 @@ rec:
 
 
 control:
+  target_device_idx: -1
   class:             'IntControl'
   delay:             2                      # Total temporal delay in time steps
   int_gain:          [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5, # Integrator gain (for 'INT' control)

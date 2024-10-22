@@ -90,7 +90,7 @@ class ElectricField(BaseDataObj):
 
     def square_modulus(self, wavelengthInNm):
         ef = self.ef_at_lambda(wavelengthInNm)
-        return self.xp.abs(ef) ** 2
+        return self.xp.real( ef *xp.conj(ef) )
 
     def sub_ef(self, xfrom, xto, yfrom, yto, idx=None):
         if idx is not None:

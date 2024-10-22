@@ -88,7 +88,7 @@ def init(device_idx=-1, precision=0):
     float_dtype = float_dtype_list[global_precision]
     complex_dtype = complex_dtype_list[global_precision]
 
-
+# should be used as less as a possible and prefarably outside time critical computations
 def cpuArray(v):    
     if isinstance(v, (np.ndarray, np.float64, np.int64, np.float32, type(None))):
         return v

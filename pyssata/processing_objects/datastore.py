@@ -24,10 +24,6 @@ class Datastore(BaseProcessingObj):
         self._data_filename = ''
         self._tn_dir = store_dir
         super().__init__()
-        
-#       uncomment when the code is a stream
-#        super().build_stream()
-
 
     def add(self, data_obj, name=None):
         if name is None:
