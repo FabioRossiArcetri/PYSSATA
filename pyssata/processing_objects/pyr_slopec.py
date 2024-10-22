@@ -49,7 +49,7 @@ class PyrSlopec(Slopec):
 
         self.total_counts = BaseValue()
         self.subap_counts = BaseValue()
-
+        self.outputs['out_pupdata'] = self.pupdata
 
     @property
     def thr_value(self):

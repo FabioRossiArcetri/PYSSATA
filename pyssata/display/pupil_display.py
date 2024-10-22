@@ -1,8 +1,8 @@
 import numpy as np
 
-from pyssata import xp
 import matplotlib.pyplot as plt
 from scipy.ndimage import zoom
+
 
 def remap_signals(sx_or_sy, slopemap, slope_side_x, slope_side_y):
     """
@@ -21,6 +21,7 @@ def remap_signals(sx_or_sy, slopemap, slope_side_x, slope_side_y):
     remapped_signal = np.zeros((slope_side_x, slope_side_y))
     remapped_signal.flat[slopemap.ravel()] = sx_or_sy
     return remapped_signal
+
 
 def pupil_display(frame, sx, sy, slopemap, real_ccd_side, cirlceDisp=None, NEGATIVE=False,
                   NOFRAME=False, GET_SIZE=False, TARGET=None, NOSHOW=False, 
