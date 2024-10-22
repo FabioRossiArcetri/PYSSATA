@@ -57,7 +57,7 @@ prop:
   inputs:
     layer_list: ['atmo.layer_list',
                   'pupilstop',
-                  'dm.out_layer']
+                  'dm.out_layer:-1']
   
 sh:
   class:             'SH'

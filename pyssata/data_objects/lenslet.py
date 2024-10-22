@@ -1,6 +1,6 @@
 
 from pyssata.lib.make_xy import make_xy
-from pyssata.data_objects.base_data_obj import BaseDataObj
+from pyssata.base_data_obj import BaseDataObj
 
 
 class Lenslet(BaseDataObj):

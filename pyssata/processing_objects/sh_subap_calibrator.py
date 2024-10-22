@@ -84,6 +84,6 @@ class ShSubapCalibrator(BaseProcessingObj):
             m[k] = map[k]
         
         subap_data = SubapData(idxs=v, map=m, nx=self._lenslet.dimx, ny=self._lenslet.dimy, energy_th=energy_th,
-                           target_device_idx=self._target_device_idx, precision=self._precision)
+                           target_device_idx=self.target_device_idx, precision=self._precision)
       
         return subap_data

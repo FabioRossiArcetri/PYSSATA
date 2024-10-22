@@ -45,6 +45,6 @@ class ImRecCalibrator(BaseProcessingObj):
             self._im[mode] += slopes / commands[idx]
     
     def finalize(self):
-        im = Intmat(self._im, target_device_idx=self._target_device_idx, precision=self.precision)
+        im = Intmat(self._im, target_device_idx=self.target_device_idx, precision=self.precision)
         rec = im.generate_rec(self._nmodes)
         rec.save(os.path.join(self._data_dir, self._filename))

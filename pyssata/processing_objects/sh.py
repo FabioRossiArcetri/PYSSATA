@@ -93,7 +93,7 @@ class SH(BaseProcessingObj):
         self._extrapol_mat = None
         
         self._ccd_side = self._subap_npx * self._lenslet.n_lenses
-        self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self._target_device_idx)
+        self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self.target_device_idx)
 
         self.inputs['in_ef'] = InputValue(type=ElectricField)
         self.outputs['out_i'] = self._out_i
@@ -286,7 +286,7 @@ class SH(BaseProcessingObj):
     
     def calc_trigger_geometry(self):
         
-        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
+        in_ef = self.inputs['in_ef'].get(self.target_device_idx)
         s = in_ef.size
 
         # Calculate subap chunks
@@ -359,11 +359,9 @@ class SH(BaseProcessingObj):
         # TODO
         return True
 
-    def trigger(self, t):
+    def trigger(self):
         
-        in_ef = self.inputs['in_ef'].get(self._target_device_idx)
-        if in_ef.generation_time != t:
-            return
+        in_ef = self.local_inputs['in_ef']
 
         if not self._input_ef_set:
             self.set_in_ef(in_ef)
@@ -528,7 +526,7 @@ class SH(BaseProcessingObj):
         ccd *= phot
 
         self._out_i.i = ccd
-        self._out_i.generation_time = t
+        self._out_i.generation_time = self.current_time
 
     def get_tlt_f(self, p, c):
         iu = complex(0, 1)
