@@ -1,6 +1,7 @@
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.data_objects.pixels import Pixels
 from pyssata.data_objects.pupdata import PupData
+from pyssata.data_objects.subap_data import SubapData
 from pyssata.data_objects.slopes import Slopes
 from pyssata.processing_objects.pyr_slopec import PyrSlopec
 from pyssata.processing_objects.sh_slopec import ShSlopec
@@ -22,12 +23,14 @@ class SlopecDisplay(BaseProcessingObj):
         self.inputs['slopes'] = InputValue(type=Slopes)
         self.inputs['pupdata'] = InputValue(type=PupData)
         self.inputs['pixels'] = InputValue(type=Pixels)
+        self.inputs['subapdata'] = InputValue(type=SubapData)
 
     def trigger_code(self):
         
         slopes_obj = self.local_inputs['slopes']
         pixels_obj = self.local_inputs['pixels']
         pupdata = self.local_inputs['pupdata']
+        subapdata = self.local_inputs['subapdata']
         pixels = pixels_obj.pixels
 
         # TODO - ModalAnalysisSlopec not available yet
@@ -43,17 +46,16 @@ class SlopecDisplay(BaseProcessingObj):
         #else:
         sx = slopes_obj.xslopes
         sy = slopes_obj.yslopes
-        map_data = pupdata.ind_pup[:, 1]
-#                TODO --- these SlopeC are not available yet
-#                elif isinstance(self._slopec, IdealWfsSlopec):
-#                    nx = slopec.subapdata.nx
-#                    map_data = slopec.subapdata.map
-#                    map_data = (map_data // nx) * nx * 2 + (map_data % nx)
-                #  elif isinstance(slopec, ShSlopec):
-                #      nx = slopec.subapdata.nx
-                #      map_data = slopec.subapdata.map
-                #      np_sub = slopec.subapdata.np_sub
-                #      map_data = (map_data // nx) * nx * np_sub + (map_data % nx)
+        if pupdata:
+            # Pyramid
+            map_data = pupdata.ind_pup[:, 1]
+        else:
+            #SH
+            nx = subapdata.nx
+            map_data = subapdata.map
+            np_sub = subapdata.np_sub
+            map_data = (map_data // nx) * nx * np_sub + (map_data % nx)
+
         if self.fig is not None:
             TARGET = (self.fig, self.ax)
         else:

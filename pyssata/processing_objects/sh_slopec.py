@@ -62,6 +62,7 @@ class ShSlopec(Slopec):
         self.slopes.resize(subapdata.n_subaps * 2)
         self.accumulated_slopes = Slopes(subapdata.n_subaps * 2)
         self.set_xy_weights()
+        self.outputs['out_subapdata'] = self.subapdata
 
     @property
     def subap_idx(self):
