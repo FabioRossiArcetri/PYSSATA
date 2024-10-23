@@ -24,84 +24,34 @@ class PsfDisplay(BaseProcessingObj):
         self._disp_factor = disp_factor
         self.inputs['psf'] = InputValue(type=BaseValue)
 
-    @property
-    def psf(self):
-        return self._psf
-
-    @psf.setter
-    def psf(self, psf):
-        self._psf = psf
-
-    @property
-    def wsize(self):
-        return self._wsize
-
-    @wsize.setter
-    def wsize(self, wsize):
-        self._wsize = wsize
-
-    @property
-    def window(self):
-        return self._window
-
-    @window.setter
-    def window(self, window):
-        self._window = window
-
-    @property
-    def log(self):
-        return self._log
-
-    @log.setter
-    def log(self, log):
-        self._log = log
-
-    @property
-    def image_p2v(self):
-        return self._image_p2v
-
-    @image_p2v.setter
-    def image_p2v(self, image_p2v):
-        self._image_p2v = image_p2v
-
-    @property
-    def title(self):
-        return self._title
-
-    @title.setter
-    def title(self, title):
-        self._title = title
-
     def set_w(self):
 #        plt.figure(self._window, figsize=(self._wsize[0] / 100, self._wsize[1] / 100))
 #        plt.title(self._title)
         self.fig = plt.figure(self._window, figsize=(self._wsize[0] / 100, self._wsize[1] / 100))
         self.ax = self.fig.add_subplot(111)
 
-    def trigger(self, t):
-        psf = self.inputs['psf'].get(self.target_device_idx)
-        if psf.generation_time == t:
+    def trigger_code(self):
+        psf = self.local_inputs['psf']
+        image = cpuArray(psf.value)
 
-            image = cpuArray(psf.value)
+        if self._image_p2v > 0:
+            image = xp.maximum(image, self._image_p2v**(-1.) * xp.max(image))
+        
+        if self._log:
+            image = xp.log10(image)
 
-            if self._image_p2v > 0:
-                image = xp.maximum(image, self._image_p2v**(-1.) * xp.max(image))
-            
-            if self._log:
-                image = xp.log10(image)
-
-            if not self._opened:
-                self.set_w()
-                self._opened = True
-            if self._first:
-                self.img = self.ax.imshow(image)
-                self._first = False
-            else:
-                self.img.set_data(image)
-                self.img.set_clim(image.min(), image.max())
+        if not self._opened:
+            self.set_w()
+            self._opened = True
+        if self._first:
+            self.img = self.ax.imshow(image)
+            self._first = False
+        else:
+            self.img.set_data(image)
+            self.img.set_clim(image.min(), image.max())
 #            plt.colorbar()
-            self.fig.canvas.draw()
-            plt.pause(0.001)
+        self.fig.canvas.draw()
+        plt.pause(0.001)
 
     def run_check(self, time_step):
         psf = self.inputs['psf'].get(self.target_device_idx)
