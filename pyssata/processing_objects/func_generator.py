@@ -1,4 +1,6 @@
 
+import numpy as np
+
 from pyssata.base_value import BaseValue
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.lib.modal_pushpull_signal import modal_pushpull_signal
@@ -78,8 +80,8 @@ class FuncGenerator(BaseProcessingObj):
             if amp is None and vect_amplitude is None:
                 raise ValueError('AMP or VECT_AMPLITUDE keyword is mandatory for type PUSHPULL')
             self.time_hist = modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, ncycles=ncycles, repeat_ncycles=self.repeat_ncycles)
-            self.amp = self.xp.array(amp)
-            self.vect_amplitude = self.xp.array(vect_amplitude)
+            self.amp = self.xp.array(amp) if amp is not None else 0.0
+            self.vect_amplitude = self.xp.array(vect_amplitude) if vect_amplitude is not None else 0.0
 
         elif self.type == 'TIME_HIST':
             if time_hist is None:
@@ -116,7 +118,7 @@ class FuncGenerator(BaseProcessingObj):
                 s = self.xp.random.normal(size=len(self.amp)) * self.amp + self.constant
 
         elif self.type in ['VIB_HIST', 'VIB_PSD', 'PUSH', 'PUSHPULL', 'TIME_HIST']:
-            s = self.get_time_hist_at_time(t)
+            s = self.get_time_hist_at_current_time()
 
         else:
             raise ValueError(f'Unknown function generator type: {self.type}')
@@ -124,11 +126,12 @@ class FuncGenerator(BaseProcessingObj):
         self.output.value = s
         self.output.generation_time = self.current_time
 
-    def get_time_hist_at_time(self, t):
+    def get_time_hist_at_current_time(self):
+        t = self.current_time
         if not self.active:
             return self.xp.zeros_like(self.time_hist[0])
-        i = self.xp.around(t / self.loop_dt)
-        return self.time_hist[i]
+        i = int(np.round(t / self.loop_dt))
+        return self.xp.array(self.time_hist[i])
 
     def run_check(self, time_step, errmsg=""):
         if hasattr(self, '_vib') and self.vib:
