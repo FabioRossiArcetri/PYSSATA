@@ -94,7 +94,9 @@ class Simul():
             if isinstance(output_name, str):
                 maxdelay = self.output_delay(output_name)
             elif isinstance(output_name, list):
-                maxdelay = max([self.output_delay(x) for x in output_name])
+                maxdelay = -1
+                if len(output_name) > 0:
+                    maxdelay = max([self.output_delay(x) for x in output_name])
             if maxdelay == 0:
                 return False
         return True
