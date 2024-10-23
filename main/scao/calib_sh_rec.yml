@@ -14,6 +14,11 @@ pushpull:
 main_override:
   total_time:  0.108
 
+prop_override:
+  inputs:
+    layer_list: ['pupilstop',
+                  'dm.out_layer']
+
 dm_override:
   inputs:
       in_command: 'pushpull.output'
@@ -26,27 +31,15 @@ detector_override:
 calibrator:
   class: 'ImRecCalibrator'
   nmodes: 54
-  output_tag:     'scao_sh_rec'
+  output_tag:     'scao_sh_rec4'
   #tag_template:    'subap_{main.tag}_n{modes}'
   inputs:
     in_slopes: 'slopec.out_slopes'
     in_commands: 'pushpull.output'
 
-sc_disp:
-  class:            'SlopecDisplay'
-  inputs:
-    slopec:       'slopec'
-  disp_factor:      4
 
-dm_disp:
-  class:            'PhaseDisplay'
-  inputs:
-    phase:       "dm.out_layer"
-  window:           13
-  title:            'DM'
-  disp_factor:      2
 
-remove: ['atmo', 'rec', 'sc_disp', 'dm_disp']
+remove: ['atmo', 'rec']
  
 
 

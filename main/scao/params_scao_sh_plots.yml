@@ -93,7 +93,7 @@ slopec:
 
 rec:
   class:              'Modalrec'
-  recmat_object:      'scao_sh_rec'         # reconstruction matrix tag
+  recmat_object:      'scao_sh_rec4'         # reconstruction matrix tag
   inputs:
     in_slopes:        'slopec.out_slopes'
 
@@ -133,7 +133,10 @@ psf:
 sc_disp:
   class:            'SlopecDisplay'
   inputs:
-    slopec:       'slopec'
+  inputs:
+    slopes:       'slopec.out_slopes'
+    subapdata:    'slopec.out_subapdata'
+    pixels:       'detector.out_pixels'
   disp_factor:      4
 sr_disp:
   class:            'PlotDisplay'
@@ -141,13 +144,13 @@ sr_disp:
     value:       'psf.out_sr'
   window:           11
   title:            'SR'
-# ph_disp:
-#   class:            'PhaseDisplay'
-#   inputs:
-#     phase:       "prop.on_axis_source"
-#   window:           12
-#   title:            'PUPIL PHASE'
-#   disp_factor:      2
+ph_disp:
+  class:            'PhaseDisplay'
+  inputs:
+    phase:       "prop.on_axis_source"
+  window:           12
+  title:            'PUPIL PHASE'
+  disp_factor:      2
 dm_disp:
   class:            'PhaseDisplay'
   inputs:
@@ -155,10 +158,17 @@ dm_disp:
   window:           13
   title:            'DM'
   disp_factor:      2
-# psf_disp:
-#   class:            'PsfDisplay'
-#   inputs:
-#     psf:       "psf.out_psf"
-#   window:           14
-#   title:            'PSF'
-#   disp_factor:      2
+psf_disp:
+  class:            'PsfDisplay'
+  inputs:
+    psf:       "psf.out_psf"
+  window:           14
+  title:            'PSF'
+  disp_factor:      2
+cmd_disp:
+  class:            'ModesDisplay'
+  inputs:
+    modes:       "rec.out_modes"
+  window:           15
+  title:            'rec.out_modes'
+  disp_factor:      2

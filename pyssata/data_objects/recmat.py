@@ -79,7 +79,6 @@ class Recmat(BaseDataObj):
             hdr = fits.Header()
         hdr['VERSION'] = 1
         hdr['IM_TAG'] = self._im_tag
-        hdr['TAG'] = self._tag
         hdr['NORMFACT'] = self._norm_factor
 
         fits.writeto(filename, np.zeros(2), hdr)
