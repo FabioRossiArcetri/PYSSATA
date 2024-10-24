@@ -9,6 +9,8 @@ sh_subaps:
   inputs:
     in_i: 'sh.out_i'
 
+main_override:
+  total_time:  0.001
 
 remove: ['atmo', 'slopec', 'rec']
  

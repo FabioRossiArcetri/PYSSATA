@@ -313,7 +313,6 @@ class SH(BaseProcessingObj):
         sensor_subap_fov = sensor_pxscale * subap_npx
         fov_cut = fov_complete - sensor_subap_fov
         
-        print(f'{fft_size=} {fp4_pixel_pitch=} {fov_cut=} {fov_complete=} {sensor_subap_fov=} {sensor_pxscale=} {subap_npx=}')
         self._cutpixels = int(np.round(fov_cut / fp4_pixel_pitch) / 2 * 2)
         self._cutsize = fft_size - self._cutpixels
         self._psfimage = self.xp.zeros((self._cutsize * self._lenslet.dimx, self._cutsize * self._lenslet.dimy), dtype=self.dtype)

@@ -48,3 +48,6 @@ class ImRecCalibrator(BaseProcessingObj):
         im = Intmat(self._im, target_device_idx=self.target_device_idx, precision=self.precision)
         rec = im.generate_rec(self._nmodes)
         rec.save(os.path.join(self._data_dir, self._filename))
+
+    def run_check(self, time_step):
+        return True

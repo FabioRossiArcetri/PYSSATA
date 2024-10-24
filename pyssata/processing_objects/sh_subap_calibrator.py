@@ -87,3 +87,6 @@ class ShSubapCalibrator(BaseProcessingObj):
                            target_device_idx=self.target_device_idx, precision=self._precision)
       
         return subap_data
+    
+    def run_check(self, time_step):
+        return True

@@ -309,7 +309,6 @@ class ShSlopec(Slopec):
             print('subapdata is not valid.')
             return
 
-        print('nofor')
         in_pixels = self.inputs['in_pixels'].get(self.target_device_idx).pixels
 
         n_subaps = self.subapdata.n_subaps
@@ -323,12 +322,9 @@ class ShSlopec(Slopec):
         idx2d = self.xp.unravel_index(self.subap_idx, orig_pixels.shape)
         pixels = orig_pixels[idx2d].T
         
-        print(self.subap_idx[0])
-        print(self.xp.unravel_index(self.subap_idx[0], orig_pixels.shape))
-        print(orig_pixels[self.xp.unravel_index(self.subap_idx[0], orig_pixels.shape)])
-        print(self.xweights)
-
         if self.weight_from_accumulated:
+            raise NotImplementedError('weight_from_accumulated is not implemented')
+        
             n_weight_applied = 0
             if self.accumulated_pixels is not None and t >= self.accumulation_dt:
                 accumulated_pixels_weight = self.accumulated_pixels[self.subap_idx].T
