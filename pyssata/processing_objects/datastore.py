@@ -217,3 +217,5 @@ class Datastore(BaseProcessingObj):
     def run_check(self, time_step, errmsg=''):
         return True
 
+    def finalize(self):
+        self.save('save_file.pickle')

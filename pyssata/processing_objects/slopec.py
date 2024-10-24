@@ -102,7 +102,7 @@ class Slopec(BaseProcessingObj):
         super().prepare_trigger(t)
 
     def trigger_code(self):
-        raise NotImplementedError(f'{self.repr()} Please implement calc_slopes in your derived class!')
+        raise NotImplementedError(f'{self.__class__.__name__}: please implement trigger_code() in your derived class!')
         
     def post_trigger(self):
         # super().post_trigger()

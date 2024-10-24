@@ -9,8 +9,8 @@
 ###############################################################################
 
 
-def make_xy(sampling, ratio, dtype=None, polar=False, vector=False,
-            zero_sampled=False, quarter=False, fft=False, xp=None):
+def make_xy(sampling, ratio, xp, dtype=None, polar=False, vector=False,
+            zero_sampled=False, quarter=False, fft=False):
     '''
     Generates zero-centered domains in a cartesian plane.
 
@@ -129,7 +129,7 @@ def make_xy(sampling, ratio, dtype=None, polar=False, vector=False,
 
     Examples
     --------
-    Compute a tilt plane on a xp.around pupil
+    Compute a tilt plane on a round pupil
 
     >>> x, y = make_xy(256, 1.0)
     >>> pupil = x*0
@@ -172,12 +172,12 @@ def make_xy(sampling, ratio, dtype=None, polar=False, vector=False,
     x = xp.tile(x, (size, 1))
     y = xp.transpose(x).copy()
     if polar:
-        x, y = _xy_to_polar(x, y)
+        x, y = _xy_to_polar(x, y, xp)
 
     return x, y
 
 
-def _xy_to_polar(x, y):
+def _xy_to_polar(x, y, xp):
 
     r = xp.sqrt(x * x + y * y)
     y = xp.arctan2(y, x)

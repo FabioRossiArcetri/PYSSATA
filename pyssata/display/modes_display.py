@@ -35,7 +35,7 @@ class ModesDisplay(BaseProcessingObj):
         if self._first:
             self._line = plt.plot(m.value, '.-')
             plt.title(self._title)
-#                plt.ylim(self._yrange)
+            plt.ylim(self._yrange)
             self._first = False
         else:
             self._line[0].set_ydata(m.value)

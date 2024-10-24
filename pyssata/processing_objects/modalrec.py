@@ -35,18 +35,18 @@ class Modalrec(BaseProcessingObj):
         else:
             if recmat is None:
                 if identity:
-                    recmat = Recmat(target_device_idx=target_device_idx, precision=precision)
                     if nmodes is None:
                         raise ValueError('modalrec nmodes key must be set!')
-                    recmat.recmat = self.xp.identity(nmodes)
+                    recmat = Recmat(self.xp.identity(nmodes),
+                                    target_device_idx=target_device_idx, precision=precision)
                 elif intmat:
                     if nmodes:
                         nmodes_intmat = intmat.size[0]
                         intmat.reduce_size(nmodes_intmat - nmodes)
                     if nSlopesToBeDiscarded:
                         intmat.reduce_slopes(nSlopesToBeDiscarded)
-                    recmat = Recmat(target_device_idx=target_device_idx, precision=precision)
-                    recmat.recmat = intmat.intmat
+                    recmat = Recmat(intmat.intmat,
+                                    target_device_idx=target_device_idx, precision=precision)
 
             if ncutmodes:
                 if recmat is not None:
@@ -60,8 +60,7 @@ class Modalrec(BaseProcessingObj):
                 if dmNumber is not None:
                     if dmNumber <= 0:
                         raise ValueError('dmNumber must be > 0')
-                    projmat = Recmat()
-                    projmat.recmat = recmat.proj_list[dmNumber - 1]
+                    projmat = Recmat(recmat.proj_list[dmNumber - 1])
                 else:
                     raise ValueError('dmNumber (>0) must be defined if projmat_tag is not defined!')
 
@@ -69,7 +68,7 @@ class Modalrec(BaseProcessingObj):
             recmat.recmat = recmat.recmat @ filtmat
             print('recmat updated with filmat!')
 
-        self._recmat = recmat if recmat is not None else Recmat(target_device_idx=target_device_idx, precision=precision)
+        self._recmat = recmat
         self._projmat = projmat
         self._intmat = intmat
         self._polc = polc
@@ -175,7 +174,7 @@ class Modalrec(BaseProcessingObj):
         self._control_list.append(control)
 
     def trigger_code(self): # , slope_ptr=None
-        if self._recmat._recmat is None:
+        if self._recmat.recmat is None:
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
 
@@ -265,7 +264,6 @@ class Modalrec(BaseProcessingObj):
         if intmat:
             m = slope_ptr @ intmat
         else:
-            matrix.recmat = self.xp.array(matrix.recmat, dtype=self.dtype)
             m = slope_ptr @ self.xp.transpose(matrix.recmat)
 
         return m

@@ -63,3 +63,6 @@ class Pupilstop(Layer):
         pupilstop = PupilStop(dim[0], dim[1], pixel_pitch, 0, input_mask=input_mask)
         return pupilstop
 
+    # TODO: this is a data object, not a processing object
+    def finalize(self):
+        pass

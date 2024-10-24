@@ -1,0 +1,18 @@
+
+
+sh_subaps:
+  class: 'ShSubapCalibrator'
+  subap_on_diameter: 20
+  output_tag:        'scao_subaps_n20_th0.5'
+  energy_th:         0.5
+  #tag_template:      'subap_{main.tag}_n{subap_on_diameter}_th{energy_th:f.1}'
+  inputs:
+    in_i: 'sh.out_i'
+
+main_override:
+  total_time:  0.001
+
+remove: ['atmo', 'slopec', 'rec']
+ 
+
+

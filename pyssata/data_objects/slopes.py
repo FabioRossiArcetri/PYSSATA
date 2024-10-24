@@ -1,4 +1,6 @@
 
+
+import numpy as np
 from astropy.io import fits
 
 from pyssata.base_data_obj import BaseDataObj
@@ -137,7 +139,7 @@ class Slopes(BaseDataObj):
         hdr['INTRLVD'] = int(self._interleave)
         hdr['PUPD_TAG'] = self._pupdata_tag
 
-        super().save(filename, hdr)
+        fits.writeto(filename, np.zeros(2), hdr)
         fits.append(filename, self._slopes)
 
     def read(self, filename, hdr=None, exten=0):

@@ -94,7 +94,9 @@ class Simul():
             if isinstance(output_name, str):
                 maxdelay = self.output_delay(output_name)
             elif isinstance(output_name, list):
-                maxdelay = max([self.output_delay(x) for x in output_name])
+                maxdelay = -1
+                if len(output_name) > 0:
+                    maxdelay = max([self.output_delay(x) for x in output_name])
             if maxdelay == 0:
                 return False
         return True
@@ -265,9 +267,6 @@ class Simul():
                 objname = name[:-9]
                 if objname not in params:
                     raise ValueError(f'Parameter file has no object named {objname}')
-                for k, v in values.items():
-                    if k not in params[objname]:
-                        raise ValueError(f'Object {objname} has not parameter {k} to override')
                 params[objname].update(values)
             else:
                 if name in params:
@@ -318,8 +317,8 @@ class Simul():
         if store.has_key('sr'):
             print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']])) * 100.}")
 
-        # Saving method with a single sav file
-        store.save('save_file.pickle')
+        for obj in self.objs.values():
+            obj.finalize()
 
         # Alternative saving method:
         # tn = store.save_tracknum(dir=dir, params=params, nodlm=True, noolformat=True, compress=True, saveFloat=saveFloat)
