@@ -58,7 +58,6 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         if len(self.inputs)==0:
             return True
         for input_name, input_obj in self.inputs.items():
-            print(input_name)
             if type(input_obj) is InputValue:
                 if input_name not in self.last_seen and input_obj.get_time() is not None and input_obj.get_time() >= 0:  # First time
                     return True

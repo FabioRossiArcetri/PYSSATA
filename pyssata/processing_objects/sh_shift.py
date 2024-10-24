@@ -1,6 +1,9 @@
 from pyssata.base_processing_obj import BaseProcessingObj
 
 class ShShift(BaseProcessingObj):
+    '''
+    TODO not yet working
+    '''
     def __init__(self, params_sh, params_main, shift_wavelength_in_nm, xy_shift, qe_factor, resize_fact, 
                  target_device_idx=None, 
                  precision=None):

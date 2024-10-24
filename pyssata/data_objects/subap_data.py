@@ -17,51 +17,27 @@ class SubapData(BaseDataObj):
                  target_device_idx=None,
                  precision=None):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
-        self._idxs = idxs.astype(int)
-        self._map = map.astype(int)
-        self._nx = int(nx)
-        self._ny = int(ny)
-        self._energy_th = float(energy_th)
-
-    @property
-    def idxs(self):
-        return self._idxs
-
-    @idxs.setter
-    def idxs(self, value):
-        self._idxs = value
+        self.idxs = idxs.astype(int)
+        self.map = map.astype(int)
+        self.nx = int(nx)
+        self.ny = int(ny)
+        self.energy_th = float(energy_th)
 
     @property
     def n_subaps(self):
-        return self._idxs.shape[0]
+        return self.idxs.shape[0]
 
     @property
     def np_sub(self):
-        return int(math.sqrt(self._idxs.shape[1]))
-
-    @property
-    def map(self):
-        return self._map
-
-    @property
-    def energy_th(self):
-        return self._energy_th
-
-    @property
-    def nx(self):
-        return self._nx
-
-    @property
-    def ny(self):
-        return self._ny
+        return int(math.sqrt(self.idxs.shape[1]))
 
     def subap_idx(self, n):
         """Returns the indices of subaperture `n`."""
-        return self._idxs[n, :]
+        return self.idxs[n, :]
 
     def map_idx(self, n):
         """Returns the position of subaperture `n`."""
-        return self._map[n]
+        return self.map[n]
 
     def save(self, filename):
         """Saves the subaperture data to a file."""
@@ -72,8 +48,8 @@ class SubapData(BaseDataObj):
         hdr['NX'] = self.nx
         hdr['NY'] = self.ny
         fits.writeto(filename, np.zeros(2), hdr)
-        fits.append(filename, cpuArray(self._idxs))
-        fits.append(filename, cpuArray(self._map))
+        fits.append(filename, cpuArray(self.idxs))
+        fits.append(filename, cpuArray(self.map))
 
     @classmethod
     def restore(cls, filename, target_device_idx=None):

@@ -24,10 +24,6 @@ class Lenslet(BaseDataObj):
             self._lenses.append(row)
 
     @property
-    def n_lenses(self):
-        return self._n_lenses
-
-    @property
     def dimx(self):
         return len(self._lenses)
 

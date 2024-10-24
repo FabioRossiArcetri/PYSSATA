@@ -2268,27 +2268,7 @@ class Factory:
         optgaincontrol.apply_properties(params)
         return optgaincontrol
 
-    def get_sh_display(self, sh, pyr_style=None, window=None):
-        """
-        Builds a `sh_display` processing object.
-
-        Parameters:
-        sh (objref): The `sh` object to display
-        pyr_style (optional): Pyramid style
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        ShDisplay: A new `sh_display` processing object
-        """
-        disp = ShDisplay(sh=sh, pyr_style=pyr_style)
-        if window is not None:
-            disp.window = window
-            window += 1
-        self.apply_global_params(disp)
-        return disp
-
-
-    def get_source_field(self, params):
+     def get_source_field(self, params):
         """
         Builds a list of `source` objects arranged on a regular grid.
 

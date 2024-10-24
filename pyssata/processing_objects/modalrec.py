@@ -174,7 +174,7 @@ class Modalrec(BaseProcessingObj):
         self._control_list.append(control)
 
     def trigger_code(self): # , slope_ptr=None
-        if self._recmat._recmat is None:
+        if self._recmat.recmat is None:
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
 

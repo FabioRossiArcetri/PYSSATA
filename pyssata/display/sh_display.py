@@ -1,6 +1,9 @@
 import numpy as np
 
 class ShDisplay(BaseProcessingObj):
+    '''
+    TODO not yet working
+    '''
     def __init__(self, sh=None, pyr_style=False):
         super().__init__('sh_display', 'SH display')
         self._wsize = [600, 600]
@@ -11,38 +14,6 @@ class ShDisplay(BaseProcessingObj):
 
         if sh is not None:
             self._sh = sh
-
-    @property
-    def sh(self):
-        return self._sh
-
-    @sh.setter
-    def sh(self, value):
-        self._sh = value
-
-    @property
-    def disp_factor(self):
-        return self._disp_factor
-
-    @disp_factor.setter
-    def disp_factor(self, value):
-        self._disp_factor = value
-
-    @property
-    def pyr_style(self):
-        return self._pyr_style
-
-    @pyr_style.setter
-    def pyr_style(self, value):
-        self._pyr_style = value
-
-    @property
-    def window(self):
-        return self._window
-
-    @window.setter
-    def window(self, value):
-        self._window = value
 
     def set_w(self):
         # Simulating the window opening based on size
@@ -89,17 +60,4 @@ class ShDisplay(BaseProcessingObj):
 
     def cleanup(self):
         # Clean up resources if needed
-        pass
-
-# Helper function to check object validity (simulating IDL behavior)
-def obj_valid(obj):
-    return obj is not None
-
-# Assuming the BaseProcessingObj has been defined elsewhere
-class BaseProcessingObj:
-    def __init__(self, name, description):
-        self.name = name
-        self.description = description
-
-    def cleanup(self):
         pass

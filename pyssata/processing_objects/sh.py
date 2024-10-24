@@ -99,30 +99,6 @@ class SH(BaseProcessingObj):
         self.outputs['out_i'] = self._out_i
 
     @property
-    def wavelengthInNm(self):
-        return self._wavelengthInNm
-
-    @wavelengthInNm.setter
-    def wavelengthInNm(self, value):
-        self._wavelengthInNm = value
-
-    @property
-    def sensor_pxscale(self):
-        return self._sensor_pxscale
-
-    @sensor_pxscale.setter
-    def sensor_pxscale(self, value):
-        self._sensor_pxscale = value
-
-    @property
-    def fov_resolution_arcsec(self):
-        return self._fov_resolution_arcsec
-
-    @fov_resolution_arcsec.setter
-    def fov_resolution_arcsec(self, value):
-        self._fov_resolution_arcsec = value
-
-    @property
     def kernel_application(self):
         return self._kernel_application
 
@@ -132,10 +108,6 @@ class SH(BaseProcessingObj):
             raise ValueError("Kernel application string must be one of 'FFT', 'FOV', or 'SUBAP'")
         self._kernel_application = str_val
 
-    @property
-    def lenslet(self):
-        return self._lenslet
-    
     def set_in_ef(self, in_ef, noprints=False):
         rad2arcsec = 180 / np.pi * 3600
         arcsec2rad = 1.0 / rad2arcsec
