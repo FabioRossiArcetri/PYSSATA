@@ -267,9 +267,6 @@ class Simul():
                 objname = name[:-9]
                 if objname not in params:
                     raise ValueError(f'Parameter file has no object named {objname}')
-                for k, v in values.items():
-                    if k not in params[objname]:
-                        raise ValueError(f'Object {objname} has not parameter {k} to override')
                 params[objname].update(values)
             else:
                 if name in params:

@@ -20,6 +20,7 @@ prop_override:
                   'dm.out_layer']
 
 dm_override:
+  sign: 1
   inputs:
       in_command: 'pushpull.output'
 
@@ -31,7 +32,7 @@ detector_override:
 calibrator:
   class: 'ImRecCalibrator'
   nmodes: 54
-  output_tag:     'scao_sh_rec4'
+  output_tag:     'scao_sh_rec5'
   #tag_template:    'subap_{main.tag}_n{modes}'
   inputs:
     in_slopes: 'slopec.out_slopes'

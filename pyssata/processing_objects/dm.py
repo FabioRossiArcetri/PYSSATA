@@ -21,6 +21,7 @@ class DM(BaseProcessingObj):
                  obsratio: float=None,
                  diaratio: float=None,
                  pupilstop: Pupilstop=None,
+                 sign: int=-1,
                  target_device_idx=None, 
                  precision=None
                  ):
@@ -46,8 +47,8 @@ class DM(BaseProcessingObj):
         self.layer = Layer(s[0], s[1], pixel_pitch, height, target_device_idx=target_device_idx, precision=precision)
         self.layer.A = self._ifunc.mask_inf_func
         
-        # sign is -1 to take into account the reflection in the propagation
-        self.sign = -1
+        # Default sign is -1 to take into account the reflection in the propagation
+        self.sign = sign
         self.inputs['in_command'] = InputValue(type=BaseValue)
         self.outputs['out_layer'] = self.layer
         self.temp_matrix = self.xp.zeros(self.layer.size, dtype=self.dtype)
