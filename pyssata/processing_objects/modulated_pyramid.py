@@ -11,11 +11,11 @@ from pyssata.lib.toccd import toccd
 
 
 @fuse(kernel_name='pyr1_fused')
-def pyr1_fused(u_fp, ffv, masked_exp, xp):
+def pyr1_fused(u_fp, ffv, fpsf, masked_exp, xp):
     psf = xp.real(u_fp * xp.conj(u_fp))
-    fpsf = psf * ffv
+    fpsf += psf * ffv
     u_fp_pyr = u_fp * masked_exp
-    return u_fp_pyr, fpsf
+    return u_fp_pyr
 
 
 @fuse(kernel_name='pyr1_abs2')
@@ -132,7 +132,8 @@ class ModulatedPyramid(BaseProcessingObj):
         self.psf_bfm_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
         self.psf_tot_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
         self.u_tlt = self.xp.zeros((self.mod_steps, self.fft_totsize, self.fft_totsize), dtype=self.complex_dtype)
-        self.plan1 = self.get_fft_plan(self.u_tlt, axes=(-2, -1), value_type='C2C')
+        self.nfft = 1
+        self.plan1 = self.get_fft_plan(self.u_tlt[0:self.nfft], axes=(-2, -1), value_type='C2C')
         self.roll_array = [self.fft_padding//2, self.fft_padding//2]
         self.roll_axis = [0,1]
         self.ifft_norm = 1.0 / (self.fft_totsize * self.fft_totsize)
@@ -389,15 +390,21 @@ class ModulatedPyramid(BaseProcessingObj):
         tmp = u_tlt_const[self.xp.newaxis, :, :] * self.ttexp
         ss = tmp.shape
         self.u_tlt[:, 0:ss[1], 0:ss[2]] = tmp
-        
+        self.pyr_image = self.xp.zeros((self.nfft, self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+        self.fpsf = self.xp.zeros((self.nfft, self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+
     @show_in_profiler('pyramid.trigger_code')
     def trigger_code(self):
-        with self.plan1:
-            u_fp = self.xp.fft.fft2(self.u_tlt, axes=(-2, -1))         
-            u_fp_pyr, self.fpsf = pyr1_fused(u_fp, self.ffv, self.shifted_masked_exp, xp=self.xp)
+        for i in range(0, self.mod_steps, self.nfft):
+          with self.plan1:
+            a = i
+            b = i + self.nfft
+            u_fp = self.xp.fft.fft2(self.u_tlt[a:b], axes=(-2, -1))
+            u_fp_pyr = pyr1_fused(u_fp, self.ffv[a:b], self.fpsf, self.shifted_masked_exp, xp=self.xp)
+            
             # 'forward' normalization is faster and we normalize correctly later in pyr1_abs2()
             pyr_ef = self.xp.fft.ifft2(u_fp_pyr, axes=(-2, -1), norm='forward')
-            self.pyr_image = pyr1_abs2(pyr_ef, self.ifft_norm , self.ffv, xp=self.xp)
+            self.pyr_image += pyr1_abs2(pyr_ef, self.ifft_norm , self.ffv[a:b], xp=self.xp)
 
     def post_trigger(self):
         # super().post_trigger()
@@ -444,7 +451,6 @@ class ModulatedPyramid(BaseProcessingObj):
         self.psf_bfm.generation_time = self.current_time
         self.out_transmission.value = self.transmission
         self.out_transmission.generation_time = self.current_time
-
     
     def run_check(self, time_step):
         self.prepare_trigger(0)
