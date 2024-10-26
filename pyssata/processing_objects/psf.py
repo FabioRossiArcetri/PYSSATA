@@ -1,4 +1,5 @@
 
+from pyssata import fuse, show_in_profiler
 from pyssata.base_processing_obj import BaseProcessingObj
 from pyssata.base_value import BaseValue
 from pyssata.data_objects.ef import ElectricField
@@ -6,6 +7,12 @@ from pyssata.data_objects.intensity import Intensity
 from pyssata.connections import InputValue
 
 import numpy as np
+
+
+@fuse(kernel_name='psf_abs2')
+def psf_abs2(v, xp):
+    return xp.real(v * xp.conj(v))
+
 
 class PSF(BaseProcessingObj):
     def __init__(self,
@@ -32,7 +39,7 @@ class PSF(BaseProcessingObj):
         self.inputs['in_ef'] = InputValue(type=ElectricField)
         self.outputs['out_sr'] = self.sr
         self.outputs['out_psf'] = self.psf
-        self.reset_integration()
+#        self.reset_integration()
 
     def calc_psf(self, phase, amp, imwidth=None, normalize=False, nocenter=False):
         """
@@ -58,24 +65,23 @@ class PSF(BaseProcessingObj):
         # Set up the complex array based on input dimensions and data type
         if imwidth is not None:
             u_ef = self.xp.zeros((imwidth, imwidth), dtype=self.complex_dtype)
-            result = amp * self.xp.exp(1j * phase)
+            result = amp * self.xp.exp(1j * phase, dtype=self.complex_dtype)
             s = result.shape
             u_ef[:s[0], :s[1]] = result
         else:
-            u_ef = amp * self.xp.exp(1j * phase)
+            u_ef = amp * self.xp.exp(1j * phase, dtype=self.complex_dtype)
         # Compute FFT (forward)
         u_fp = self.xp.fft.fft2(u_ef)
         # Center the PSF if required
         if not nocenter:
             u_fp = self.xp.fft.fftshift(u_fp)
         # Compute the PSF as the square modulus of the Fourier transform
-        psf = self.xp.abs(u_fp)**2
+        psf = psf_abs2(u_fp, xp=self.xp)
         # Normalize if required
         if normalize:
             psf /= self.xp.sum(psf)
 
         return psf
-
 
     @property
     def size(self):
@@ -92,7 +98,7 @@ class PSF(BaseProcessingObj):
 
     def reset_integration(self):
         self.count = 0
-        in_ef = self.inputs['in_ef'].get(self.target_device_idx)
+        in_ef = self.local_inputs['in_ef']
         if in_ef:
             self.int_psf.value *= 0
         self.intsr = 0
@@ -102,12 +108,12 @@ class PSF(BaseProcessingObj):
         self.in_ef = self.local_inputs['in_ef']
         if self.psf.value is None:
             s = [dim * self.nd for dim in self.in_ef.size]
-            self.psf.value = self.xp.zeros(s, dtype=self.dtype)
             self.int_psf.value = self.xp.zeros(s, dtype=self.dtype)
-            self.ref = None
+            self.intsr = 0
         if self.current_time_seconds >= self.start_time:
             self.count += 1
 
+    @show_in_profiler('psf.trigger')
     def trigger_code(self):
         self.out_size = [np.around(dim * self.nd) for dim in self.in_ef.size]
         if not self.ref:
@@ -120,9 +126,9 @@ class PSF(BaseProcessingObj):
         super().post_trigger()
         if self.current_time_seconds >= self.start_time:
             self.intsr += self.sr.value
+            self.int_psf.value += self.psf.value
             self.int_sr.value = self.intsr / self.count
             self.int_psf.generation_time = self.current_time
             self.int_sr.generation_time = self.current_time
-            self.int_psf.value += self.psf.value
         self.psf.generation_time = self.current_time
         self.sr.generation_time = self.current_time

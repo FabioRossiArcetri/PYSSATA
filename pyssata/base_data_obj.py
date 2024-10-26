@@ -3,7 +3,9 @@ from astropy.io import fits
 from pyssata.base_time_obj import BaseTimeObj
 from copy import copy
 from pyssata import cp, np
+from functools import cache
 
+@cache
 def get_properties(cls):
     result = []
     classlist = cls.__mro__
@@ -56,13 +58,14 @@ class BaseDataObj(BaseTimeObj):
         for attr in dir(self):
             if attr not in excluded and attr not in pp:
                 concrete_attr = getattr(self, attr)
-                cloned_attr = getattr(destobj, attr)
                 aType = type(concrete_attr)
                 if destobj.target_device_idx==-1:
                     if aType==cp.ndarray:
+                        #print(f'transferDataTo: {attr} to CPU')
                         setattr(destobj, attr, concrete_attr.get(blocking=True) )
                 elif self.target_device_idx==-1:
                     if aType==np.ndarray:
+                        #print(f'transferDataTo: {attr} to GPU')
                         setattr(destobj, attr, cp.asarray( concrete_attr ) )                            
         return destobj
 
@@ -82,7 +85,7 @@ class BaseDataObj(BaseTimeObj):
                     aType = type(concrete_attr)
                     if target_device_idx==-1:
                         if aType==cp.ndarray:
-                            setattr(cloned, attr, cp._cupyx.zeros_like_pinned( cloned_attr ) )
+                            #setattr(cloned, attr, cp._cupyx.zeros_like_pinned( cloned_attr ) )
                             setattr(cloned, attr, cp.asnumpy( cloned_attr ) )
                             # print('Member', attr, 'of class', type(cloned).__name__, 'is now on CPU')
                     elif self.target_device_idx==-1:

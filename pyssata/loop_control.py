@@ -124,7 +124,9 @@ class LoopControl:
 
             for element in self._ordered_lists[i]:
                 element.trigger()
-                # print('Trigger', element) # Verbose?
+
+            for element in self._ordered_lists[i]:
+                element.post_trigger()
 
         if self._stop_on_data and self._stop_on_data.generation_time == self._t:
             return
