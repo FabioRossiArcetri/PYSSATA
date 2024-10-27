@@ -128,9 +128,6 @@ class ModulatedPyramid(BaseProcessingObj):
         self.mod_steps = int(mod_step)
         self.ttexp = None
         self.cache_ttexp()
-        self.pup_pyr_tot = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
-        self.psf_bfm_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
-        self.psf_tot_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
         self.u_tlt = self.xp.zeros((self.mod_steps, self.fft_totsize, self.fft_totsize), dtype=self.complex_dtype)
         self.plan1 = self.get_fft_plan(self.u_tlt[0], axes=(-2, -1), value_type='C2C')
         self.roll_array = [self.fft_padding//2, self.fft_padding//2]
