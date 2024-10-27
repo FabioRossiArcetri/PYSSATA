@@ -1,4 +1,3 @@
-import numpy as np
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
 
@@ -80,30 +79,6 @@ class DM(BaseProcessingObj):
     @property
     def size(self):
         return self.layer.size
-
-    @property
-    def shift_xy_in_pixel(self):
-        return self.layer.shift_xy_in_pixel
-
-    @shift_xy_in_pixel.setter
-    def shift_xy_in_pixel(self, value):
-        self.layer.shift_xy_in_pixel = value
-
-    @property
-    def rot_in_deg(self):
-        return self.layer.rot_in_deg
-
-    @rot_in_deg.setter
-    def rot_in_deg(self, value):
-        self.layer.rot_in_deg = value
-
-    @property
-    def magnification(self):
-        return self.layer.magnification
-
-    @magnification.setter
-    def magnification(self, value):
-        self.layer.magnification = value
 
     def run_check(self, time_step, errmsg=""):
         commands_input = self.inputs['in_command'].get(self.target_device_idx)
