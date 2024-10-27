@@ -9,6 +9,21 @@ from pyssata.data_objects.intensity import Intensity
 from pyssata.lib.make_mask import make_mask
 from pyssata.lib.toccd import toccd
 
+import cupy
+from cupy.cuda import cufft
+
+@fuse(kernel_name='pyr1_fused')
+def pyr1_fused_orig(u_fp, ffv, masked_exp, xp):
+    psf = xp.real(u_fp * xp.conj(u_fp))
+    fpsf = psf * ffv
+    u_fp_pyr = u_fp * masked_exp
+    return u_fp_pyr, fpsf
+
+
+@fuse(kernel_name='pyr1_abs2')
+def pyr1_abs2_orig(v, norm, ffv, xp):
+    v_norm = v * norm
+    return xp.real(v_norm * xp.conj(v_norm)) * ffv
 
 @fuse(kernel_name='pyr1_fused')
 def pyr1_fused(u_fp, ffv, fpsf, masked_exp, xp):
@@ -22,6 +37,19 @@ def pyr1_fused(u_fp, ffv, fpsf, masked_exp, xp):
 def pyr1_abs2(v, norm, ffv, xp):
     v_norm = v * norm
     return xp.real(v_norm * xp.conj(v_norm)) * ffv
+
+
+@fuse(kernel_name='pyr1_fused')
+def pyr1_fused_inplace(u_fp, ffv, fpsf, masked_exp, out_fp_pyr, xp):
+    psf = xp.real(u_fp * xp.conj(u_fp))
+    fpsf += psf * ffv
+    out_fp_pyr[:] = u_fp * masked_exp
+
+
+@fuse(kernel_name='pyr1_abs2')
+def pyr1_abs2_inplace(v, norm, ffv, pyr_image, xp):
+    v_norm = v * norm
+    pyr_image += xp.real(v_norm * xp.conj(v_norm)) * ffv
 
 
 class ModulatedPyramid(BaseProcessingObj):
@@ -132,7 +160,8 @@ class ModulatedPyramid(BaseProcessingObj):
         self.psf_bfm_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
         self.psf_tot_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
         self.u_tlt = self.xp.zeros((self.mod_steps, self.fft_totsize, self.fft_totsize), dtype=self.complex_dtype)
-        self.nfft = 1
+        self.nfft = 24
+        self.plan_orig = self.get_fft_plan(self.u_tlt, axes=(-2, -1), value_type='C2C')
         self.plan1 = self.get_fft_plan(self.u_tlt[0:self.nfft], axes=(-2, -1), value_type='C2C')
         self.roll_array = [self.fft_padding//2, self.fft_padding//2]
         self.roll_axis = [0,1]
@@ -392,19 +421,60 @@ class ModulatedPyramid(BaseProcessingObj):
         self.u_tlt[:, 0:ss[1], 0:ss[2]] = tmp
         self.pyr_image = self.xp.zeros((self.nfft, self.fft_totsize, self.fft_totsize), dtype=self.dtype)
         self.fpsf = self.xp.zeros((self.nfft, self.fft_totsize, self.fft_totsize), dtype=self.dtype)
-
+        self.u_fp = self.xp.zeros((self.nfft, self.fft_totsize, self.fft_totsize), dtype=self.complex_dtype)
+        self.u_fp_pyr = self.xp.zeros((self.nfft, self.fft_totsize, self.fft_totsize), dtype=self.complex_dtype)
+        self.pyr_ef = self.xp.zeros((self.nfft, self.fft_totsize, self.fft_totsize), dtype=self.complex_dtype)
+        
+        
     @show_in_profiler('pyramid.trigger_code')
-    def trigger_code(self):
+    def trigger_code_orig(self):
+        with self.plan_orig:
+            u_fp = self.xp.fft.fft2(self.u_tlt, axes=(-2, -1))         
+            u_fp_pyr, self.fpsf = pyr1_fused_orig(u_fp, self.ffv, self.shifted_masked_exp, xp=self.xp)
+            # 'forward' normalization is faster and we normalize correctly later in pyr1_abs2()
+            pyr_ef = self.xp.fft.ifft2(u_fp_pyr, axes=(-2, -1), norm='forward')
+            self.pyr_image = pyr1_abs2(pyr_ef, self.ifft_norm , self.ffv, xp=self.xp)
+    
+    @show_in_profiler('pyramid.trigger_code')
+    def trigger_code1(self):
+        for i in range(0, self.mod_steps, self.nfft):
+          with self.plan1:
+            a = i
+            b = i + self.nfft
+            self.u_fp = self.xp.fft.fft2(self.u_tlt[a:b], axes=(-2, -1))
+            self.u_fp_pyr = pyr1_fused(self.u_fp, self.ffv[a:b], self.fpsf, self.shifted_masked_exp, xp=self.xp)
+             
+            # 'forward' normalization is faster and we normalize correctly later in pyr1_abs2()
+            self.pyr_ef = self.xp.fft.ifft2(self.u_fp_pyr, axes=(-2, -1), norm='forward')
+            self.pyr_image += pyr1_abs2(self.pyr_ef, self.ifft_norm , self.ffv[a:b], xp=self.xp)
+                
+    @show_in_profiler('pyramid.trigger_code')
+    def trigger_code2(self):
         for i in range(0, self.mod_steps, self.nfft):
           with self.plan1:
             a = i
             b = i + self.nfft
             u_fp = self.xp.fft.fft2(self.u_tlt[a:b], axes=(-2, -1))
-            u_fp_pyr = pyr1_fused(u_fp, self.ffv[a:b], self.fpsf, self.shifted_masked_exp, xp=self.xp)
-            
+            pyr1_fused_inplace(u_fp, self.ffv[a:b], self.fpsf, self.shifted_masked_exp, self.u_fp_pyr, xp=self.xp)
+             
             # 'forward' normalization is faster and we normalize correctly later in pyr1_abs2()
-            pyr_ef = self.xp.fft.ifft2(u_fp_pyr, axes=(-2, -1), norm='forward')
-            self.pyr_image += pyr1_abs2(pyr_ef, self.ifft_norm , self.ffv[a:b], xp=self.xp)
+            pyr_ef = self.xp.fft.ifft2(self.u_fp_pyr, axes=(-2, -1), norm='forward')
+            pyr1_abs2_inplace(pyr_ef, self.ifft_norm , self.ffv[a:b], self.pyr_image, xp=self.xp)
+
+    @show_in_profiler('pyramid.trigger_code')
+    def trigger_code3(self):
+        for i in range(0, self.mod_steps, self.nfft):
+          with self.plan1:
+            a = i
+            b = i + self.nfft
+            cupy.fft._fft._fftn(self.u_tlt[a:b], s=None, axes=(-2, -1), norm='forward', direction=cufft.CUFFT_FORWARD, out=self.u_fp)
+            pyr1_fused_inplace(self.u_fp, self.ffv[a:b], self.fpsf, self.shifted_masked_exp, self.u_fp_pyr, xp=self.xp)
+             
+            # 'forward' normalization is faster and we normalize correctly later in pyr1_abs2()
+            cupy.fft._fft._fftn(self.u_fp_pyr, s=None, axes=(-2, -1), norm='forward', direction=cufft.CUFFT_INVERSE, out=self.pyr_ef)
+            pyr1_abs2_inplace(self.pyr_ef, self.ifft_norm , self.ffv[a:b], self.pyr_image, xp=self.xp)
+
+    trigger_code = trigger_code_orig
 
     def post_trigger(self):
         # super().post_trigger()
