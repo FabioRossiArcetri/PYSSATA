@@ -34,6 +34,7 @@ class FuncGenerator(BaseProcessingObj):
         self.offset = self.xp.array(offset, dtype=self.dtype) if offset is not None else 0.0
         self.vect_amplitude = self.xp.array(vect_amplitude, dtype=self.dtype) if vect_amplitude is not None else 0.0
         self.output = BaseValue(target_device_idx=target_device_idx, value=self.xp.array(0))
+        self.vib = None
 
         if seed is not None:
             self.seed = seed
@@ -116,12 +117,13 @@ class FuncGenerator(BaseProcessingObj):
         return self.xp.array(self.time_hist[i])
 
     def run_check(self, time_step, errmsg=""):
-        if hasattr(self, '_vib') and self.vib:
+        if self.vib:
             self.vib.set_niters(self.loop_niters + 1)
             self.vib.set_samp_freq(1.0 / self.t_to_self.current_time_seconds(self.loop_dt))
             self.vib.compute()
             self.time_hist = self.vib.get_time_hist()
 
-        self.build_stream()
+        if self.type in ['SIN', 'LINEAR', 'RANDOM']:
+            self.build_stream()
         return True
 
