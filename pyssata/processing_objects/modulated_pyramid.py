@@ -124,6 +124,9 @@ class ModulatedPyramid(BaseProcessingObj):
         if int(mod_step) != mod_step:
             raise ValueError('Modulation step number is not an integer')
 
+        self.pup_pyr_tot = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+        self.psf_bfm_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+        self.psf_tot_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
         self.mod_amp = mod_amp
         self.mod_steps = int(mod_step)
         self.ttexp = None
@@ -136,6 +139,8 @@ class ModulatedPyramid(BaseProcessingObj):
         # These two are used in the graph-launched trigger code and we manage them separately
         self.pyr_image = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
         self.fpsf = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+        self.transmission = self.xp.zeros(1, dtype=self.dtype)
+        self.ef = self.xp.zeros((fft_sampling, fft_sampling), dtype=self.complex_dtype)
 
     def calc_geometry(self,
         DpupPix,                # number of pixels of input phase array
@@ -362,7 +367,6 @@ class ModulatedPyramid(BaseProcessingObj):
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
         self.in_ef = self.local_inputs['in_ef']
-        self.ef_size = self.in_ef.size
         #if self.extended_source_in_on and self.extSourcePsf is not None:
         #    if self.extSourcePsf.generation_time == self.current_time:
         #        if self.xp.sum(self.xp.abs(self.extSourcePsf.value)) > 0:
@@ -372,28 +376,28 @@ class ModulatedPyramid(BaseProcessingObj):
         #            self.factor = 1.0 / self.xp.sum(self.flux_factor_vector)
 
         #if self.rotAnglePhInDeg != 0:
+        #    self.ef_size = self.in_ef.size
         #    A = (self.ROT_AND_SHIFT_IMAGE(self.in_ef.A, self.rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(self.xp.uint8)
         #    phi_at_lambda = self.ROT_AND_SHIFT_IMAGE(self.in_ef.phi_at_lambda(self.wavelength_in_nm), self.rotAnglePhInDeg, [0, 0], 1, use_interpolate=True)
-        #    self.ef = self.xp.complex64(self.xp.rebin(A, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) + 
+        #    self.ef[:] = self.xp.complex64(self.xp.rebin(A, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) + 
         #                      self.xp.rebin(phi_at_lambda, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) * 1j)
         #else:
         #if self.fov_res != 1:
-        #self.ef = self.xp.complex64(self.xp.rebin(self.in_ef.A, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) + 
+        #self.ef[:] = self.xp.complex64(self.xp.rebin(self.in_ef.A, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) + 
         #                        self.xp.rebin(self.in_ef.phi_at_lambda(self.wavelength_in_nm), (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) * 1j)
         #else:
-        self.ef = self.in_ef.ef_at_lambda(self.wavelength_in_nm)
-        ##
 
-        self.phot = self.in_ef.S0 * self.xp.sum(self.in_ef.A) * (self.in_ef.pixel_pitch ** 2)
+        self.ef[:] = self.in_ef.ef_at_lambda(self.wavelength_in_nm)
+
+    @show_in_profiler('pyramid.trigger_code')
+    def trigger_code(self):
         u_tlt_const = self.ef * self.tlt_f
         tmp = u_tlt_const[self.xp.newaxis, :, :] * self.ttexp
         ss = tmp.shape
         self.u_tlt[:, 0:ss[1], 0:ss[2]] = tmp
         self.pyr_image *=0
         self.fpsf *=0
-        
-    @show_in_profiler('pyramid.trigger_code')
-    def trigger_code(self):
+
         with self.plan1:
             for i in range(0, self.mod_steps):
                 u_fp = self.xp.fft.fft2(self.u_tlt[i], axes=(-2, -1))
@@ -403,16 +407,18 @@ class ModulatedPyramid(BaseProcessingObj):
                 pyr_ef = self.xp.fft.ifft2(u_fp_pyr, axes=(-2, -1), norm='forward')
                 self.pyr_image += pyr1_abs2(pyr_ef, self.ifft_norm , self.ffv[i], xp=self.xp)
 
-    def post_trigger(self):
-        # super().post_trigger()
-        self.psf_bfm_arr = self.xp.fft.fftshift(self.fpsf)
-        self.psf_tot_arr = self.psf_bfm_arr * self.fp_mask
-        self.pup_pyr_tot = self.xp.roll(self.pyr_image, self.roll_array, self.roll_axis )
+        self.psf_bfm_arr[:] = self.xp.fft.fftshift(self.fpsf)
+        self.psf_tot_arr[:] = self.psf_bfm_arr * self.fp_mask
+        self.pup_pyr_tot[:] = self.xp.roll(self.pyr_image, self.roll_array, self.roll_axis )
         self.pup_pyr_tot *= self.factor
         self.psf_tot_arr *= self.factor
         self.psf_bfm_arr *= self.factor
-        self.transmission = self.xp.sum(self.psf_tot_arr) / self.xp.sum(self.psf_bfm_arr)
+        self.transmission[:] = self.xp.sum(self.psf_tot_arr) / self.xp.sum(self.psf_bfm_arr)
+
+    def post_trigger(self):
+        self.phot = self.in_ef.S0 * self.xp.sum(self.in_ef.A) * (self.in_ef.pixel_pitch ** 2)
         self.pup_pyr_tot *= (self.phot / self.xp.sum(self.pup_pyr_tot)) * self.transmission
+        # super().post_trigger()
         
 #        if phot == 0: slows down?
 #            print('WARNING: total intensity at PYR entrance is zero')
