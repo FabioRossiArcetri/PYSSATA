@@ -130,6 +130,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self.mod_amp = mod_amp
         self.mod_steps = int(mod_step)
         self.ttexp = None
+        self.ttexp_shape = None
         self.cache_ttexp()
         self.u_tlt = self.xp.zeros((self.mod_steps, self.fft_totsize, self.fft_totsize), dtype=self.complex_dtype)
         self.plan1 = self.get_fft_plan(self.u_tlt[0], axes=(-2, -1), value_type='C2C')
@@ -261,6 +262,7 @@ class ModulatedPyramid(BaseProcessingObj):
         idx = self.xp.where(self.xp.abs(i) < self.xp.max(self.xp.abs(i)) * 1e-5)[0]
         if len(idx[0]) > 0:
             i[idx] = 0
+        self.ttexp_shape = self.ttexp.shape
         self.flux_factor_vector = i
         self.ffv = self.flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
         self.factor = 1.0 / self.xp.sum(self.flux_factor_vector)
@@ -363,6 +365,7 @@ class ModulatedPyramid(BaseProcessingObj):
             self.flux_factor_vector = self.xp.ones(self.mod_steps, dtype=self.dtype)
             self.ffv = self.flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
             self.factor = 1.0 / self.xp.sum(self.flux_factor_vector)
+            self.ttexp_shape = self.ttexp.shape
 
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
@@ -393,8 +396,7 @@ class ModulatedPyramid(BaseProcessingObj):
     def trigger_code(self):
         u_tlt_const = self.ef * self.tlt_f
         tmp = u_tlt_const[self.xp.newaxis, :, :] * self.ttexp
-        ss = tmp.shape
-        self.u_tlt[:, 0:ss[1], 0:ss[2]] = tmp
+        self.u_tlt[:, 0:self.ttexp_shape[1], 0:self.ttexp_shape[2]] = tmp
         self.pyr_image *=0
         self.fpsf *=0
 
@@ -414,10 +416,10 @@ class ModulatedPyramid(BaseProcessingObj):
         self.psf_tot_arr *= self.factor
         self.psf_bfm_arr *= self.factor
         self.transmission[:] = self.xp.sum(self.psf_tot_arr) / self.xp.sum(self.psf_bfm_arr)
+        phot = self.in_ef.S0 * self.xp.sum(self.in_ef.A) * (self.in_ef.pixel_pitch ** 2)
+        self.pup_pyr_tot *= (phot / self.xp.sum(self.pup_pyr_tot)) * self.transmission
 
     def post_trigger(self):
-        self.phot = self.in_ef.S0 * self.xp.sum(self.in_ef.A) * (self.in_ef.pixel_pitch ** 2)
-        self.pup_pyr_tot *= (self.phot / self.xp.sum(self.pup_pyr_tot)) * self.transmission
         # super().post_trigger()
         
 #        if phot == 0: slows down?
