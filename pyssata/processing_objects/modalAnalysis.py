@@ -1,104 +1,82 @@
-import numpy as np
+from pyssata import fuse, show_in_profiler
 
-class ModalAnalysis:
-    def __init__(self, phase2modes):
-        self._phase2modes = phase2modes
-        self._modes = BaseValue('modes', 'output modes from modal reconstructor')
-        self._rms = BaseValue('modes', 'output RMS of modes from modal reconstructor')
-        self._ef = None
-        self._dorms = False
-        self._wavelengthInNm = 0.0
-        self._verbose = False  # Verbose flag for debugging output
+from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.base_value import BaseValue
+from pyssata.connections import InputValue
+from pyssata.data_objects.ef import ElectricField
+from pyssata.data_objects.ifunc import IFunc
 
-    def set_property(self, phase2modes=None, in_ef=None, dorms=None, wavelengthInNm=None, **kwargs):
-        if phase2modes is not None:
-            self._phase2modes = phase2modes
-        if in_ef is not None:
-            self._ef = in_ef
-        if dorms is not None:
-            self._dorms = dorms
-        if wavelengthInNm is not None:
-            self._wavelengthInNm = wavelengthInNm
+class ModalAnalysis(BaseProcessingObj):
 
-    def get_property(self, phase2modes=None, in_ef=None, out_modes=None, rms=None, **kwargs):
-        properties = {
-            'in_ef': self._ef,
-            'phase2modes': self._phase2modes,
-            'out_modes': self._modes,
-            'rms': self._rms,
-        }
-        return {k: properties[k] for k in kwargs.keys() if k in properties}
+    def __init__(self, 
+                phase2modes: IFunc = None,
+                wavelengthInNm: float = 0,
+                dorms: bool = False,
+                target_device_idx: int = None,
+                precision: int = None):
 
-    def unwrap_phase_2d(self, p):
-        unwrapped_p = np.copy(p)
+        super().__init__(target_device_idx=target_device_idx, precision=precision)
+
+        self.phase2modes = phase2modes
+        self.rms = BaseValue('modes', 'output RMS of modes from modal reconstructor')        
+        self.dorms = dorms
+        self.wavelengthInNm = wavelengthInNm
+        self.verbose = False  # Verbose flag for debugging output
+        self.out_modes = BaseValue('output modes from modal analysis', target_device_idx=target_device_idx)        
+        self.inputs['in_ef'] = InputValue(type=ElectricField)
+        self.outputs['out_modes'] = self.out_modes
+
+
+    def prepare_trigger(self, t):
+        super().prepare_trigger(t)
+        self.in_ef = self.local_inputs['in_ef']
+        self.ef[:] = self.in_ef.ef_at_lambda(self.wavelength_in_nm)
+
+
+    def unwrap_2d(self, p):
+        unwrapped_p = self.xp.copy(p)
         for r in range(p.shape[1]):
             row = unwrapped_p[:, r]
-            unwrapped_p[:, r] = self.unwrap_phase(row)
-        
+            unwrapped_p[:, r] = self.xp.unwrap(row)        
         for c in range(p.shape[0]):
             col = unwrapped_p[c, :]
-            unwrapped_p[c, :] = self.unwrap_phase(col)
-        
+            unwrapped_p[c, :] = self.xp.unwrap(col)        
         return unwrapped_p
 
-    def unwrap_phase(self, phase):
-        # Placeholder function: implement phase unwrapping as needed
-        return np.unwrap(phase)
 
-    def trigger(self, t):
-        if self._ef.generation_time == t:
-            if self._phase2modes.zero_pad:
-                m = self.vector_matrix_multiply(
-                    self._ef.gpu_phaseInNm if HAS_GPU() else self._ef.phaseInNm,
-                    self._phase2modes.gpu_ifunc if HAS_GPU() else self._phase2modes.ptr_ifunc
-                )
+    def trigger_code(self):
+        if self.phase2modes.zero_pad:
+            m = self.self.xp.dot(self.ef.phaseInNm, self.phase2modes.ifunc)
+        else:
+            if self.wavelengthInNm > 0:
+                phase_in_rad = self.ef.phaseInNm * (2 * self.xp.pi / self.wavelengthInNm)
+                phase_in_rad *= self.phase2modes.mask_inf_func.astype(float)
+                phase_in_rad = self.unwrap_2d(phase_in_rad)
+                phase_in_nm = phase_in_rad * (self.wavelengthInNm / (2 * self.xp.pi))
+                ph = phase_in_nm[self.phase2modes.idx_inf_func]
             else:
-                if self._wavelengthInNm > 0:
-                    phase_in_rad = self._ef.phaseInNm * (2 * np.pi / self._wavelengthInNm)
-                    phase_in_rad *= self._phase2modes.mask_inf_func.astype(float)
-                    phase_in_rad = self.unwrap_phase_2d(phase_in_rad)
-                    phase_in_nm = phase_in_rad * (self._wavelengthInNm / (2 * np.pi))
-                    ph = phase_in_nm[self._phase2modes.idx_inf_func]
-                else:
-                    ph = self._ef.phaseInNm[self._phase2modes.idx_inf_func]
+                ph = self.ef.phaseInNm[self.phase2modes.idx_inf_func]
 
-                m = self.vector_matrix_multiply(
-                    ph, 
-                    self._phase2modes.gpu_ifunc if HAS_GPU() else self._phase2modes.ptr_ifunc
-                )
+            m = self.self.xp.dot(ph, self.phase2modes.ifunc)
 
-            self._modes.value = m
-            self._modes.generation_time = t
+        self.out_modes.value = m
+        self.out_modes.generation_time = self.current_time
 
-            if self._dorms:
-                self._rms.value = np.std(ph)
-                self._rms.generation_time = t
+        if self.dorms:
+            self.rms.value = self.xp.std(ph)
+            self.rms.generation_time = self.current_time
 
-            if self._verbose:
-                print(f"First residual values: {m[:min(6, len(m))]}")
-                if self._dorms:
-                    print(f"Phase RMS: {self._rms.value}")
+        if self.verbose:
+            print(f"First residual values: {m[:min(6, len(m))]}")
+            if self.dorms:
+                print(f"Phase RMS: {self.rms.value}")
 
-    def revision_track(self):
-        return "$Rev$"
 
     def run_check(self, time_step):
         errmsg = ""
-        if not obj_valid(self._ef):
+        if not obj_valid(self.ef):
             errmsg += "EF is not valid. "
-        if not obj_valid(self._phase2modes):
+        if not obj_valid(self.phase2modes):
             errmsg += "phase2modes is not valid. "
-        return obj_valid(self._ef) and obj_valid(self._phase2modes), errmsg
+        return obj_valid(self.ef) and obj_valid(self.phase2modes), errmsg
 
-    def cleanup(self):
-        self._ef.cleanup()
-        self._modes.cleanup()
-        self._rms.cleanup()
-        self._phase2modes.cleanup()
-
-    def __repr__(self):
-        return f"{self._objdescr} ({self._objname})"
-
-    def vector_matrix_multiply(self, vector, matrix):
-        # Placeholder function: implement GPU or CPU matrix-vector multiplication as needed
-        return np.dot(matrix, vector)
