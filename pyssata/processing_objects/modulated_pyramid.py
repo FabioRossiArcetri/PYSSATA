@@ -416,10 +416,10 @@ class ModulatedPyramid(BaseProcessingObj):
         self.psf_tot_arr *= self.factor
         self.psf_bfm_arr *= self.factor
         self.transmission[:] = self.xp.sum(self.psf_tot_arr) / self.xp.sum(self.psf_bfm_arr)
-        phot = self.in_ef.S0 * self.xp.sum(self.in_ef.A) * (self.in_ef.pixel_pitch ** 2)
-        self.pup_pyr_tot *= (phot / self.xp.sum(self.pup_pyr_tot)) * self.transmission
 
     def post_trigger(self):
+        phot = self.in_ef.S0 * self.xp.sum(self.in_ef.A) * (self.in_ef.pixel_pitch ** 2)
+        self.pup_pyr_tot *= (phot / self.xp.sum(self.pup_pyr_tot)) * self.transmission
         # super().post_trigger()
         
 #        if phot == 0: slows down?
