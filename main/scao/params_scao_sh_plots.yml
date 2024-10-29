@@ -169,6 +169,6 @@ cmd_disp:
   class:            'ModesDisplay'
   inputs:
     modes:       "rec.out_modes"
-  window:           15
+  window:           16
   title:            'rec.out_modes'
   disp_factor:      2

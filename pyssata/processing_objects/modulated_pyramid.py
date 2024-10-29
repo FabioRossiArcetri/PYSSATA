@@ -11,11 +11,11 @@ from pyssata.lib.toccd import toccd
 
 
 @fuse(kernel_name='pyr1_fused')
-def pyr1_fused(u_fp, ffv, masked_exp, xp):
+def pyr1_fused(u_fp, ffv, fpsf, masked_exp, xp):
     psf = xp.real(u_fp * xp.conj(u_fp))
-    fpsf = psf * ffv
+    fpsf += psf * ffv
     u_fp_pyr = u_fp * masked_exp
-    return u_fp_pyr, fpsf
+    return u_fp_pyr
 
 
 @fuse(kernel_name='pyr1_abs2')
@@ -124,18 +124,24 @@ class ModulatedPyramid(BaseProcessingObj):
         if int(mod_step) != mod_step:
             raise ValueError('Modulation step number is not an integer')
 
-        self.mod_amp = mod_amp
-        self.mod_steps = int(mod_step)
-        self.ttexp = None
-        self.cache_ttexp()
         self.pup_pyr_tot = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
         self.psf_bfm_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
         self.psf_tot_arr = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+        self.mod_amp = mod_amp
+        self.mod_steps = int(mod_step)
+        self.ttexp = None
+        self.ttexp_shape = None
+        self.cache_ttexp()
         self.u_tlt = self.xp.zeros((self.mod_steps, self.fft_totsize, self.fft_totsize), dtype=self.complex_dtype)
-        self.plan1 = self.get_fft_plan(self.u_tlt, axes=(-2, -1), value_type='C2C')
+        self.plan1 = self.get_fft_plan(self.u_tlt[0], axes=(-2, -1), value_type='C2C')
         self.roll_array = [self.fft_padding//2, self.fft_padding//2]
         self.roll_axis = [0,1]
         self.ifft_norm = 1.0 / (self.fft_totsize * self.fft_totsize)
+        # These two are used in the graph-launched trigger code and we manage them separately
+        self.pyr_image = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+        self.fpsf = self.xp.zeros((self.fft_totsize, self.fft_totsize), dtype=self.dtype)
+        self.transmission = self.xp.zeros(1, dtype=self.dtype)
+        self.ef = self.xp.zeros((fft_sampling, fft_sampling), dtype=self.complex_dtype)
 
     def calc_geometry(self,
         DpupPix,                # number of pixels of input phase array
@@ -256,6 +262,7 @@ class ModulatedPyramid(BaseProcessingObj):
         idx = self.xp.where(self.xp.abs(i) < self.xp.max(self.xp.abs(i)) * 1e-5)[0]
         if len(idx[0]) > 0:
             i[idx] = 0
+        self.ttexp_shape = self.ttexp.shape
         self.flux_factor_vector = i
         self.ffv = self.flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
         self.factor = 1.0 / self.xp.sum(self.flux_factor_vector)
@@ -358,11 +365,11 @@ class ModulatedPyramid(BaseProcessingObj):
             self.flux_factor_vector = self.xp.ones(self.mod_steps, dtype=self.dtype)
             self.ffv = self.flux_factor_vector[:, self.xp.newaxis, self.xp.newaxis]
             self.factor = 1.0 / self.xp.sum(self.flux_factor_vector)
+            self.ttexp_shape = self.ttexp.shape
 
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
         self.in_ef = self.local_inputs['in_ef']
-        self.ef_size = self.in_ef.size
         #if self.extended_source_in_on and self.extSourcePsf is not None:
         #    if self.extSourcePsf.generation_time == self.current_time:
         #        if self.xp.sum(self.xp.abs(self.extSourcePsf.value)) > 0:
@@ -372,45 +379,48 @@ class ModulatedPyramid(BaseProcessingObj):
         #            self.factor = 1.0 / self.xp.sum(self.flux_factor_vector)
 
         #if self.rotAnglePhInDeg != 0:
+        #    self.ef_size = self.in_ef.size
         #    A = (self.ROT_AND_SHIFT_IMAGE(self.in_ef.A, self.rotAnglePhInDeg, [0, 0], 1, use_interpolate=True) >= 0.5).astype(self.xp.uint8)
         #    phi_at_lambda = self.ROT_AND_SHIFT_IMAGE(self.in_ef.phi_at_lambda(self.wavelength_in_nm), self.rotAnglePhInDeg, [0, 0], 1, use_interpolate=True)
-        #    self.ef = self.xp.complex64(self.xp.rebin(A, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) + 
+        #    self.ef[:] = self.xp.complex64(self.xp.rebin(A, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) + 
         #                      self.xp.rebin(phi_at_lambda, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) * 1j)
         #else:
         #if self.fov_res != 1:
-        #self.ef = self.xp.complex64(self.xp.rebin(self.in_ef.A, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) + 
+        #self.ef[:] = self.xp.complex64(self.xp.rebin(self.in_ef.A, (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) + 
         #                        self.xp.rebin(self.in_ef.phi_at_lambda(self.wavelength_in_nm), (self.ef_size[0] * self.fov_res, self.ef_size[1] * self.fov_res)) * 1j)
         #else:
-        self.ef = self.in_ef.ef_at_lambda(self.wavelength_in_nm)
-        ##
 
-        self.phot = self.in_ef.S0 * self.xp.sum(self.in_ef.A) * (self.in_ef.pixel_pitch ** 2)
-        u_tlt_const = self.ef * self.tlt_f
-        tmp = u_tlt_const[self.xp.newaxis, :, :] * self.ttexp
-        ss = tmp.shape
-        self.u_tlt[:, 0:ss[1], 0:ss[2]] = tmp
-        
+        self.ef[:] = self.in_ef.ef_at_lambda(self.wavelength_in_nm)
+
     @show_in_profiler('pyramid.trigger_code')
     def trigger_code(self):
-        with self.plan1:
-            u_fp = self.xp.fft.fft2(self.u_tlt, axes=(-2, -1))         
-            u_fp_pyr, self.fpsf = pyr1_fused(u_fp, self.ffv, self.shifted_masked_exp, xp=self.xp)
-            # 'forward' normalization is faster and we normalize correctly later in pyr1_abs2()
-            pyr_ef = self.xp.fft.ifft2(u_fp_pyr, axes=(-2, -1), norm='forward')
-            self.pyr_image = pyr1_abs2(pyr_ef, self.ifft_norm , self.ffv, xp=self.xp)
+        u_tlt_const = self.ef * self.tlt_f
+        tmp = u_tlt_const[self.xp.newaxis, :, :] * self.ttexp
+        self.u_tlt[:, 0:self.ttexp_shape[1], 0:self.ttexp_shape[2]] = tmp
+        self.pyr_image *=0
+        self.fpsf *=0
 
-    def post_trigger(self):
-        # super().post_trigger()
-        self.xp.sum(self.pyr_image, axis=0, out=self.pup_pyr_tot)
-        self.xp.sum(self.fpsf, axis=0, out=self.psf_bfm_arr)
-        self.psf_bfm_arr = self.xp.fft.fftshift(self.psf_bfm_arr)
-        self.psf_tot_arr = self.psf_bfm_arr * self.fp_mask
-        self.pup_pyr_tot = self.xp.roll(self.pup_pyr_tot, self.roll_array, self.roll_axis )
+        with self.plan1:
+            for i in range(0, self.mod_steps):
+                u_fp = self.xp.fft.fft2(self.u_tlt[i], axes=(-2, -1))
+                u_fp_pyr = pyr1_fused(u_fp, self.ffv[i], self.fpsf, self.shifted_masked_exp, xp=self.xp)
+
+                # 'forward' normalization is faster and we normalize correctly later in pyr1_abs2()
+                pyr_ef = self.xp.fft.ifft2(u_fp_pyr, axes=(-2, -1), norm='forward')
+                self.pyr_image += pyr1_abs2(pyr_ef, self.ifft_norm , self.ffv[i], xp=self.xp)
+
+        self.psf_bfm_arr[:] = self.xp.fft.fftshift(self.fpsf)
+        self.psf_tot_arr[:] = self.psf_bfm_arr * self.fp_mask
+        self.pup_pyr_tot[:] = self.xp.roll(self.pyr_image, self.roll_array, self.roll_axis )
         self.pup_pyr_tot *= self.factor
         self.psf_tot_arr *= self.factor
         self.psf_bfm_arr *= self.factor
-        self.transmission = self.xp.sum(self.psf_tot_arr) / self.xp.sum(self.psf_bfm_arr)
-        self.pup_pyr_tot *= (self.phot / self.xp.sum(self.pup_pyr_tot)) * self.transmission
+        self.transmission[:] = self.xp.sum(self.psf_tot_arr) / self.xp.sum(self.psf_bfm_arr)
+        phot = self.in_ef.S0 * self.xp.sum(self.in_ef.A) * (self.in_ef.pixel_pitch ** 2)
+        self.pup_pyr_tot *= (phot / self.xp.sum(self.pup_pyr_tot)) * self.transmission
+
+    def post_trigger(self):
+        # super().post_trigger()
         
 #        if phot == 0: slows down?
 #            print('WARNING: total intensity at PYR entrance is zero')
@@ -444,7 +454,6 @@ class ModulatedPyramid(BaseProcessingObj):
         self.psf_bfm.generation_time = self.current_time
         self.out_transmission.value = self.transmission
         self.out_transmission.generation_time = self.current_time
-
     
     def run_check(self, time_step):
         self.prepare_trigger(0)
