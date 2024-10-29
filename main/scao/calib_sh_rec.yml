@@ -40,7 +40,7 @@ calibrator:
 
 
 
-remove: ['atmo', 'rec']
+remove: ['atmo'] #, 'rec']
  
 
 
