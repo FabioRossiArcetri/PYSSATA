@@ -12,7 +12,7 @@ from pyssata.lib.phasescreen_manager import phasescreens_manager
 from pyssata.connections import InputValue
 from pyssata import cpuArray
 
-class AtmoCube(BaseProcessingObj):
+class AtmoRandomPhase(BaseProcessingObj):
     def __init__(self,
                  L0,
                  pixel_pitch,
@@ -31,7 +31,7 @@ class AtmoCube(BaseProcessingObj):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
         
         self.pupil_dict = {}
-        self.source_dict = {}
+        self.source_dict = source_dict
         self.last_position = 0
         self.seeing = 1
         self.airmass = 1
@@ -42,8 +42,8 @@ class AtmoCube(BaseProcessingObj):
         
         if zenithAngleInDeg is not None:
             self.airmass = 1.0 / np.cos(np.radians(zenithAngleInDeg))
-            print(f'Atmo_Evolution: zenith angle is defined as: {zenithAngleInDeg} deg')
-            print(f'Atmo_Evolution: airmass is: {self.airmass}')
+            print(f'AtmoRandomPhase: zenith angle is defined as: {zenithAngleInDeg} deg')
+            print(f'AtmoRandomPhase: airmass is: {self.airmass}')
         else:
             self.airmass = 1.0
 
@@ -74,6 +74,8 @@ class AtmoCube(BaseProcessingObj):
         layer = Layer(self.pixel_pupil, self.pixel_pupil, pixel_pitch, 0, precision=self.precision, target_device_idx=self.target_device_idx)
         self.layer_list.append(layer)
         
+        print('self.source_dict.items()',self.source_dict.items())
+
         for name, source in source_dict.items():
             self.add_source(name, source)
             self.outputs[name] = self.pupil_dict[name]
@@ -98,7 +100,7 @@ class AtmoCube(BaseProcessingObj):
     def compute(self):
 
         # Seed
-        seed = self.seed + self.xp.arange(1)
+        seed = np.array([self.seed])
 
         # Square phasescreens
         square_phasescreens = phasescreens_manager(np.array([self.L0]), self.pixel_square_phasescreens,
@@ -106,10 +108,16 @@ class AtmoCube(BaseProcessingObj):
                                                     seed=seed, precision=self.precision,
                                                     verbose=self.verbose)
 
+        # number of slices to be cut from the 2D array
         num_slices = (self.pixel_square_phasescreens // self.pixel_pupil)
 
-        temp_screen = square_phasescreens[0][0:num_slices*self.pixel_pupil,0:num_slices*self.pixel_pupil].reshape(num_slices**2, self.pixel_pupil, self.pixel_pupil)
-        # Convert to nm
+        # it cuts the array to have dimensions multiple of pixel_pupil
+        input_array = square_phasescreens[0][0:num_slices*self.pixel_pupil,0:num_slices*self.pixel_pupil]
+
+        # it makes a 3D array stacking neighbouring squares of the 2D array
+        temp_screen = input_array.reshape(num_slices, self.pixel_pupil,num_slices, self.pixel_pupil).swapaxes(1, 2).reshape(-1, self.pixel_pupil, self.pixel_pupil)
+
+        # phase in rad
         temp_screen *= self.wavelengthInNm / (2 * np.pi)
 
         temp_screen = self.xp.array(temp_screen, dtype=self.dtype)
@@ -124,17 +132,20 @@ class AtmoCube(BaseProcessingObj):
         r0wavelength = r0 * (self.wavelengthInNm / 500.0)**(6./5.)
         scale_coeff = (self.pixel_pitch / r0wavelength)**(5./6.) # if seeing > 0 else 0.0
 
-        new_position = self.last_position + 1
-        if new_position > self.phasescreens.shape[0]:
+        new_position = self.last_position
+        if new_position+1 > self.phasescreens.shape[0]:
+            self.seed += 1
             self.compute()
-        
+            new_position = 0
+        print('new_position',new_position)
+
         for name, source in self.source_dict.items():
             self.pupil_dict[name].phaseInNm = self.phasescreens[new_position,:,:] * scale_coeff
             self.update_ef = self.pupil_dict[name]
             self.update_ef.generation_time = self.current_time
         
         # Update position output
-        self.last_position = new_position
+        self.last_position = new_position + 1
         
     def save(self, filename):
         hdr = fits.Header()
