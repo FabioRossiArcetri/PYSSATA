@@ -31,6 +31,7 @@ class AtmoCube(BaseProcessingObj):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
         
         self.pupil_dict = {}
+        self.source_dict = {}
         self.last_position = 0
         self.seeing = 1
         self.airmass = 1
@@ -63,7 +64,7 @@ class AtmoCube(BaseProcessingObj):
             self.pixel_square_phasescreens = pixel_phasescreens
 
         # Error if phase-screens dimension is smaller than maximum layer dimension
-        if self.pixel_square_phasescreens < max(self.pixel_layer):
+        if self.pixel_square_phasescreens < self.pixel_layer:
             raise ValueError('Error: phase-screens dimension must be greater than layer dimension!')
         
         self.verbose = verbose if verbose is not None else False
@@ -90,21 +91,24 @@ class AtmoCube(BaseProcessingObj):
         self.compute()
 
     def add_source(self, name, source):
-        ef = ElectricField(self.pixel_pupil_size, self.pixel_pupil_size, self.pixel_pitch, target_device_idx=self.target_device_idx)
+        ef = ElectricField(self.pixel_pupil, self.pixel_pupil, self.pixel_pitch, target_device_idx=self.target_device_idx)
         ef.S0 = source.phot_density()
         self.pupil_dict[name] = ef
 
     def compute(self):
 
+        # Seed
+        seed = self.seed + self.xp.arange(1)
+
         # Square phasescreens
-        square_phasescreens = phasescreens_manager(self.L0, self.pixel_square_phasescreens,
+        square_phasescreens = phasescreens_manager(np.array([self.L0]), self.pixel_square_phasescreens,
                                                     self.pixel_pitch, self.data_dir,
                                                     seed=seed, precision=self.precision,
                                                     verbose=self.verbose)
 
-        num_slices = (self.pixel_square_phasescreens // self.pixel_pupil) * (self.pixel_square_phasescreens // self.pixel_pupil)
+        num_slices = (self.pixel_square_phasescreens // self.pixel_pupil)
 
-        temp_screen = square_phasescreens.reshape(num_slices, self.pixel_pupil, self.pixel_pupil)
+        temp_screen = square_phasescreens[0][0:num_slices*self.pixel_pupil,0:num_slices*self.pixel_pupil].reshape(num_slices**2, self.pixel_pupil, self.pixel_pupil)
         # Convert to nm
         temp_screen *= self.wavelengthInNm / (2 * np.pi)
 
@@ -114,13 +118,13 @@ class AtmoCube(BaseProcessingObj):
 
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
-        self.delta_time = self.t_to_seconds(self.current_time - self.last_t) + self.extra_delta_time        
     
     def trigger_code(self):
         r0 = 0.9759 * 0.5 / (self.local_inputs['seeing'].value * 4.848) * self.airmass**(-3./5.) # if seeing > 0 else 0.0
         r0wavelength = r0 * (self.wavelengthInNm / 500.0)**(6./5.)
         scale_coeff = (self.pixel_pitch / r0wavelength)**(5./6.) # if seeing > 0 else 0.0
-        
+
+        new_position = self.last_position + 1
         if new_position > self.phasescreens.shape[0]:
             self.compute()
         
