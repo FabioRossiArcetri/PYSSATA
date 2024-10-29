@@ -74,8 +74,6 @@ class AtmoRandomPhase(BaseProcessingObj):
         layer = Layer(self.pixel_pupil, self.pixel_pupil, pixel_pitch, 0, precision=self.precision, target_device_idx=self.target_device_idx)
         self.layer_list.append(layer)
         
-        print('self.source_dict.items()',self.source_dict.items())
-
         for name, source in source_dict.items():
             self.add_source(name, source)
             self.outputs[name] = self.pupil_dict[name]
@@ -137,7 +135,6 @@ class AtmoRandomPhase(BaseProcessingObj):
             self.seed += 1
             self.compute()
             new_position = 0
-        print('new_position',new_position)
 
         for name, source in self.source_dict.items():
             self.pupil_dict[name].phaseInNm = self.phasescreens[new_position,:,:] * scale_coeff
