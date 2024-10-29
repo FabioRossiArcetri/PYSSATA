@@ -4,10 +4,10 @@ from pyssata import xp
 from astropy.io import fits
 
 from pyssata.base_processing_obj import BaseProcessingObj
+from pyssata.data_objects.ef import ElectricField
 from pyssata.base_value import BaseValue
 from pyssata.base_list import BaseList
 from pyssata.data_objects.layer import Layer
-from pyssata.lib.cv_coord import cv_coord
 from pyssata.lib.phasescreen_manager import phasescreens_manager
 from pyssata.connections import InputValue
 from pyssata import cpuArray
@@ -67,10 +67,6 @@ class AtmoCube(BaseProcessingObj):
             raise ValueError('Error: phase-screens dimension must be greater than layer dimension!')
         
         self.verbose = verbose if verbose is not None else False
-
-        # Use a specific user-defined phase screen if provided
-        if user_defined_phasescreen is not None:
-            self.user_defined_phasescreen = user_defined_phasescreen
         
         # Initialize layer list with correct heights
         self.layer_list = BaseList(target_device_idx=self.target_device_idx)
