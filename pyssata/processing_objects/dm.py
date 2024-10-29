@@ -1,4 +1,3 @@
-import numpy as np
 from pyssata.base_value import BaseValue
 from pyssata.connections import InputValue
 
@@ -51,7 +50,6 @@ class DM(BaseProcessingObj):
         self.sign = sign
         self.inputs['in_command'] = InputValue(type=BaseValue)
         self.outputs['out_layer'] = self.layer
-        self.temp_matrix = self.xp.zeros(self.layer.size, dtype=self.dtype)
 
     def trigger_code(self):
         commands = self.local_inputs['in_command'].value
@@ -60,8 +58,7 @@ class DM(BaseProcessingObj):
         #    if len(commands) > len(self.if_commands):
         #        raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self.if_commands)})")
         self.if_commands[:len(commands)] = self.sign * commands
-        self.temp_matrix[self._ifunc.idx_inf_func] = self.xp.dot(self.if_commands, self._ifunc.ptr_ifunc)
-        self.layer.phaseInNm = self.temp_matrix
+        self.layer.phaseInNm[self._ifunc.idx_inf_func] = self.xp.dot(self.if_commands, self._ifunc.ptr_ifunc)
         self.layer.generation_time = self.current_time
     
     # Getters and Setters for the attributes
@@ -80,30 +77,6 @@ class DM(BaseProcessingObj):
     @property
     def size(self):
         return self.layer.size
-
-    @property
-    def shift_xy_in_pixel(self):
-        return self.layer.shift_xy_in_pixel
-
-    @shift_xy_in_pixel.setter
-    def shift_xy_in_pixel(self, value):
-        self.layer.shift_xy_in_pixel = value
-
-    @property
-    def rot_in_deg(self):
-        return self.layer.rot_in_deg
-
-    @rot_in_deg.setter
-    def rot_in_deg(self, value):
-        self.layer.rot_in_deg = value
-
-    @property
-    def magnification(self):
-        return self.layer.magnification
-
-    @magnification.setter
-    def magnification(self, value):
-        self.layer.magnification = value
 
     def run_check(self, time_step, errmsg=""):
         commands_input = self.inputs['in_command'].get(self.target_device_idx)

@@ -271,7 +271,7 @@ class CCD(BaseProcessingObj):
             ccd_frame = ccd_frame * self._binning ** 2 * (tot_ccd_frame / self.xp.sum(ccd_frame))
             self._pixels.pixels = ccd_frame
         else:
-            self._pixels.pixels = self._integrated_i.i.copy()
+            self._pixels.pixels = ccd_frame
 
     def apply_qe(self):
         if self._qe != 1:

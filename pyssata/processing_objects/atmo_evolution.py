@@ -1,5 +1,5 @@
 import numpy as np
-from pyssata import xp
+from pyssata import show_in_profiler
 
 from astropy.io import fits
 
@@ -233,20 +233,24 @@ class AtmoEvolution(BaseProcessingObj):
         super().prepare_trigger(t)
         self.delta_time = self.t_to_seconds(self.current_time - self.last_t) + self.extra_delta_time        
     
+    @show_in_profiler('atmo_evolution.trigger_code')
     def trigger_code(self):
         # if len(self.phasescreens) != len(wind_speed) or len(self.phasescreens) != len(wind_direction):
         #     raise ValueError('Error: number of elements of wind speed and/or direction does not match the number of phasescreens')
-        r0 = 0.9759 * 0.5 / (self.local_inputs['seeing'].value * 4.848) * self.airmass**(-3./5.) # if seeing > 0 else 0.0
+        seeing = cpuArray(self.local_inputs['seeing'].value)
+        wind_speed = cpuArray(self.local_inputs['wind_speed'].value)
+        wind_direction = cpuArray(self.local_inputs['wind_direction'].value)
+        r0 = 0.9759 * 0.5 / (seeing * 4.848) * self.airmass**(-3./5.) # if seeing > 0 else 0.0
         r0wavelength = r0 * (self.wavelengthInNm / 500.0)**(6./5.)
         scale_coeff = (self.pixel_pitch / r0wavelength)**(5./6.) # if seeing > 0 else 0.0
         # Compute the delta position in pixels
-        delta_position = self.local_inputs['wind_speed'].value * self.delta_time / self.pixel_pitch  # [pixel]
-        new_position = self.last_position + cpuArray(delta_position)
+        delta_position =  wind_speed * self.delta_time / self.pixel_pitch  # [pixel]
+        new_position = self.last_position + delta_position
         # Get quotient and remainder
         new_position_quo = np.floor(new_position).astype(np.int64)
         new_position_rem = new_position - new_position_quo
-        wdf, wdi = np.modf(self.local_inputs['wind_direction'].value/90.0)
-        wdf_full, wdi_full = np.modf(self.local_inputs['wind_direction'].value)
+        wdf, wdi = np.modf(wind_direction/90.0)
+        wdf_full, wdi_full = np.modf(wind_direction)
         # Check if we need to cycle the screens
         # print(ii, new_position[ii], self.pixel_layer[ii], p.shape[1]) # Verbose?
         if self.cycle_screens:

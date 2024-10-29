@@ -1,5 +1,3 @@
-from pyssata.base_list import BaseList
-
 
 class InputValue():
     def __init__(self, type):

@@ -74,8 +74,8 @@ def toccd_gpu(a, newshape, set_total=None):
     iny, inx = a.shape
     outy, outx = newshape
 
-    mcmx = lcm(inx, outx);
-    mcmy = lcm(iny, outy);
+    mcmx = lcm(inx, outx)
+    mcmy = lcm(iny, outy)
 
     dx_in = int(mcmx / inx)
     dy_in = int(mcmy / iny)

@@ -34,6 +34,7 @@ class FuncGenerator(BaseProcessingObj):
         self.offset = self.xp.array(offset, dtype=self.dtype) if offset is not None else 0.0
         self.vect_amplitude = self.xp.array(vect_amplitude, dtype=self.dtype) if vect_amplitude is not None else 0.0
         self.output = BaseValue(target_device_idx=target_device_idx, value=self.xp.array(0))
+        self.vib = None
 
         if seed is not None:
             self.seed = seed
@@ -88,24 +89,26 @@ class FuncGenerator(BaseProcessingObj):
 
         self.nmodes = nmodes
         self.outputs['output'] = self.output
+        self.output_value = None
 
     def trigger_code(self):
         if self.type == 'SIN':
-            s = self.amp * self.xp.sin(self.freq*2 * self.xp.pi*self.current_time_seconds + self.offset) + self.constant
+            self.output_value = self.amp * self.xp.sin(self.freq*2 * self.xp.pi*self.current_time_seconds + self.offset) + self.constant
 
         elif self.type == 'LINEAR':
-            s = self.slope * self.current_time_seconds + self.constant
+            self.output_value = self.slope * self.current_time_seconds + self.constant
 
         elif self.type == 'RANDOM':
-            s = self.xp.random.normal(size=len(self.amp)) * self.amp + self.constant
+            self.output_value = self.xp.random.normal(size=len(self.amp)) * self.amp + self.constant
 
         elif self.type in ['VIB_HIST', 'VIB_PSD', 'PUSH', 'PUSHPULL', 'TIME_HIST']:
-            s = self.get_time_hist_at_current_time()
+            self.output_value = self.get_time_hist_at_current_time()
 
         else:
             raise ValueError(f'Unknown function generator type: {self.type}')
 
-        self.output.value = s
+    def post_trigger(self):
+        self.output.value = self.output_value
         self.output.generation_time = self.current_time
 
     def get_time_hist_at_current_time(self):
@@ -114,11 +117,13 @@ class FuncGenerator(BaseProcessingObj):
         return self.xp.array(self.time_hist[i])
 
     def run_check(self, time_step, errmsg=""):
-        if hasattr(self, '_vib') and self.vib:
+        if self.vib:
             self.vib.set_niters(self.loop_niters + 1)
             self.vib.set_samp_freq(1.0 / self.t_to_self.current_time_seconds(self.loop_dt))
             self.vib.compute()
             self.time_hist = self.vib.get_time_hist()
 
+        if self.type in ['SIN', 'LINEAR', 'RANDOM']:
+            self.build_stream()
         return True
 

@@ -137,7 +137,6 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
                 self.cuda_graph.launch(stream=self.stream)
             else:
                 self.trigger_code()
-            self.post_trigger()
             self.ready = False
                     
     @property

@@ -5,9 +5,9 @@ from pyssata.data_objects.ef import ElectricField
 from pyssata.connections import InputList
 from pyssata.data_objects.layer import Layer
 from pyssata import cp, fuse
+from pyssata import show_in_profiler
 
 import numpy as np
-import warnings
 
 sec2rad = 4.848e-6
 degree2rad = np.pi / 180.
@@ -89,6 +89,7 @@ class AtmoPropagation(BaseProcessingObj):
                 
                 self.propagators.append(H)
 
+    @show_in_profiler('atmo_propagation.trigger_code')
     def trigger_code(self):
         #if self.doFresnel:
         #    self.doFresnel_setup()
