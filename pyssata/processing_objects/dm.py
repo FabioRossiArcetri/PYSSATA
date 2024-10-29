@@ -69,15 +69,7 @@ class DM(BaseProcessingObj):
     @ifunc.setter
     def ifunc(self, value):
         self._ifunc.influence_function = value
-
-    @property
-    def out_layer(self):
-        return self.layer
-
-    @property
-    def size(self):
-        return self.layer.size
-
+    
     def run_check(self, time_step, errmsg=""):
         commands_input = self.inputs['in_command'].get(self.target_device_idx)
         if commands_input is None:

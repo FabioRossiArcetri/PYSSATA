@@ -179,8 +179,9 @@ class AtmoPropagation(BaseProcessingObj):
             self.LL.append( (self.xp.arange(self.layer_sizes[i][0]), self.xp.arange(self.layer_sizes[i][1])) )
 
         self.map_streams = []
-        for i in range(len(self.layer_list)*len(self.source_dict)):
-            self.map_streams.append(cp.cuda.stream.Stream(non_blocking=True))
+        if self.target_device_idx >= 0:            
+            for i in range(len(self.layer_list)*len(self.source_dict)):
+                self.map_streams.append(cp.cuda.stream.Stream(non_blocking=True))
 
         errmsg = ''
         if not (len(self.source_dict) > 0):

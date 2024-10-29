@@ -186,8 +186,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         hdr = fits.Header()
         hdr['VERBOSE'] = self._verbose
         hdr['LOOP_DT'] = self._loop_dt
-        hdr['LOOP_NITERS'] = self._loop_niters
-        super().save(filename)
+        hdr['LOOP_NITERS'] = self._loop_niters        
         with fits.open(filename, mode='update') as hdul:
             hdr = hdul[0].header
             hdr['VERBOSE'] = self._verbose
@@ -195,8 +194,7 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
             hdr['LOOP_NITERS'] = self._loop_niters
             hdul.flush()
 
-    def read(self, filename):
-        super().read(filename)
+    def read(self, filename):        
         with fits.open(filename) as hdul:
             hdr = hdul[0].header
             self._verbose = hdr.get('VERBOSE', 0)

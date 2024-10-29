@@ -5,7 +5,7 @@ main:
   store_dir:         './output'             # Data result directory: 'store_dir'/TN/
   pixel_pupil:       160                    # Linear dimension of pupil phase array
   pixel_pitch:       0.05                   # [m] Pitch of the pupil phase array
-  total_time:        0.105                  # [s] Total simulation running time
+  total_time:        0.305                  # [s] Total simulation running time
   time_step:         0.001                  # [s] Simulation time step
   store:                                   # Dict of data products to store, 'name': 'output'
     sr: 'psf.out_sr'
