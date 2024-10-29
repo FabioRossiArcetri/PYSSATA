@@ -91,6 +91,19 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
                         self.last_seen[input_name].append(tt.generation_time)
 
     def trigger_code(self):
+        '''
+        Any code implemented by derived classed must:
+        1) only perform GPU operations using the xp module
+           on arrays allocated with self.xp
+        2) avoid any explicity numpy or normal python operation.
+        3) NOT use any value in variables that are reallocated by prepare_trigger() or post_trigger(),
+           and in general avoid any value defined outside this class (like object inputs)
+        
+        because if stream capture is used, a CUDA graph will be generated that will skip
+        over any non-GPU operation and re-use GPU memory addresses of its first run.
+        
+        Defining local variables inside this function is OK, they will persist in GPU memory.
+        '''
         pass
 
     def post_trigger(self):
