@@ -123,7 +123,8 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
     def check_ready(self, t):
         self.current_time = t
         if self.checkInputTimes():
-            self._target_device.use()
+            if self.target_device_idx>=0:
+                self._target_device.use()
             self.prepare_trigger(t)
             self.ready = True
         else:

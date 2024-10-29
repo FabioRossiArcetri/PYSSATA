@@ -89,12 +89,12 @@ def init(device_idx=-1, precision=0):
     complex_dtype = complex_dtype_list[global_precision]
 
 # should be used as less as a possible and prefarably outside time critical computations
-def cpuArray(v):    
-    if isinstance(v, (np.ndarray, np.float64, np.int64, np.float32, type(None))):
-        return v
-    else:
+def cpuArray(v):
+    if cp and isinstance(v, cp.ndarray):
         # which one is better, xp.asnumpy(v) or v.get() ? almost the same but asnumpy is more general
-        return xp.asnumpy(v)
+        return cp.asnumpy(v)
+    else:
+        return np.array(v)
 
 
 def show_in_profiler(message=None, color_id=None, argb_color=None, sync=False):
