@@ -116,21 +116,24 @@ class PyrSlopec(Slopec):
         # Compute total intensity
         self.total_intensity = self.xp.sum(self.flat_pixels[self.pup_idx])
 
+        # Use 1-length array to allow clamp() on both GPU arrays and CPU scalars
+        inv_factor = self.xp.zeros(1, dtype=self.dtype)
+
         if self.slopes_from_intensity:
-            inv_factor = self.total_intensity / (4 * self.n_subap)
-            factor = 1.0 / inv_factor
+            inv_factor[0] = self.total_intensity / (4 * self.n_subap)
+            factor = 1.0 / inv_factor[0]
             self.sx = factor * self.xp.concatenate([A, B])
             self.sy = factor * self.xp.concatenate([C, D])
         else:
             if self.norm_factor is not None:
-                inv_factor = self.norm_factor
-                factor = 1.0 / inv_factor
+                inv_factor[0] = self.norm_factor
+                factor = 1.0 / inv_factor[0]
             elif not self.shlike:
-                inv_factor = self.total_intensity /  self.n_subap
+                inv_factor[0] = self.total_intensity /  self.n_subap
                 factor = 1.0 / inv_factor
             else:
-                inv_factor = self.xp.sum(self.flat_pixels[self.pup_idx])
-                factor = 1.0 / inv_factor
+                inv_factor[0] = self.xp.sum(self.flat_pixels[self.pup_idx])
+                factor = 1.0 / inv_factor[0]
 
             # self.sx = (A+B-C-D).astype(self.dtype) * factor
             # self.sy = (B+C-A-D).astype(self.dtype) * factor
@@ -138,8 +141,8 @@ class PyrSlopec(Slopec):
             self.sy = (B+C-A-D) * factor
 
         clamp_generic_more(0, 1, inv_factor, xp=self.xp)
-        self.sx *= inv_factor
-        self.sy *= inv_factor
+        self.sx *= inv_factor[0]
+        self.sy *= inv_factor[0]
 
         self.slopes.xslopes = self.sx
         self.slopes.yslopes = self.sy 

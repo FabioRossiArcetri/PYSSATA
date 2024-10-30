@@ -1,0 +1,39 @@
+---
+
+main:
+  root_dir:          './calib/SCAO'         # Root directory for calibration manager
+  store_dir:         './output'             # Data result directory: 'store_dir'/TN/
+  pixel_pupil:       160                    # Linear dimension of pupil phase array
+  pixel_pitch:       0.05                   # [m] Pitch of the pupil phase array
+  total_time:        1.0                  # [s] Total simulation running time
+  time_step:         0.001                  # [s] Simulation time step
+
+
+seeing:
+  class:             'FuncGenerator'
+  constant:          0.8                  # ["] seeing value
+  func_type:         'SIN'                 # TODO necessary for factory.py line 217
+
+
+on_axis_source:
+  class:             'Source'
+  polar_coordinate:  [0.0, 0.0]           # [arcsec, degrees] source polar coordinates
+  magnitude:         8                    # source magnitude
+  wavelengthInNm:    750                   # [nm] wavelength
+
+
+atmo:
+  class:                'AtmoRandomPhase'
+  L0:                   40                   # [m] Outer scale
+  source_dict_ref:      ['on_axis_source']
+  inputs:
+    seeing: 'seeing.output'
+
+
+ph_disp:
+  class:            'PhaseDisplay'
+  inputs:
+    phase:       "atmo.on_axis_source"
+  window:           12
+  title:            'PUPIL PHASE'
+  disp_factor:      2

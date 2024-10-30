@@ -1,12 +1,11 @@
 from astropy.io import fits
 
 from pyssata.base_time_obj import BaseTimeObj
-from pyssata.base_parameter_obj import BaseParameterObj
 from pyssata import default_target_device, cp
 from pyssata.connections import InputValue, InputList
 from contextlib import nullcontext
 
-class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
+class BaseProcessingObj(BaseTimeObj):
     def __init__(self, target_device_idx=None, precision=None):
         """
         Initialize the base processing object.
@@ -30,8 +29,6 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         self.rotate = rotate        
         self.RegularGridInterpolator = RegularGridInterpolator
         self._get_fft_plan = get_fft_plan
-
-        BaseParameterObj.__init__(self)
 
         self.current_time = 0
         self.current_time_seconds = 0
@@ -91,6 +88,19 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
                         self.last_seen[input_name].append(tt.generation_time)
 
     def trigger_code(self):
+        '''
+        Any code implemented by derived classed must:
+        1) only perform GPU operations using the xp module
+           on arrays allocated with self.xp
+        2) avoid any explicity numpy or normal python operation.
+        3) NOT use any value in variables that are reallocated by prepare_trigger() or post_trigger(),
+           and in general avoid any value defined outside this class (like object inputs)
+        
+        because if stream capture is used, a CUDA graph will be generated that will skip
+        over any non-GPU operation and re-use GPU memory addresses of its first run.
+        
+        Defining local variables inside this function is OK, they will persist in GPU memory.
+        '''
         pass
 
     def post_trigger(self):
@@ -123,7 +133,8 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
     def check_ready(self, t):
         self.current_time = t
         if self.checkInputTimes():
-            self._target_device.use()
+            if self.target_device_idx>=0:
+                self._target_device.use()
             self.prepare_trigger(t)
             self.ready = True
         else:

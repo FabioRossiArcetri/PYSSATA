@@ -4,7 +4,6 @@ from pyssata.connections import InputValue
 from pyssata.data_objects.intmat import Intmat
 from pyssata.data_objects.recmat import Recmat
 from pyssata.data_objects.slopes import Slopes
-from pyssata.processing_objects.cheat import Cheat
 
     
 class Modalrec(BaseProcessingObj):
@@ -111,8 +110,6 @@ class Modalrec(BaseProcessingObj):
     #     self._slopes = value
     #     if isinstance(value, Slopes):
     #         size = value.size
-    #     elif isinstance(value, (BaseValue, Cheat)):
-    #         size = len(value.value)
     #     if self._polc:
     #         self._pseudo_ol_slopes = Slopes(size)
 
@@ -229,8 +226,6 @@ class Modalrec(BaseProcessingObj):
 
         if isinstance(slopes, Slopes):
             self._pseudo_ol_slopes.slopes = slopes.slopes
-        elif isinstance(slopes, (BaseValue, Cheat)):
-            self._pseudo_ol_slopes.slopes = slopes.value
 
         comm = []
         for control in self._control_list:
@@ -255,11 +250,7 @@ class Modalrec(BaseProcessingObj):
                 slope_ptr = self._slopes.ptr_value
                 if self._verbose:
                     print(f"modalrec.compute_modes base_value RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
-            elif isinstance(self._slopes, Cheat):
-                slopes = self._slopes.value
-                slope_ptr = slopes
-                if self._verbose:
-                    print(f"modalrec.compute_modes value from cheat RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
+
 
         if intmat:
             m = slope_ptr @ intmat
