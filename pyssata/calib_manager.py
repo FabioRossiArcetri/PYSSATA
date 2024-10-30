@@ -2,11 +2,10 @@
 import os
 from astropy.io import fits
 
-from pyssata.base_parameter_obj import BaseParameterObj
 from pyssata.data_objects.pupdata import PupData
 from pyssata.data_objects.recmat import Recmat
 
-class CalibManager(BaseParameterObj):
+class CalibManager():
     def __init__(self, root_dir):
         """
         Initialize the calibration manager object.

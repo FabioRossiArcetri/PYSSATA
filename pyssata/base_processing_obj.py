@@ -1,12 +1,11 @@
 from astropy.io import fits
 
 from pyssata.base_time_obj import BaseTimeObj
-from pyssata.base_parameter_obj import BaseParameterObj
 from pyssata import default_target_device, cp
 from pyssata.connections import InputValue, InputList
 from contextlib import nullcontext
 
-class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
+class BaseProcessingObj(BaseTimeObj):
     def __init__(self, target_device_idx=None, precision=None):
         """
         Initialize the base processing object.
@@ -30,8 +29,6 @@ class BaseProcessingObj(BaseTimeObj, BaseParameterObj):
         self.rotate = rotate        
         self.RegularGridInterpolator = RegularGridInterpolator
         self._get_fft_plan = get_fft_plan
-
-        BaseParameterObj.__init__(self)
 
         self.current_time = 0
         self.current_time_seconds = 0

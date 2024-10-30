@@ -2,14 +2,13 @@ import numpy as np
 
 from pyssata import xp, cpuArray
 
-from pyssata.base_parameter_obj import BaseParameterObj
 from pyssata.base_data_obj import BaseDataObj
 from pyssata.lib.n_phot import n_phot
 
 sec2rad = 4.848e-6
 degree2rad = np.pi / 180.
 
-class Source(BaseDataObj, BaseParameterObj):
+class Source(BaseDataObj):
     '''source'''
 
     def __init__(self,
