@@ -16,6 +16,7 @@ class CalibManager():
         super().__init__()
         self._subdirs = {
             'phasescreen': 'phasescreens/',
+            'AtmoRandomPhase': 'phasescreens/',
             'AtmoEvolution': 'phasescreens/',
             'slopenull': 'slopenulls/',
             'sn': 'slopenulls/',
