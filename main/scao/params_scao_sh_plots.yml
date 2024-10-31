@@ -5,11 +5,11 @@ main:
   store_dir:         './output'             # Data result directory: 'store_dir'/TN/
   pixel_pupil:       160                    # Linear dimension of pupil phase array
   pixel_pitch:       0.05                   # [m] Pitch of the pupil phase array
-  total_time:        0.105                  # [s] Total simulation running time
+  total_time:        0.050                  # [s] Total simulation running time
   time_step:         0.001                  # [s] Simulation time step
   store:                                   # Dict of data products to store, 'name': 'output'
     sr: 'psf.out_sr'
-    res_ef: 'prop.on_axis_source'
+    res_ef: 'prop.out_on_axis_source_ef'
 
 
 seeing:
@@ -67,7 +67,7 @@ sh:
   subap_on_diameter: 20                      # Number of subapertures in diameter
   wavelengthInNm:    750                     # [nm] Pyramid wavelength
   inputs:
-    in_ef: 'prop.on_axis_source'
+    in_ef: 'prop.out_on_axis_source_ef'
 
 
 detector:
@@ -128,7 +128,7 @@ psf:
   nd:                8                    # padding coefficient for PSF computation
   start_time:        0.05                # PSF integration start time
   inputs:
-      in_ef:  'prop.on_axis_source'
+      in_ef:  'prop.out_on_axis_source_ef'
 
 sc_disp:
   class:            'SlopecDisplay'
@@ -147,7 +147,7 @@ sr_disp:
 ph_disp:
   class:            'PhaseDisplay'
   inputs:
-    phase:       "prop.on_axis_source"
+    phase:       "prop.out_on_axis_source_ef"
   window:           12
   title:            'PUPIL PHASE'
   disp_factor:      2

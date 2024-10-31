@@ -38,7 +38,6 @@ class AtmoPropagation(BaseProcessingObj):
         self.pixel_pupil_size = pixel_pupil
         self.pixel_pitch = pixel_pitch        
         self.source_dict = source_dict
-        self.pupil_dict = {}
         self.layer_list = []
         self.shiftXY_list = []
         self.rotAnglePhInDeg_list = []
@@ -52,16 +51,12 @@ class AtmoPropagation(BaseProcessingObj):
         self.propagators = None
 
         for name, source in source_dict.items():
-            self.add_source(name, source)
-            self.outputs[name] = self.pupil_dict[name]
+            ef = ElectricField(self.pixel_pupil_size, self.pixel_pupil_size, self.pixel_pitch, target_device_idx=self.target_device_idx)
+            ef.S0 = source.phot_density()
+            self.outputs['out_'+name+'_ef'] = ef            
             
         self.inputs['layer_list'] = InputList(type=Layer)
         self.xx, self.yy = self.xp.meshgrid(self.xp.arange(self.pixel_pupil_size), self.xp.arange(self.pixel_pupil_size))
-
-    def add_source(self, name, source):
-        ef = ElectricField(self.pixel_pupil_size, self.pixel_pupil_size, self.pixel_pitch, target_device_idx=self.target_device_idx)
-        ef.S0 = source.phot_density()
-        self.pupil_dict[name] = ef
 
 
     def doFresnel_setup(self):
@@ -100,7 +95,7 @@ class AtmoPropagation(BaseProcessingObj):
             j+=1
             r_angle = source.polar_coordinate_t[0]
             phi_angle = source.polar_coordinate_t[1]
-            self.update_ef = self.pupil_dict[name]
+            self.update_ef = self.outputs['out_'+name+'_ef']
             self.update_ef.reset()
             for i, layer in enumerate(self.layer_list):
 #                if self.propagators:
@@ -156,7 +151,7 @@ class AtmoPropagation(BaseProcessingObj):
 #                if self.doFresnel:
 #                    self.update_ef.physical_prop(self.wavelengthInNm, propagator, temp_array=None)
         for name, source in self.source_dict.items():
-            self.update_ef = self.pupil_dict[name]
+            self.update_ef = self.outputs['out_'+name+'_ef']
             self.update_ef.generation_time = self.current_time
 
 

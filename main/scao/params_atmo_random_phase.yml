@@ -5,7 +5,7 @@ main:
   store_dir:         './output'             # Data result directory: 'store_dir'/TN/
   pixel_pupil:       120                    # Linear dimension of pupil phase array
   pixel_pitch:       0.05                   # [m] Pitch of the pupil phase array
-  total_time:        10.00                  # [s] Total simulation running time
+  total_time:        0.050                  # [s] Total simulation running time
   time_step:         0.001                  # [s] Simulation time step
   store:                                    # Dict of data products to store, 'name': 'output'
     atmo_phase: 'atmo.out_on_axis_source_ef'
@@ -75,7 +75,7 @@ detector:
 
 slopec:
   class:             'PyrSlopec'
-  pupdata_object:    'scao_pup'            # tag of the pyramid WFS pupils
+  pupdata_object:    'soul_pup'            # tag of the pyramid WFS pupils
   sn_object:         'scao_sn'             # tag of the slope reference vector
   inputs:
     in_pixels:        'detector.out_pixels'

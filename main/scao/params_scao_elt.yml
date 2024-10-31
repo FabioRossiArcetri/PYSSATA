@@ -5,11 +5,11 @@ main:
   store_dir:         './output'             # Data result directory: 'store_dir'/TN/
   pixel_pupil:       512                    # Linear dimension of pupil phase array
   pixel_pitch:       0.0762                 # [m] Pitch of the pupil phase array
-  total_time:        0.100                  # [s] Total simulation running time
+  total_time:        0.050                  # [s] Total simulation running time
   time_step:         0.001                  # [s] Simulation time step
   store:                                    # Dict of data products to store, 'name': 'output'
     sr: 'psf.out_sr'
-    res_ef: 'prop.on_axis_source'
+    res_ef: 'prop.out_on_axis_source_ef'
 
 
 seeing:
@@ -68,7 +68,7 @@ pyramid:
   output_resolution: 240                     # Output sampling [usually corresponding to CCD pixels]
   wavelengthInNm:    798                     # [nm] Pyramid wavelength
   inputs:
-    in_ef: 'prop.on_axis_source'
+    in_ef: 'prop.out_on_axis_source_ef'
 
 
 detector:
@@ -121,4 +121,4 @@ psf:
   nd:                3                    # padding coefficient for PSF computation
   start_time:        0.05                # PSF integration start time
   inputs:
-      in_ef:  'prop.on_axis_source'
+      in_ef:  'prop.out_on_axis_source_ef'
