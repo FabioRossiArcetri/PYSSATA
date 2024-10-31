@@ -1,9 +1,9 @@
-# PASSATA
-IDL AO end-to-end simulator
+# SPECULA
+Python AO end-to-end simulator
 
-PyrAmid Simulator Software for Adaptive opTics Arcetri (PASSATA) is an IDL based object oriented software developed
+SPECULA is a python based object oriented software developed
 in the Adaptive Optics group of the Arcetri observatory for Monte-Carlo end-to-end adaptive optics simulations.
-It can be accelerated with GPU-CUDA installing the dll https://github.com/ArcetriAdaptiveOptics/IdlTools/tree/main/GPU
+It can be accelerated with GPU-CUDA relying on CuPy.
 
 Directories:
 * calib: this directory contains functions/classes to make the calibration of an adaptive optics system
@@ -14,13 +14,13 @@ Directories:
 reconstruction on annular apertures", Journal of the Optical Society of America A, Vol. 13, Issue 4, pp. 862-867 (1996), https://doi.org/10.1364/JOSAA.13.000862
 * lib: this directory contains functions/procedure
 * main: this directory contains a few examples of main and parameters files to calibrate and run some adaptive optics systems
-* test: this directory contains a set of functions to test PASSATA using make_test.pro file
-* test_gpu: this directory contains a set of functions to test PASSATA with the GPU dll using make_test.pro file
+* test: this directory contains a set of functions to test SPECULA using make_test.pro file
+* test_gpu: this directory contains a set of functions to test SPECULA with the GPU dll using make_test.pro file
 
 Libraries required:
-* https://github.com/ArcetriAdaptiveOptics/IdlTools
-* https://github.com/wlandsman/IDLAstro
-* https://github.com/idl-coyote/coyote
+* 
+* 
+* 
 
 There is a help doc [help.pdf](help.pdf) for this software.
 
