@@ -5,9 +5,9 @@ from shutil import rmtree
 
 from setuptools import setup, Command
 
-NAME = 'pyssata'
+NAME = 'specula'
 DESCRIPTION = 'PYramid Simulator Software for Adaptive OpTics Arcetri'
-URL = 'https://github.com/FabioRossiArcetri/PYSSATA'
+URL = 'https://github.com/FabioRossiArcetri/SPECULA'
 EMAIL = 'fabio.rossi@inaf.it'
 AUTHOR = 'Fabio Rossi, Alfio Puglisi, Guid Agapito, Lorenzo Busoni, INAF Arcetri Adaptive Optics group'
 LICENSE = 'MIT'
@@ -70,9 +70,9 @@ setup(name=NAME,
       author=AUTHOR,
       license=LICENSE,
       keywords=KEYWORDS,
-      packages=['pyssata',
-                'pyssata.data_objects',
-                'pyssata.processing_objects',
+      packages=['specula',
+                'specula.data_objects',
+                'specula.processing_objects',
                 ],
       package_data={
       },

@@ -1,17 +1,17 @@
 
 
-import pyssata
-pyssata.init(1)
+import specula
+specula.init(1)
 
 import unittest
 import numpy as np
 
-from pyssata import xp
-from pyssata import cpuArray
+from specula import xp
+from specula import cpuArray
 
-from pyssata.data_objects.pixels import Pixels
-from pyssata.data_objects.pupdata import PupData
-from pyssata.processing_objects.pyr_slopec import PyrSlopec
+from specula.data_objects.pixels import Pixels
+from specula.data_objects.pupdata import PupData
+from specula.processing_objects.pyr_slopec import PyrSlopec
 
 
 class TestSlopec(unittest.TestCase):

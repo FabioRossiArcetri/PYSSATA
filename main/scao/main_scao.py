@@ -1,10 +1,10 @@
 import sys
 
-import pyssata
+import specula
 
-pyssata.init(device_idx=int(sys.argv[1]), precision=int(sys.argv[2]))
+specula.init(device_idx=int(sys.argv[1]), precision=int(sys.argv[2]))
 
-from pyssata.simul import Simul
+from specula.simul import Simul
 
 import cProfile
 from pstats import Stats
