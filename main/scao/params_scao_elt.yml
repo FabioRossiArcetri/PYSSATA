@@ -16,16 +16,19 @@ seeing:
   class:             'FuncGenerator'
   constant:          0.8                  # ["] seeing value
   func_type:         'SIN'                 # TODO necessary for factory.py line 217
+  outputs: ['output']
 
 
 wind_speed:
   class:             'FuncGenerator'
   constant:          [20.]                #,10.,20.,10.]      # [m/s] Wind speed value
+  outputs: ['output']
 
 
 wind_direction:
   class:             'FuncGenerator'
   constant:          [0.]#,270.,270.,90.]   # [degrees] Wind direction value
+  outputs: ['output']
 
 
 on_axis_source:
@@ -44,11 +47,12 @@ atmo:
   L0:                   40                   # [m] Outer scale
   heights:              [119.] #,837,3045,12780]), # [m] layer heights at 0 zenith angle
   Cn2:                  [0.70] #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
-  source_list_ref:      ['on_axis_source']
+  source_dict_ref:      ['on_axis_source']
   inputs:
     seeing: 'seeing.output'
     wind_speed: 'wind_speed.output'
     wind_direction: 'wind_direction.output'
+  outputs: ['layer_list']
 
 
 prop:
@@ -58,6 +62,8 @@ prop:
     layer_list: ['atmo.layer_list',
                   'pupilstop',
                   'dm.out_layer:-1']
+  outputs: ['out_on_axis_source_ef']
+
   
 pyramid:
   class:             'ModulatedPyramid'
@@ -69,6 +75,7 @@ pyramid:
   wavelengthInNm:    798                     # [nm] Pyramid wavelength
   inputs:
     in_ef: 'prop.out_on_axis_source_ef'
+  outputs:  ['out_i']
 
 
 detector:
@@ -82,6 +89,7 @@ detector:
   quantum_eff:       0.32                    # quantum efficiency * total transmission
   inputs:
     in_i: 'pyramid.out_i'
+  outputs:  ['out_pixels']
 
 
 slopec:
@@ -90,6 +98,7 @@ slopec:
   sn_object:         'hiresA_ps512p0.076_pyr90x90_wl798_fv2.1_ft3.0_ma4_bn1_th0.30a0.30b'             # tag of the slope reference vector
   inputs:
     in_pixels:        'detector.out_pixels'
+  outputs:  ['out_slopes', 'out_pupdata', 'total_counts', 'subap_counts']
 
 
 rec:
@@ -97,6 +106,7 @@ rec:
   recmat_object:      'hiresA_ps512p0.076_pyr90x90_wl798_fv2.1_ft3.0_ma4_bn1_th0.30a0.30b_mn4094'         # reconstruction matrix tag
   inputs:
     in_slopes:        'slopec.out_slopes'
+  outputs:  ['out_modes', 'out_pseudo_ol_modes', 'out_modes_first_step']
 
 
 control:
@@ -105,6 +115,7 @@ control:
   int_gain_data:    'g0.50_4094'
   inputs:
       delta_comm: 'rec.out_modes'     
+  outputs:  ['out_comm']
 
 
 dm:
@@ -113,7 +124,7 @@ dm:
   height:            0                      # DM height [m]
   inputs:
       in_command: 'control.out_comm'
-
+  outputs:  ['out_layer']
 
 psf:
   class:             'PSF'
@@ -122,3 +133,4 @@ psf:
   start_time:        0.05                # PSF integration start time
   inputs:
       in_ef:  'prop.out_on_axis_source_ef'
+  outputs:  ['out_psf', 'out_sr']

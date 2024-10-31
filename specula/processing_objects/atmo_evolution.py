@@ -13,7 +13,7 @@ from specula.connections import InputValue
 from specula import cpuArray
 
 class AtmoEvolution(BaseProcessingObj):
-    def __init__(self, L0, pixel_pitch, heights, Cn2, pixel_pupil, data_dir, source_list, wavelengthInNm: float=500.0,
+    def __init__(self, L0, pixel_pitch, heights, Cn2, pixel_pupil, data_dir, source_dict, wavelengthInNm: float=500.0,
                  zenithAngleInDeg=None, mcao_fov=None, pixel_phasescreens=None, seed: int=1, target_device_idx=None, precision=None,
                  verbose=None, user_defined_phasescreen: str='', force_mcao_fov=False, make_cycle=None,
                  fov_in_m=None, pupil_position=None):
@@ -58,7 +58,7 @@ class AtmoEvolution(BaseProcessingObj):
             alpha_fov = mcao_fov / 2.0
         else:
             alpha_fov = 0.0
-            for element in source_list:
+            for element in source_dict.values():
                 alpha_fov = max(alpha_fov, *abs(cv_coord(from_polar=[element.polar_coordinate[1], element.polar_coordinate[0]],
                                                        to_rect=True, degrees=True)))
             if mcao_fov is not None:
