@@ -4,10 +4,10 @@ class ShDisplay(BaseProcessingObj):
     '''
     TODO not yet working
     '''
-    def __init__(self, sh=None, pyr_style=False):
+    def __init__(self, window=26, sh=None, pyr_style=False):
         super().__init__('sh_display', 'SH display')
         self._wsize = [600, 600]
-        self._window = 21
+        self._window = window
         self._opened = False
         self._disp_factor = 0.0
         self._pyr_style = pyr_style

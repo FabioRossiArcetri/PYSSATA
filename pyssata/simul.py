@@ -320,5 +320,7 @@ class Simul():
         for obj in self.objs.values():
             obj.finalize()
 
+        store.finalize()
+
         # Alternative saving method:
         # tn = store.save_tracknum(dir=dir, params=params, nodlm=True, noolformat=True, compress=True, saveFloat=saveFloat)

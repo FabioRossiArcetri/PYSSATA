@@ -46,7 +46,7 @@ class FuncGenerator(BaseProcessingObj):
         elif self.type == 'LINEAR':
             self.slope = 0.0
 
-        elif self.type == 'RANDOM':
+        elif self.type == 'RANDOM' or self.type == 'RANDOM_UNIFORM':
             pass
 
         elif self.type == 'VIB_HIST':
@@ -91,15 +91,22 @@ class FuncGenerator(BaseProcessingObj):
         self.outputs['output'] = self.output
         self.output_value = None
 
+    def prepare_trigger(self, t):
+        super().prepare_trigger(t)
+
     def trigger_code(self):
         if self.type == 'SIN':
             self.output_value = self.amp * self.xp.sin(self.freq*2 * self.xp.pi*self.current_time_seconds + self.offset) + self.constant
-
         elif self.type == 'LINEAR':
             self.output_value = self.slope * self.current_time_seconds + self.constant
 
         elif self.type == 'RANDOM':
             self.output_value = self.xp.random.normal(size=len(self.amp)) * self.amp + self.constant
+
+        elif self.type == 'RANDOM_UNIFORM':
+            lowv = self.constant - self.amp/2
+            highv = self.constant + self.amp/2
+            self.output_value = self.xp.random.uniform(low=lowv, high=highv)
 
         elif self.type in ['VIB_HIST', 'VIB_PSD', 'PUSH', 'PUSHPULL', 'TIME_HIST']:
             self.output_value = self.get_time_hist_at_current_time()
@@ -123,7 +130,7 @@ class FuncGenerator(BaseProcessingObj):
             self.vib.compute()
             self.time_hist = self.vib.get_time_hist()
 
-        if self.type in ['SIN', 'LINEAR', 'RANDOM']:
-            self.build_stream()
+#        if self.type in ['SIN', 'LINEAR', 'RANDOM']:
+#            self.build_stream()
         return True
 

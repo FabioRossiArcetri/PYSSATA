@@ -11,7 +11,7 @@ from pyssata.connections import InputValue
 
 
 class PsfDisplay(BaseProcessingObj):
-    def __init__(self, disp_factor=1, wsize=[600, 600], window=23, title='PSF'):
+    def __init__(self, disp_factor=1, wsize=[600, 600], window=25, title='PSF'):
         super().__init__()
         self._psf = None
         self._wsize = wsize
