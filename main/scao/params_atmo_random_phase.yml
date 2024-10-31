@@ -5,7 +5,7 @@ main:
   store_dir:         './output'             # Data result directory: 'store_dir'/TN/
   pixel_pupil:       120                    # Linear dimension of pupil phase array
   pixel_pitch:       0.05                   # [m] Pitch of the pupil phase array
-  total_time:        10.00                  # [s] Total simulation running time
+  total_time:        0.050                  # [s] Total simulation running time
   time_step:         0.001                  # [s] Simulation time step
   store:                                    # Dict of data products to store, 'name': 'output'
     atmo_phase: 'atmo.out_on_axis_source_ef'
@@ -16,6 +16,7 @@ seeing:
   amp:               0.4                  # This 2 values result in a 
   constant:          0.3                  # range of [0.1, 0.5]
   func_type:         'RANDOM_UNIFORM'                 # TODO necessary for factory.py line 217
+  outputs: ['output']
 
 #sin_seeing:
 #  class:             'FuncGenerator'
@@ -41,13 +42,14 @@ atmo:
   inputs:
     seeing: 'seeing.output'
     pupilstop: 'pupilstop'
-  #outputs: ['out_on_axis_source_ef_ef']
+  outputs: ['out_on_axis_source_ef']
 
 modal_analysis:
   class:             'ModalAnalysis'
   ifunc_object:         'KLmatrix_KL_v10'
   inputs:
     in_ef: 'atmo.out_on_axis_source_ef'
+  outputs: ['out_modes']
 
 pyramid:
   class:             'ModulatedPyramid'
@@ -59,7 +61,7 @@ pyramid:
   wavelengthInNm:    750                     # [nm] Pyramid wavelength
   inputs:
     in_ef: 'atmo.out_on_axis_source_ef'
-  #outputs:  ['out_i']
+  outputs:  ['out_i']
 
 detector:
   class:             'CCD'
@@ -72,13 +74,15 @@ detector:
   quantum_eff:       0.32                    # quantum efficiency * total transmission
   inputs:
     in_i: 'pyramid.out_i'
+  outputs:  ['out_pixels']
 
 slopec:
   class:             'PyrSlopec'
-  pupdata_object:    'scao_pup'            # tag of the pyramid WFS pupils
+  pupdata_object:    'soul_pup'            # tag of the pyramid WFS pupils
   sn_object:         'scao_sn'             # tag of the slope reference vector
   inputs:
     in_pixels:        'detector.out_pixels'
+  outputs:  ['out_slopes', 'out_pupdata', 'total_counts', 'subap_counts']
 
 ph_disp:
   class:         'PhaseDisplay'

@@ -139,7 +139,7 @@ class Simul():
     def build_objects(self, params):
         main = params['main']
         cm = CalibManager(main['root_dir'])
-        skip_pars = 'class inputs'.split()
+        skip_pars = 'class inputs outputs'.split()
 
         for key, pars in params.items():
             if key == 'main':
@@ -159,23 +159,20 @@ class Simul():
             for name, value in pars.items():
                 if name in skip_pars:
                     continue
-
-                if name.endswith('_list_ref'):
-                    data = [self.output_ref(x) for x in value]
-                    pars2[name[:-4]] = data
-
+                
+                # dict_ref field contains a dictionary of names and associated data objects (defined in the same yml file)
                 elif name.endswith('_dict_ref'):
                     data = {x : self.output_ref(x) for x in value}
                     pars2[name[:-4]] = data
 
-                elif name.endswith('_ref'):
-                    data = self.output_ref(value)
-                    pars2[name[:-4]] = data
-
+                # data fields are read from a fits file
                 elif name.endswith('_data'):
                     data = cm.read_data(value)
                     pars2[name[:-5]] = data
 
+                # object fields are data objects which are loaded from a fits file
+                # the name of the object is the string preceeding th e_, 
+                # while its type is infered from the constructor of the current class                
                 elif name.endswith('_object'):
                     parname = name[:-7]
                     if parname in hints:
@@ -198,8 +195,15 @@ class Simul():
 
     def connect_objects(self, params):
         for dest_object, pars in params.items():
+
+            if 'outputs' in pars:
+                for output_name in pars['outputs']:
+                    if not output_name in self.objs[dest_object].outputs:
+                        raise ValueError(f'Object {dest_object} does does not have an output called {output_name}')
+
             if 'inputs' not in pars:
                 continue
+            
             for input_name, output_name in pars['inputs'].items():
                 if not input_name in self.objs[dest_object].inputs:
                     raise ValueError(f'Object {dest_object} does does not have an input called {input_name}')
