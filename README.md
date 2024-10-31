@@ -26,10 +26,10 @@ There is a help doc [help.pdf](help.pdf) for this software.
 
 The reference publication for this software is:
 
-Agapito, G.; Puglisi, A.; Esposito, S., “PASSATA: object oriented numerical simulation software for adaptive optics”, Proc. SPIE 9909, Adaptive Optics Systems V, (2016).
 
-ADS: http://adsabs.harvard.edu/abs/2016SPIE.9909E..7EA
 
-ARXIV: https://arxiv.org/abs/1607.07624
 
-SPIE: https://doi.org/10.1117/12.2233963
+
+
+
+
