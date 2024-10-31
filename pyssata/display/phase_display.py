@@ -11,7 +11,7 @@ from pyssata.data_objects.ef import ElectricField
 
 
 class PhaseDisplay(BaseProcessingObj):
-    def __init__(self, disp_factor=1, doImage=False, window=23, title='phase'):
+    def __init__(self, disp_factor=1, doImage=False, window=24, title='phase'):
         super().__init__()
 
         self._phase = None

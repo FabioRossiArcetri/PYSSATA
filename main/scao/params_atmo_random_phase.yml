@@ -3,24 +3,36 @@
 main:
   root_dir:          './calib/SCAO'         # Root directory for calibration manager
   store_dir:         './output'             # Data result directory: 'store_dir'/TN/
-  pixel_pupil:       160                    # Linear dimension of pupil phase array
+  pixel_pupil:       120                    # Linear dimension of pupil phase array
   pixel_pitch:       0.05                   # [m] Pitch of the pupil phase array
-  total_time:        1.0                  # [s] Total simulation running time
+  total_time:        10.00                  # [s] Total simulation running time
   time_step:         0.001                  # [s] Simulation time step
-
+  store:                                    # Dict of data products to store, 'name': 'output'
+    atmo_phase: 'atmo.out_on_axis_source_ef'
+    ccd_pixels: 'detector.out_pixels'
 
 seeing:
   class:             'FuncGenerator'
-  constant:          0.8                  # ["] seeing value
-  func_type:         'SIN'                 # TODO necessary for factory.py line 217
+  amp:               0.4                  # This 2 values result in a 
+  constant:          0.3                  # range of [0.1, 0.5]
+  func_type:         'RANDOM_UNIFORM'                 # TODO necessary for factory.py line 217
 
+#sin_seeing:
+#  class:             'FuncGenerator'
+#  amp:               0.8                  # This 2 values result in a 
+#  constant:          0.8                  # range of [0.4, 1.2]
+#  freq:              50
+#  offset:            0
+#  func_type:         'SIN'                # TODO necessary for factory.py line 217
 
 on_axis_source:
   class:             'Source'
   polar_coordinate:  [0.0, 0.0]           # [arcsec, degrees] source polar coordinates
   magnitude:         8                    # source magnitude
-  wavelengthInNm:    750                   # [nm] wavelength
+  wavelengthInNm:    750                  # [nm] wavelength
 
+pupilstop:                                # Default parameters (circular pupil)
+  class: 'Pupilstop'
 
 atmo:
   class:                'AtmoRandomPhase'
@@ -28,12 +40,69 @@ atmo:
   source_dict_ref:      ['on_axis_source']
   inputs:
     seeing: 'seeing.output'
+    pupilstop: 'pupilstop'
+  #outputs: ['out_on_axis_source_ef_ef']
 
+modal_analysis:
+  class:             'ModalAnalysis'
+  ifunc_object:         'KLmatrix_KL_v10'
+  inputs:
+    in_ef: 'atmo.out_on_axis_source_ef'
+
+pyramid:
+  class:             'ModulatedPyramid'
+  pup_diam:          40.                     # Pupil diameter in subaps.
+  pup_dist:          48.                     # Separation between pupil centers in subaps.
+  fov:               2.0                     # Requested field-of-view [arcsec]
+  mod_amp:           0.0                     # Modulation radius (in lambda/D units)
+  output_resolution: 120                     # Output sampling [usually corresponding to CCD pixels]
+  wavelengthInNm:    750                     # [nm] Pyramid wavelength
+  inputs:
+    in_ef: 'atmo.out_on_axis_source_ef'
+  #outputs:  ['out_i']
+
+detector:
+  class:             'CCD'
+  size:              [120,120]                 # Detector size in pixels
+  dt:                0.001                   # [s] Detector integration time
+  bandw:             300                     # [nm] Sensor bandwidth
+  photon_noise:      False                    # activate photon noise
+  readout_noise:     False                    # activate readout noise
+  readout_level:     1.0                     # readout noise in [e-/pix/frame]
+  quantum_eff:       0.32                    # quantum efficiency * total transmission
+  inputs:
+    in_i: 'pyramid.out_i'
+
+slopec:
+  class:             'PyrSlopec'
+  pupdata_object:    'scao_pup'            # tag of the pyramid WFS pupils
+  sn_object:         'scao_sn'             # tag of the slope reference vector
+  inputs:
+    in_pixels:        'detector.out_pixels'
 
 ph_disp:
-  class:            'PhaseDisplay'
+  class:         'PhaseDisplay'
   inputs:
-    phase:       "atmo.on_axis_source"
+    phase:       "atmo.out_on_axis_source_ef"
   window:           12
   title:            'PUPIL PHASE'
   disp_factor:      2
+
+
+test_disp:
+   class:            'ModesDisplay'
+   inputs:
+     modes:       "modal_analysis.out_modes"
+   window:           15
+   title:            'test'
+   disp_factor:      2
+
+sc_disp:
+   class:            'SlopecDisplay'
+   inputs:
+     slopes:       'slopec.out_slopes'
+     pupdata:      'slopec.out_pupdata'
+     pixels:       'detector.out_pixels'
+   window:           16
+   disp_factor:      4
+

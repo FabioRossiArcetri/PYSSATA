@@ -8,6 +8,7 @@ from pyssata.data_objects.ef import ElectricField
 from pyssata.base_value import BaseValue
 from pyssata.base_list import BaseList
 from pyssata.data_objects.layer import Layer
+from pyssata.data_objects.pupilstop import Pupilstop
 from pyssata.lib.phasescreen_manager import phasescreens_manager
 from pyssata.connections import InputValue
 from pyssata import cpuArray
@@ -29,8 +30,7 @@ class AtmoRandomPhase(BaseProcessingObj):
 
 
         super().__init__(target_device_idx=target_device_idx, precision=precision)
-        
-        self.pupil_dict = {}
+                
         self.source_dict = source_dict
         self.last_position = 0
         self.seeing = 1
@@ -75,11 +75,14 @@ class AtmoRandomPhase(BaseProcessingObj):
         self.layer_list.append(layer)
         
         for name, source in source_dict.items():
-            self.add_source(name, source)
-            self.outputs[name] = self.pupil_dict[name]
-        
+            ef = ElectricField(self.pixel_pupil, self.pixel_pupil, self.pixel_pitch, target_device_idx=self.target_device_idx)
+            ef.S0 = source.phot_density()
+            self.outputs['out_'+name+'_ef'] = ef
+
         if seed is not None:
             self.seed = seed
+
+        self.inputs['pupilstop'] = InputValue(type=Pupilstop)
     
     @property
     def seed(self):
@@ -90,10 +93,6 @@ class AtmoRandomPhase(BaseProcessingObj):
         self._seed = value
         self.compute()
 
-    def add_source(self, name, source):
-        ef = ElectricField(self.pixel_pupil, self.pixel_pupil, self.pixel_pitch, target_device_idx=self.target_device_idx)
-        ef.S0 = source.phot_density()
-        self.pupil_dict[name] = ef
 
     def compute(self):
 
@@ -124,6 +123,7 @@ class AtmoRandomPhase(BaseProcessingObj):
 
     def prepare_trigger(self, t):
         super().prepare_trigger(t)
+        self.pupilstop = self.local_inputs['pupilstop']
     
     def trigger_code(self):
         r0 = 0.9759 * 0.5 / (self.local_inputs['seeing'].value * 4.848) * self.airmass**(-3./5.) # if seeing > 0 else 0.0
@@ -137,10 +137,10 @@ class AtmoRandomPhase(BaseProcessingObj):
             new_position = 0
 
         for name, source in self.source_dict.items():
-            self.pupil_dict[name].phaseInNm = self.phasescreens[new_position,:,:] * scale_coeff
-            self.update_ef = self.pupil_dict[name]
-            self.update_ef.generation_time = self.current_time
-        
+            self.outputs['out_'+name+'_ef'].phaseInNm = self.phasescreens[new_position,:,:] * scale_coeff
+            self.outputs['out_'+name+'_ef'].A = self.pupilstop.A
+            self.outputs['out_'+name+'_ef'].generation_time = self.current_time
+
         # Update position output
         self.last_position = new_position + 1
         
