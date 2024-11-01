@@ -154,6 +154,13 @@ class Simul():
             hints = self._get_type_hints(klass)
 
             target_device_idx = pars.get('target_device_idx', None)
+
+            if 'tag' in pars:
+                if len(pars) > 2:
+                    raise ValueError('Extra parameters with "tag" are not allowed')
+                filename = cm.filename(classname, pars['tag'])
+                self.objs[key] = klass.restore(filename, target_device_idx=target_device_idx)
+                continue
                 
             pars2 = {}
             for name, value in pars.items():
