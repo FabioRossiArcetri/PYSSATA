@@ -1,6 +1,6 @@
 from specula.base_processing_obj import BaseProcessingObj
 from specula.base_value import BaseValue
-from specula.connections import InputValue
+from specula.connections import InputList, InputValue
 from specula.data_objects.intmat import Intmat
 from specula.data_objects.recmat import Recmat
 from specula.data_objects.slopes import Slopes
@@ -82,6 +82,7 @@ class Modalrec(BaseProcessingObj):
         self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor', target_device_idx=target_device_idx)
 
         self.inputs['in_slopes'] = InputValue(type=Slopes)
+        self.inputs['in_slopes_list'] = InputList(type=Slopes)
         self.outputs['out_modes'] = self.out_modes
         self.outputs['out_pseudo_ol_modes'] = self.pseudo_ol_modes
         self.outputs['out_modes_first_step'] = self.modes_first_step
@@ -175,7 +176,10 @@ class Modalrec(BaseProcessingObj):
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
 
-        slopes = self.local_inputs['in_slopes']
+        slopes = self.local_inputs['in_slopes'].slopes
+        slopes_list = self.local_inputs['in_slopes_list']
+        if slopes is None:
+            slopes = self.xp.hstack([x.slopes for x in slopes_list])
         
         comm_new = []
         if len(self._control_list) > 0:
@@ -194,7 +198,7 @@ class Modalrec(BaseProcessingObj):
                 else:
                     self._modes_first_step.value = m
             else:
-                m = self.compute_modes(self._recmat, slopes.slopes)
+                m = self.compute_modes(self._recmat, slopes)
                 self._modes_first_step.value = m
 
             self._modes_first_step.generation_time = self.current_time
@@ -262,18 +266,20 @@ class Modalrec(BaseProcessingObj):
     def run_check(self, time_step):
         errmsg = []
         slopes = self.inputs['in_slopes'].get(self.target_device_idx)
-        if not slopes:
+        slopes_list = self.inputs['in_slopes_list'].get(self.target_device_idx)
+        
+        if not slopes and not all(slopes_list):
             errmsg.append("Slopes object not valid")
         if not self._recmat:
             errmsg.append("Recmat object not valid")
-        out = bool(slopes) and bool(self._recmat)
+        out = bool(slopes or all(slopes_list)) and bool(self._recmat)
         if self._polc:
             if not self._intmat:
                 errmsg.append("Intmat object not valid")
             if not self._control_list:
                 errmsg.append("ControlList object not valid")
             out &= bool(self._intmat) and bool(self._control_list)
-        if errmsg:
+        if len(errmsg) > 0:
             print(", ".join(errmsg))
 
 #        super().build_stream()
