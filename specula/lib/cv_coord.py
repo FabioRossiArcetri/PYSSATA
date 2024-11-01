@@ -3,12 +3,11 @@
 
 import numpy as np
 
-from specula import xp
 from specula import float_dtype
 
 def cv_coord(from_rect=None, from_polar=None, from_cylin=None, from_sphere=None,
              to_rect=False, to_polar=False, to_cylin=False, to_sphere=False,
-             degrees=False, double=False):
+             degrees=False, double=False, xp=np):
     
     def to_double(arr):
         return arr.astype(xp.float64) if double else arr.astype(xp.float32)

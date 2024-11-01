@@ -60,7 +60,7 @@ class AtmoEvolution(BaseProcessingObj):
             alpha_fov = 0.0
             for element in source_dict.values():
                 alpha_fov = max(alpha_fov, *abs(cv_coord(from_polar=[element.polar_coordinate[1], element.polar_coordinate[0]],
-                                                       to_rect=True, degrees=True)))
+                                                       to_rect=True, degrees=True, xp=np)))
             if mcao_fov is not None:
                 alpha_fov = max(alpha_fov, mcao_fov / 2.0)
         
