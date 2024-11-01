@@ -91,24 +91,12 @@ class IFunc(BaseDataObj):
         return self._idx_inf_func
 
     @property
-    def ptr_ifunc(self):
-        return self._influence_function
-
-    @property
     def size(self):
         return self._influence_function.shape
 
     @property
     def type(self):
         return self._influence_function.dtype
-
-    @property
-    def zeroPad(self):
-        return self._doZeroPad
-
-    @zeroPad.setter
-    def zeroPad(self, zeroPad):
-        self._doZeroPad = zeroPad
 
     def inverse(self):
         return self.xp.linalg.pinv(self._influence_function)
