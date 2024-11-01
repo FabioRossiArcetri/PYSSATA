@@ -32,7 +32,7 @@ class ElectricField(BaseDataObj):
         diff0 = self.size[0] - subrect[0]
         diff1 = self.size[1] - subrect[1]
         if ef2.size[0] != diff0 or ef2.size[1] != diff1:
-            raise ValueError(f'{ef2} has size {sz2} instead of the required ({diff0}, {diff1})')
+            raise ValueError(f'{ef2} has size {ef2.size} instead of the required ({diff0}, {diff1})')
         return subrect
         
     def phi_at_lambda(self, wavelengthInNm):

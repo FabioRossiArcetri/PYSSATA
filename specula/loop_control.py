@@ -50,9 +50,7 @@ class LoopControl:
             if self._verbose:
                 print(f'Checking {repr(element)}')
             if not element.run_check(dt):
-                if errmsg:
-                    errmsg = f' With message: {errmsg}'
-                raise ValueError(f'Run check failed for object {repr(element)}{errmsg}')
+                raise ValueError(f'Run check failed for object {repr(element)}: {errmsg}')
         if self._verbose:
             print('All checks OK')
 
