@@ -9,7 +9,7 @@ NAME = 'specula'
 DESCRIPTION = 'PYramid Simulator Software for Adaptive OpTics Arcetri'
 URL = 'https://github.com/FabioRossiArcetri/SPECULA'
 EMAIL = 'fabio.rossi@inaf.it'
-AUTHOR = 'Fabio Rossi, Alfio Puglisi, Guid Agapito, Lorenzo Busoni, INAF Arcetri Adaptive Optics group'
+AUTHOR = 'Fabio Rossi, Alfio Puglisi, Guido Agapito, Lorenzo Busoni, INAF Arcetri Adaptive Optics group'
 LICENSE = 'MIT'
 KEYWORDS = 'Adaptive Optics, Astrophysics, INAF, Arcetri',
 
