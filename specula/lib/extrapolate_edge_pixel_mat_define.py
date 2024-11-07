@@ -126,11 +126,9 @@ def extrapolate_edge_pixel_mat_define(mask, do_ext_2_pix=False):
                         else:
                             test = idx_mask_array[ind[0] - 2, ind[1]]
 
-
-
                 if sum_1pix_extra[idx] == -1 and test >= 0:
                     sum_1pix_extra[idx] = test
 
-    return sum_1pix_extra, sum_2pix_extra
+    return sum_1pix_extra.astype(np.int32), sum_2pix_extra.astype(np.int32)
 
 
