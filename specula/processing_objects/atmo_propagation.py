@@ -12,10 +12,10 @@ import numpy as np
 sec2rad = 4.848e-6
 degree2rad = np.pi / 180.
 
-@fuse(kernel_name='rot_points')
+#@fuse(kernel_name='rot_points')
 def rot_points(angle , xx, yy, half_pixel_layer, p0, p1, xp):
-    x = xp.cos(angle) * xx - xp.sin(angle) * yy + half_pixel_layer + p0
-    y = xp.sin(angle) * xx + xp.cos(angle) * yy + half_pixel_layer + p1
+    x = xp.cos(angle) * xx - xp.sin(angle) * yy + half_pixel_layer[0] + p0
+    y = xp.sin(angle) * xx + xp.cos(angle) * yy + half_pixel_layer[1] + p1
     points = xp.vstack((x.ravel(), y.ravel())).T
     return points
 

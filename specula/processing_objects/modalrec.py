@@ -176,10 +176,12 @@ class Modalrec(BaseProcessingObj):
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
 
-        slopes = self.local_inputs['in_slopes'].slopes
+        slopes = self.local_inputs['in_slopes']
         slopes_list = self.local_inputs['in_slopes_list']
         if slopes is None:
             slopes = self.xp.hstack([x.slopes for x in slopes_list])
+        else:
+            slopes = slopes.slopes
         
         comm_new = []
         if len(self._control_list) > 0:
@@ -254,7 +256,6 @@ class Modalrec(BaseProcessingObj):
                 slope_ptr = self._slopes.ptr_value
                 if self._verbose:
                     print(f"modalrec.compute_modes base_value RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
-
 
         if intmat:
             m = slope_ptr @ intmat

@@ -273,6 +273,9 @@ class Simul():
             if not key=='data_source':
                 if 'inputs' in pars.keys():
                     for input_name, output_name_full in pars['inputs'].items():
+                        if type(output_name_full) is list:
+                            print('TODO: list of inputs is not handled in output replay')
+                            continue
                         if output_name_full in data_source_outputs.keys():
                             self.replay_params[key]['inputs'][input_name] = data_source_outputs[output_name_full]
 

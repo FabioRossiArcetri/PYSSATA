@@ -45,7 +45,7 @@ class ElectricField(BaseDataObj):
         return self.A * self.xp.exp(1j * phi, dtype=self.complex_dtype)
 
     def product(self, ef2, subrect=None):
-        subrect = self.checkOther(ef2, subrect=subrect)
+#        subrect = self.checkOther(ef2, subrect=subrect)    # TODO check subrect from atmo_propagation, even in PASSATA it does not seem right
         x2 = subrect[0] + self.size[0]
         y2 = subrect[1] + self.size[1]
         self.A *= ef2.A[subrect[0] : x2, subrect[1] : y2]

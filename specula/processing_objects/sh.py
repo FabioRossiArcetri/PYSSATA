@@ -1,5 +1,8 @@
 import numpy as np
-import cupy as cp # TODO fuse
+
+from specula import cpuArray, fuse
+from specula.lib.extrapolate_edge_pixel import extrapolate_edge_pixel
+from specula.lib.extrapolate_edge_pixel_mat_define import extrapolate_edge_pixel_mat_define
 from specula.lib.toccd import toccd
 from specula.lib.make_mask import make_mask
 from specula.connections import InputValue
@@ -22,9 +25,9 @@ if 0:
             sh.kernelobj = kernelobj
         
 
-@cp.fuse(kernel_name='abs2')
-def abs2(u_fp):
-     psf = cp.real(u_fp * cp.conj(u_fp))
+@fuse(kernel_name='abs2')
+def abs2(u_fp, xp):
+     psf = xp.real(u_fp * xp.conj(u_fp))
      return psf
 
 class SH(BaseProcessingObj):
@@ -94,6 +97,9 @@ class SH(BaseProcessingObj):
         
         self._ccd_side = self._subap_npx * self._lenslet.n_lenses
         self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self.target_device_idx)
+
+        self.yy = None
+        self.xx = None
 
         self.inputs['in_ef'] = InputValue(type=ElectricField)
         self.outputs['out_i'] = self._out_i
@@ -252,9 +258,9 @@ class SH(BaseProcessingObj):
 
         # Check for valid phase size
         if abs((ef_size * round(self._fov_ovs) * lens[2]) / 2.0 - round((ef_size * round(self._fov_ovs) * lens[2]) / 2.0)) > 1e-4:
-            raise ValueError(f'ERROR: interpolated input phase size {ef_size} * {round(self._fov_ovs)} is not divisible by subapertures.')
+            raise ValueError(f'ERROR: interpolated input phase size {ef_size} * {round(self._fov_ovs)} is not divisible by  {self._lenslet.n_lenses} subapertures.')
         elif not self._noprints:
-            print(f'GOOD: interpolated input phase size is divisible by {self._lenslet.n_lenses} subapertures.')
+            print(f'GOOD: interpolated input phase size {ef_size} * {round(self._fov_ovs)} is divisible by {self._lenslet.n_lenses} subapertures.')
     
     def calc_trigger_geometry(self):
         
@@ -355,18 +361,53 @@ class SH(BaseProcessingObj):
         # Interpolation of input array if needed
         if fov_oversample != 1 or self._rotAnglePhInDeg != 0 or np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
             if self._extrapol_mat is None:
-                self._extrapol_mat = extrapolate_edge_pixel_mat_define(in_ef.a, do_ext_2_pix=True)
+                sum_1pix_extra, sum_2pix_extra = extrapolate_edge_pixel_mat_define(cpuArray(in_ef.A), do_ext_2_pix=True)
+                self._extrapol_mat1 = self.xp.array(sum_1pix_extra)
+                self._extrapol_mat2 = self.xp.array(sum_2pix_extra)
 
-            phaseInNmNew = extrapolate_edge_pixel(in_ef.phaseInNm, self._extrapol_mat)
-            tempA = congrid(in_ef.a, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
-            tempW = congrid(phaseInNmNew, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
+            phaseInNmNew = extrapolate_edge_pixel(in_ef.phaseInNm, self._extrapol_mat1, self._extrapol_mat2, xp=self.xp)
+#            tempA = congrid(in_ef.A, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
+#            tempW = congrid(phaseInNmNew, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
+#
+#            if self._rotAnglePhInDeg != 0 or np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
+#                self._wf1.A = (rot_and_shift_image(tempA, self._rotAnglePhInDeg, self._xyShiftPhInPixel, 1.0, use_interpolate=True) >= 0.5).astype(np.uint8)
+#                self._wf1.phaseInNm = rot_and_shift_image(tempW, self._rotAnglePhInDeg, self._xyShiftPhInPixel, 1.0, use_interpolate=True)
+#            else:
+#                self._wf1.A = tempA
+#                self._wf1.phaseInNm = tempW
 
-            if self._rotAnglePhInDeg != 0 or np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
-                self._wf1.A = (rot_and_shift_image(tempA, self._rotAnglePhInDeg, self._xyShiftPhInPixel, 1.0, use_interpolate=True) >= 0.5).astype(np.uint8)
-                self._wf1.phaseInNm = rot_and_shift_image(tempW, self._rotAnglePhInDeg, self._xyShiftPhInPixel, 1.0, use_interpolate=True)
-            else:
-                self._wf1.A = tempA
-                self._wf1.phaseInNm = tempW
+            shape_ovs = (int(s[0] * fov_oversample), int(s[1] * fov_oversample))
+            if self.yy is None or self.xx is None:
+                yy, xx = map(self.dtype, np.mgrid[0:shape_ovs[0], 0:shape_ovs[1]])
+                yy *= s[0] / shape_ovs[0]
+                xx *= s[1] / shape_ovs[1]
+                if self._rotAnglePhInDeg != 0:
+                    yc = s[0] / 2 - 0.5
+                    xc = s[1] / 2 - 0.5
+                    cos_ = np.cos(self._rotAnglePhInDeg * 3.1415 / 180.0)
+                    sin_ = np.sin(self._rotAnglePhInDeg * 3.1415 / 180.0)
+                    xxr = (xx-xc)*cos_ - (yy-yc)*sin_ + xc
+                    yyr = (xx-xc)*sin_ + (yy-yc)*cos_ + yc
+                    xx = xxr
+                    yy = yyr
+                if np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
+                    yy += self._xyShiftPhInPixel[0]
+                    xx += self._xyShiftPhInPixel[1]
+                yy[np.where(yy < 0)] = 0
+                xx[np.where(xx < 0)] = 0
+                yy[np.where(yy > s[0]-1)] = s[0]-1
+                xx[np.where(xx > s[1]-1)] = s[1]-1
+
+                self.yy = self.xp.array(yy).ravel()
+                self.xx = self.xp.array(xx).ravel()
+
+            points = (np.arange(s[0]), np.arange(s[1]))
+            Ainterp = self.RegularGridInterpolator(points, in_ef.A, method='linear')
+            PhInterp = self.RegularGridInterpolator(points, phaseInNmNew, method='linear')
+
+            self._wf1.A = Ainterp((self.yy, self.xx)).reshape(shape_ovs)
+            self._wf1.phaseInNm = PhInterp((self.yy, self.xx)).reshape(shape_ovs)
+
         else:
             # wf1 already set to in_ef
             pass
@@ -410,7 +451,7 @@ class SH(BaseProcessingObj):
 
             # PSF generation
             fp4 = self.xp.fft.fft2(self._wf3, axes=(1, 2))
-            psf_shifted = abs2(fp4)
+            psf_shifted = abs2(fp4, xp=self.xp)
             psfTotalAtFft += self.xp.sum(psf_shifted)
 
             # Full resolution kernel

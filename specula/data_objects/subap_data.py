@@ -48,7 +48,7 @@ class SubapData(BaseDataObj):
         hdr['NX'] = self.nx
         hdr['NY'] = self.ny
         fits.writeto(filename, np.zeros(2), hdr)
-        fits.append(filename, cpuArray(self.idxs))
+        fits.append(filename, cpuArray(self.idxs.T))  # Transposed for IDL-saved data compatibility
         fits.append(filename, cpuArray(self.map))
 
     @classmethod
@@ -62,7 +62,7 @@ class SubapData(BaseDataObj):
             energy_th = hdr.get('ENRGYTH')
             nx = hdr.get('NX')
             ny = hdr.get('NY')
-            idxs = hdul[1].data
+            idxs = hdul[1].data.T     # Transposed for IDL-saved compatibility
             map = hdul[2].data
         return SubapData(idxs=idxs, map=map, nx=nx, ny=ny, energy_th=energy_th,
                          target_device_idx=target_device_idx)
