@@ -72,6 +72,7 @@ class Pixels(BaseDataObj):
     def get_fits_header(self):
         hdr = fits.Header()
         hdr['VERSION'] = 1
+        hdr['OBJ_TYPE'] = 'Pixels'
         hdr['TYPE'] = str(self._type)
         hdr['BPP'] = self._bpp
         hdr['BYTESPP'] = self._bytespp

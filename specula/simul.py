@@ -10,6 +10,7 @@ from specula.loop_control import LoopControl
 from specula.lib.flatten import flatten
 from specula.calib_manager import CalibManager
 from specula.processing_objects.data_store import DataStore
+from specula.connections import InputValue, InputList
 
 import yaml
 import io
@@ -56,6 +57,8 @@ class Simul():
         return hints
     
     def output_owner(self, output_name):
+        if '-' in output_name:
+            output_name = output_name.split('-')[1]
         if '.' in output_name:
             obj_name, attr_name = output_name.split('.')
             return obj_name
@@ -211,6 +214,17 @@ class Simul():
                 continue
             
             for input_name, output_name in pars['inputs'].items():
+
+                if isinstance(output_name, list) and input_name=='input_list':
+                    inputs = [x.split('-')[0] for x in output_name]
+                    outputs = [self.output_ref(x.split('-')[1]) for x in output_name]
+                    for ii, oo in zip(inputs, outputs):
+                        print(oo)
+                        self.objs[dest_object].inputs[ii] = InputValue(type = type(oo) )
+                        self.objs[dest_object].inputs[ii].set(oo)
+                        self.objs[dest_object].add(oo, name=ii)
+                    continue
+
                 if not input_name in self.objs[dest_object].inputs:
                     raise ValueError(f'Object {dest_object} does does not have an input called {input_name}')
                 if not isinstance(output_name, (str, list)):
@@ -232,8 +246,6 @@ class Simul():
 
                 self.objs[dest_object].inputs[input_name].set(output_ref)
 
-                if type(self.objs[dest_object]) is DataStore:
-                    self.objs[dest_object].add(output_ref, name=input_name)
 
     def build_replay(self, params):
         self.replay_params = deepcopy(params)
@@ -252,9 +264,10 @@ class Simul():
                 self.replay_params['data_source'] = self.replay_params[key]
                 self.replay_params['data_source']['class'] = 'DataSource'
                 del self.replay_params['data_store']
-                for input_name, output_name_full in pars['inputs'].items():
-                    output_obj, output_name = output_name_full.split('.')                    
-                    data_source_outputs[output_name_full] = 'data_source.' + input_name # 'source.' + output_obj + '-' + output_name                    
+                for output_name_full in pars['inputs']['input_list']:
+                    input_name, output_name = output_name_full.split('-')
+                    output_obj, output_name_small = output_name.split('.')                     
+                    data_source_outputs[output_name] = 'data_source.' + input_name # 'source.' + output_obj + '-' + output_name_small                    
                     obj_to_remove.append(output_obj)
 
         for obj_name in obj_to_remove:
@@ -265,12 +278,15 @@ class Simul():
                 continue
             if not key=='data_source':
                 if 'inputs' in pars.keys():
-                    for input_name, output_name_full in pars['inputs'].items():
-                        if output_name_full in data_source_outputs.keys():
-                            self.replay_params[key]['inputs'][input_name] = data_source_outputs[output_name_full]
-
+                    for input_name, output_name in pars['inputs'].items():
+                        if output_name in data_source_outputs.keys():
+                            self.replay_params[key]['inputs'][input_name] = data_source_outputs[output_name]
+            
             if key=='data_source':
-                self.replay_params[key]['outputs'] = list(self.replay_params[key]['inputs'].keys())
+                self.replay_params[key]['outputs'] = []
+                for v in self.replay_params[key]['inputs']['input_list']:
+                    kk, vv = v.split('-')
+                    self.replay_params[key]['outputs'].append(kk)
                 del self.replay_params[key]['inputs']
 
         print(self.replay_params)
