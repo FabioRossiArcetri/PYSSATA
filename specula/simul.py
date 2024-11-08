@@ -9,7 +9,7 @@ from specula.base_processing_obj import BaseProcessingObj
 from specula.loop_control import LoopControl
 from specula.lib.flatten import flatten
 from specula.calib_manager import CalibManager
-from specula.processing_objects.datastore import Datastore
+from specula.processing_objects.data_store import DataStore
 
 import yaml
 import io
@@ -25,6 +25,7 @@ class Simul():
         self.param_files = param_files
         self.objs = {}
         self.verbose = False  #TODO
+        self.isReplay = False
 
     def _camelcase_to_snakecase(self, s):
         tokens = re.findall('[A-Z]+[0-9a-z]*', s)
@@ -130,11 +131,6 @@ class Simul():
             print('Warning: the following objects will not be triggered:', params.keys())
         return order, order_index
 
-    def connect_datastore(self, store, params):
-        if 'store' in params['main']:
-            for name, output_ref in params['main']['store'].items():
-                output = self.output_ref(output_ref)
-                store.add(output, name=name)
 
     def build_objects(self, params):
         main = params['main']
@@ -164,7 +160,13 @@ class Simul():
                 
             pars2 = {}
             for name, value in pars.items():
-                if name in skip_pars:
+                if key == 'data_source':
+                    self.isReplay = True
+
+                if key != 'data_source' and name in skip_pars:
+                    continue
+                
+                if key == 'data_source' and name in ['class']:                    
                     continue
                 
                 # dict_ref field contains a dictionary of names and associated data objects (defined in the same yml file)
@@ -197,8 +199,12 @@ class Simul():
             my_params = {k: main[k] for k in args if k in main}
             if 'data_dir' in args:  # TODO special case
                 my_params['data_dir'] = cm.root_subdir(classname)
+
             my_params.update(pars2)
             self.objs[key] = klass(**my_params)
+
+            if type(self.objs[key]) is DataStore:
+                self.objs[key].setParams(params)
 
     def connect_objects(self, params):
         for dest_object, pars in params.items():
@@ -233,12 +239,69 @@ class Simul():
 
                 self.objs[dest_object].inputs[input_name].set(output_ref)
 
+                if type(self.objs[dest_object]) is DataStore:
+                    self.objs[dest_object].add(output_ref, name=input_name)
+
+    def build_replay(self, params):
+        self.replay_params = deepcopy(params)
+        skip_pars = 'class inputs outputs'.split()
+        obj_to_remove = []
+        data_source_outputs = {}
+        for key, pars in params.items():
+            if key == 'main':
+                continue
+            try:
+                classname = pars['class']
+            except KeyError:
+                raise KeyError(f'Object {key} does not define the "class" parameter')
+
+            if classname=='DataStore':
+                self.replay_params['data_source'] = self.replay_params[key]
+                self.replay_params['data_source']['class'] = 'DataSource'
+                del self.replay_params['data_store']
+                for input_name, output_name_full in pars['inputs'].items():
+                    output_obj, output_name = output_name_full.split('.')                    
+                    data_source_outputs[output_name_full] = 'data_source.' + input_name # 'source.' + output_obj + '-' + output_name                    
+                    obj_to_remove.append(output_obj)
+
+        for obj_name in obj_to_remove:
+            del self.replay_params[obj_name]
+        
+        for key, pars in self.replay_params.items():            
+            if key == 'main':
+                continue
+            if not key=='data_source':
+                if 'inputs' in pars.keys():
+                    for input_name, output_name_full in pars['inputs'].items():
+                        if output_name_full in data_source_outputs.keys():
+                            self.replay_params[key]['inputs'][input_name] = data_source_outputs[output_name_full]
+
+            if key=='data_source':
+                self.replay_params[key]['outputs'] = list(self.replay_params[key]['inputs'].keys())
+                del self.replay_params[key]['inputs']
+
+        print(self.replay_params)
+
+        skip_pars = 'class inputs outputs'.split()
+
+        for key, pars in params.items():
+            if key == 'main':
+                continue
+            try:
+                classname = pars['class']
+            except KeyError:
+                raise KeyError(f'Object {key} does not define the "class" parameter')
+
+            if type(self.objs[key]) is DataStore:
+                self.objs[key].setReplayParams(self.replay_params)
+
+
     def remove_inputs(self, params, obj_to_remove):
         '''
         Modify params removing all references to the specificed object name
         '''
         for objname, obj in params.items():
-            for key in ['inputs', 'store']:
+            for key in ['inputs']:
                 if key not in obj:
                     continue
                 obj_inputs_copy = deepcopy(obj[key])
@@ -298,18 +361,20 @@ class Simul():
                 self.combine_params(params, additional_params)
 
         # Initialize housekeeping objects
-        loop = LoopControl(run_time=params['main']['total_time'], dt=params['main']['time_step'])
-        store = Datastore(params['main']['store_dir'])
+        loop = LoopControl(run_time=params['main']['total_time'], dt=params['main']['time_step'])        
 
         # Actual creation code
         self.build_objects(params)
+
 
         # TODO temporary hack, locals() does not work
         for name, obj in self.objs.items():
             globals()[name] = obj
                         
-        self.connect_objects(params)
-        self.connect_datastore(store, params)
+        self.connect_objects(params)                
+        
+        if not self.isReplay:
+            self.build_replay(params)
 
         trigger_order, trigger_order_idx = self.trigger_order(params)
         print(f'{trigger_order=}')
@@ -320,18 +385,12 @@ class Simul():
             obj = self.objs[name]
             if isinstance(obj, BaseProcessingObj):
                 loop.add(obj, idx)
-        loop.add(store, trigger_order_idx[-1]+1)
 
         # Run simulation loop
         loop.run(run_time=params['main']['total_time'], dt=params['main']['time_step'], speed_report=True)
 
-        if store.has_key('sr'):
-            print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']])) * 100.}")
+#        if data_store.has_key('sr'):
+#            print(f"Mean Strehl Ratio (@{params['psf']['wavelengthInNm']}nm) : {store.mean('sr', init=min([50, 0.1 * params['main']['total_time'] / params['main']['time_step']])) * 100.}")
 
         for obj in self.objs.values():
             obj.finalize()
-
-        store.finalize()
-
-        # Alternative saving method:
-        # tn = store.save_tracknum(dir=dir, params=params, nodlm=True, noolformat=True, compress=True, saveFloat=saveFloat)

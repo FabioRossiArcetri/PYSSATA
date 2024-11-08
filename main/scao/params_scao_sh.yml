@@ -2,14 +2,10 @@
 
 main:
   root_dir:          './calib/SCAO'         # Root directory for calibration manager
-  store_dir:         './output'             # Data result directory: 'store_dir'/TN/
   pixel_pupil:       160                    # Linear dimension of pupil phase array
   pixel_pitch:       0.05                   # [m] Pitch of the pupil phase array
   total_time:        0.050                  # [s] Total simulation running time
   time_step:         0.001                  # [s] Simulation time step
-  store:                                   # Dict of data products to store, 'name': 'output'
-    sr: 'psf.out_sr'
-    res_ef: 'prop.out_on_axis_source_ef'
 
 
 seeing:
@@ -142,3 +138,9 @@ psf:
       in_ef:  'prop.out_on_axis_source_ef'
   outputs:  ['out_psf', 'out_sr']
 
+
+data_store:
+  class:             'DataStore'
+  store_dir:         './output'             # Data result directory: 'store_dir'/TN/
+  inputs:    
+    res_ef: 'prop.out_on_axis_source_ef'
