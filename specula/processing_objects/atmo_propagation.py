@@ -142,7 +142,7 @@ class AtmoPropagation(BaseProcessingObj):
                         layer.phaseInNm = tempP
                     #with self.map_streams[kk*j+i]:
                     angle = self.rotAnglePhInDeg_list[i]
-                    points = rot_points(angle, self.xx, self.yy, half_pixel_layer, pixel_position[0], pixel_position[1])
+                    points = rot_points(angle, self.xx, self.yy, half_pixel_layer, pixel_position[0], pixel_position[1], xp=self.xp)
                     interpolator_A = self.RegularGridInterpolator(self.LL[i], layer.A, bounds_error=False, fill_value=0)
                     interpolator_phase = self.RegularGridInterpolator(self.LL[i], layer.phaseInNm, bounds_error=False, fill_value=0)
                     self.update_ef.A *= interpolator_A(points).reshape(self.pixel_pupil_size, self.pixel_pupil_size)

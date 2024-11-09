@@ -1,6 +1,6 @@
 import numpy as np
 
-from specula import cpuArray, fuse
+from specula import cp, cpuArray, fuse, show_in_profiler
 from specula.lib.extrapolate_edge_pixel import extrapolate_edge_pixel
 from specula.lib.extrapolate_edge_pixel_mat_define import extrapolate_edge_pixel_mat_define
 from specula.lib.toccd import toccd
@@ -10,7 +10,6 @@ from specula.data_objects.ef import ElectricField
 from specula.data_objects.intensity import Intensity
 from specula.base_processing_obj import BaseProcessingObj
 from specula.data_objects.lenslet import Lenslet
-from specula.data_objects.subap_data import SubapData
 
 
 # TODO
@@ -29,6 +28,106 @@ if 0:
 def abs2(u_fp, xp):
      psf = xp.real(u_fp * xp.conj(u_fp))
      return psf
+ 
+
+class Interp2D():
+    def __init__(self, input_shape, output_shape, rotInDeg, rowShiftInPixels, colShiftInPixels, dtype, xp):
+        self.xp = xp
+        self.dtype = dtype
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+
+        yy, xx = map(self.dtype, np.mgrid[0:output_shape[0], 0:output_shape[1]])
+        yy *= input_shape[0] / output_shape[0]
+        xx *= input_shape[1] / output_shape[1]
+        if rotInDeg != 0:
+            yc = input_shape[0] / 2 - 0.5
+            xc = input_shape[1] / 2 - 0.5
+            cos_ = np.cos(rotInDeg * 3.1415 / 180.0)
+            sin_ = np.sin(rotInDeg * 3.1415 / 180.0)
+            xxr = (xx-xc)*cos_ - (yy-yc)*sin_ + xc
+            yyr = (xx-xc)*sin_ + (yy-yc)*cos_ + yc
+            xx = xxr
+            yy = yyr
+        if rowShiftInPixels != 0 or colShiftInPixels != 0:
+            yy += rowShiftInPixels
+            xx += colShiftInPixels
+
+        yy[np.where(yy < 0)] = 0
+        xx[np.where(xx < 0)] = 0
+        yy[np.where(yy > input_shape[0]-1)] = input_shape[0]-1
+        xx[np.where(xx > input_shape[1]-1)] = input_shape[1]-1
+
+        self.yy = self.xp.array(yy).ravel()
+        self.xx = self.xp.array(xx).ravel()
+
+        if cp:
+            interp2_kernel = r'''
+                extern "C" __global__
+                void interp2_kernel_TYPE(TYPE *g_in, TYPE *g_out, int out_dx, int out_dy, int in_dx, int *xx, int *yy) {
+
+                    int y = blockIdx.y * blockDim.y + threadIdx.y;
+                    int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+                    float ovs_ratio = in_dx / out_dx;
+                    
+                    if ((y<out_dy) && (x<out_dx)) {
+                        float xcoord = x * ovs_ratio;
+                        float ycoord = y * ovs_ratio;
+                        int xin = floor(xcoord);
+                        int yin = floor(ycoord);
+                        int xin2 = xin+1;
+                        int yin2 = yin+1;
+
+                        float xdist = xcoord-xin;
+                        float ydist = ycoord-yin;
+
+                        int idx_a = yin*in_dx + xin;
+                        int idx_b = yin*in_dx + xin2;
+                        int idx_c = yin2*in_dx + xin;
+                        int idx_d = yin2*in_dx + xin2;
+
+                        TYPE value = g_in[idx_a]*(1-xdist)*(1-ydist) +
+                                    g_in[idx_b]*xdist*(1-ydist) +
+                                    g_in[idx_c]*ydist*(1-xdist) +
+                                    g_in[idx_d]*xdist*ydist;
+
+                        g_out[y*out_dx + x] = value;
+                        }
+                    }
+                '''
+            self.interp2_kernel_float = cp.RawKernel(interp2_kernel.replace('TYPE', 'float'), name='interp2_kernel_float')
+            self.interp2_kernel_double = cp.RawKernel(interp2_kernel.replace('TYPE', 'double'), name='interp2_kernel_double')
+ 
+    def interpolate(self, value, out=None):
+        if value.shape != self.input_shape:
+            raise ValueError(f'Array to be interpolated must have shape {self.input_shape} instead of {value.shape}')
+        
+        if out is None:
+            out = self.xp.empty(shape=self.output_shape)
+        
+        if self.xp == cp:
+            block = (16, 16)
+            numBlocks2d = int(self.output_shape[0] // block[0])
+            if self.output_shape[0] % block[0]:
+                numBlocks2d += 1
+            grid = (numBlocks2d, numBlocks2d)
+            
+            if self.dtype == cp.float32:
+                self.interp2_kernel_float(grid, block, (value, out, self.output_shape[1],  self.output_shape[0],  self.input_shape[1], self.xx, self.yy))
+            elif self.dtype == cp.float64:
+                self.interp2_kernel_double(grid, block, (value, out, self.output_shape[1],  self.output_shape[0],  self.input_shape[1], self.xx, self.yy))
+            else:
+                raise ValueError('Unsupported dtype {self.dtype}')
+            return out
+
+        else:
+            from scipy.interpolate import RegularGridInterpolator
+            points = (self.xp.arange( self.input_shape[0], dtype=self.dtype), self.xp.arange( self.input_shape[1], dtype=self.dtype))
+            interp = RegularGridInterpolator(points,value, method='linear')
+            out[:] = interp((self.yy, self.xx)).reshape(self.output_shape).astype(self.dtype)
+            return out
+
 
 class SH(BaseProcessingObj):
     def __init__(self,
@@ -93,13 +192,15 @@ class SH(BaseProcessingObj):
         self._fft_size = 0
         self._input_ef_set = False
         self._trigger_geometry_calculated = False
-        self._extrapol_mat = None
+        self._extrapol_mat1 = None
+        self._extrapol_mat2 = None
         
         self._ccd_side = self._subap_npx * self._lenslet.n_lenses
         self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self.target_device_idx)
 
         self.yy = None
         self.xx = None
+        self.interp = None
 
         self.inputs['in_ef'] = InputValue(type=ElectricField)
         self.outputs['out_i'] = self._out_i
@@ -278,9 +379,13 @@ class SH(BaseProcessingObj):
         # Test: chunks of 2 full rows each
 #        for i in range(0, self._lenslet.dimx, 2):
             #self._subap_chunks.append((slice(i, i+2), slice(0, self._lenslet.dimy)))
+
+        # Test: chunks of 1 rows each
+        for i in range(0, self._lenslet.dimx):
+            self._subap_chunks.append((slice(i, i+1), slice(0, self._lenslet.dimy)))
             
         # Whole SH in one go
-        self._subap_chunks.append((slice(0, self._lenslet.dimx), slice(0, self._lenslet.dimy)))
+#        self._subap_chunks.append((slice(0, self._lenslet.dimx), slice(0, self._lenslet.dimy)))
 
         nx = self._subap_chunks[0][0].stop - self._subap_chunks[0][0].start
         ny = self._subap_chunks[0][1].stop - self._subap_chunks[0][1].start
@@ -301,7 +406,7 @@ class SH(BaseProcessingObj):
         if fov_oversample != 1 or self._rotAnglePhInDeg != 0 or np.sum(np.abs(self._xyShiftPhInPixel)) != 0:
             M0 = s[0] * fov_oversample
             M1 = s[1] * fov_oversample
-            wf1 = ElectricField(M0, M1, in_ef.pixel_pitch / fov_oversample)
+            wf1 = ElectricField(M0, M1, in_ef.pixel_pitch / fov_oversample, target_device_idx=self.target_device_idx)
         else:
             wf1 = in_ef            
         
@@ -359,58 +464,25 @@ class SH(BaseProcessingObj):
         subap_npx = self._subap_npx
 
         # Interpolation of input array if needed
-        if fov_oversample != 1 or self._rotAnglePhInDeg != 0 or np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
-            if self._extrapol_mat is None:
-                sum_1pix_extra, sum_2pix_extra = extrapolate_edge_pixel_mat_define(cpuArray(in_ef.A), do_ext_2_pix=True)
-                self._extrapol_mat1 = self.xp.array(sum_1pix_extra)
-                self._extrapol_mat2 = self.xp.array(sum_2pix_extra)
+        with show_in_profiler('interpolation'):
+            if fov_oversample != 1 or self._rotAnglePhInDeg != 0 or np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
+                if self._extrapol_mat1 is None or self._extrapol_mat2 is None:
+                    sum_1pix_extra, sum_2pix_extra = extrapolate_edge_pixel_mat_define(cpuArray(in_ef.A), do_ext_2_pix=True)
+                    self._extrapol_mat1 = self.xp.array(sum_1pix_extra)
+                    self._extrapol_mat2 = self.xp.array(sum_2pix_extra)
 
-            phaseInNmNew = extrapolate_edge_pixel(in_ef.phaseInNm, self._extrapol_mat1, self._extrapol_mat2, xp=self.xp)
-#            tempA = congrid(in_ef.A, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
-#            tempW = congrid(phaseInNmNew, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
-#
-#            if self._rotAnglePhInDeg != 0 or np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
-#                self._wf1.A = (rot_and_shift_image(tempA, self._rotAnglePhInDeg, self._xyShiftPhInPixel, 1.0, use_interpolate=True) >= 0.5).astype(np.uint8)
-#                self._wf1.phaseInNm = rot_and_shift_image(tempW, self._rotAnglePhInDeg, self._xyShiftPhInPixel, 1.0, use_interpolate=True)
-#            else:
-#                self._wf1.A = tempA
-#                self._wf1.phaseInNm = tempW
+                phaseInNmNew = extrapolate_edge_pixel(in_ef.phaseInNm, self._extrapol_mat1, self._extrapol_mat2, xp=self.xp)
+                 
+                shape_ovs = (int(s[0] * fov_oversample), int(s[1] * fov_oversample))
+                if not self.interp:
+                    self.interp = Interp2D(s, shape_ovs, self._rotAnglePhInDeg, self._xyShiftPhInPixel[0], self._xyShiftPhInPixel[1], self.dtype, self.xp)
 
-            shape_ovs = (int(s[0] * fov_oversample), int(s[1] * fov_oversample))
-            if self.yy is None or self.xx is None:
-                yy, xx = map(self.dtype, np.mgrid[0:shape_ovs[0], 0:shape_ovs[1]])
-                yy *= s[0] / shape_ovs[0]
-                xx *= s[1] / shape_ovs[1]
-                if self._rotAnglePhInDeg != 0:
-                    yc = s[0] / 2 - 0.5
-                    xc = s[1] / 2 - 0.5
-                    cos_ = np.cos(self._rotAnglePhInDeg * 3.1415 / 180.0)
-                    sin_ = np.sin(self._rotAnglePhInDeg * 3.1415 / 180.0)
-                    xxr = (xx-xc)*cos_ - (yy-yc)*sin_ + xc
-                    yyr = (xx-xc)*sin_ + (yy-yc)*cos_ + yc
-                    xx = xxr
-                    yy = yyr
-                if np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
-                    yy += self._xyShiftPhInPixel[0]
-                    xx += self._xyShiftPhInPixel[1]
-                yy[np.where(yy < 0)] = 0
-                xx[np.where(xx < 0)] = 0
-                yy[np.where(yy > s[0]-1)] = s[0]-1
-                xx[np.where(xx > s[1]-1)] = s[1]-1
-
-                self.yy = self.xp.array(yy).ravel()
-                self.xx = self.xp.array(xx).ravel()
-
-            points = (np.arange(s[0]), np.arange(s[1]))
-            Ainterp = self.RegularGridInterpolator(points, in_ef.A, method='linear')
-            PhInterp = self.RegularGridInterpolator(points, phaseInNmNew, method='linear')
-
-            self._wf1.A = Ainterp((self.yy, self.xx)).reshape(shape_ovs)
-            self._wf1.phaseInNm = PhInterp((self.yy, self.xx)).reshape(shape_ovs)
-
-        else:
-            # wf1 already set to in_ef
-            pass
+                self.interp.interpolate(in_ef.A, out=self._wf1.A)
+                self.interp.interpolate(phaseInNmNew, out=self._wf1.phaseInNm)
+                
+            else:
+                # wf1 already set to in_ef
+                pass
 
         fft_size = self._fft_size
         psfTotalAtFft = 0
@@ -423,7 +495,8 @@ class SH(BaseProcessingObj):
 
         congrid_np_sub = self._congrid_np_sub
 
-        ef_whole = self._wf1.ef_at_lambda(self._wavelengthInNm)
+        with show_in_profiler('ef_at_lambda'):
+            ef_whole = self._wf1.ef_at_lambda(self._wavelengthInNm)
 
         for chunk in self._subap_chunks:
             xslice, yslice = chunk
@@ -435,24 +508,28 @@ class SH(BaseProcessingObj):
             y2 = yslice.stop * congrid_np_sub
             n = nx * ny
 
-            ef = ef_whole[x1:x2, y1:y2]
+            with show_in_profiler('slice'):
+                ef = ef_whole[x1:x2, y1:y2]
 
             # Transform from 2d subap tiling into N x np x np
             # For an explanation of how this works, ask ChatGPT
-            ef = ef.reshape(nx, congrid_np_sub, ny, congrid_np_sub)
-            ef = ef.transpose((2, 0, 1, 3))
-            ef = ef.reshape(n, congrid_np_sub, congrid_np_sub)
+            with show_in_profiler('reshape1'):
+                ef = ef.reshape(nx, congrid_np_sub, ny, congrid_np_sub)
+                ef = ef.transpose((2, 0, 1, 3))
+                ef = ef.reshape(n, congrid_np_sub, congrid_np_sub)
 
             # Insert into padded array
-            self._wf3[:, :congrid_np_sub, :congrid_np_sub] = ef * self._tltf[self.xp.newaxis, :, :]
+            with show_in_profiler('padding'):
+                self._wf3[:, :congrid_np_sub, :congrid_np_sub] = ef * self._tltf[self.xp.newaxis, :, :]
 
             if self._debugOutput:
                 tempefcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = self._wf3
 
             # PSF generation
-            fp4 = self.xp.fft.fft2(self._wf3, axes=(1, 2))
-            psf_shifted = abs2(fp4, xp=self.xp)
-            psfTotalAtFft += self.xp.sum(psf_shifted)
+            with show_in_profiler('FFT'):
+                fp4 = self.xp.fft.fft2(self._wf3, axes=(1, 2))
+                psf_shifted = abs2(fp4, xp=self.xp)
+                psfTotalAtFft += self.xp.sum(psf_shifted)
 
             # Full resolution kernel
             if self._kernelobj is not None and self.kernel_at_fft():
@@ -477,9 +554,10 @@ class SH(BaseProcessingObj):
                 psf = self.xp.fft.fftshift(psf_shifted, axes=(1, 2))
                 psf *= self._fp_mask[self.xp.newaxis, :, :]
 
-            cutsize = self._cutsize
-            cutpixels = self._cutpixels
-            psf_cut = psf[:, cutpixels // 2: -cutpixels // 2, cutpixels // 2: -cutpixels // 2]
+            with show_in_profiler('cut'):
+                cutsize = self._cutsize
+                cutpixels = self._cutpixels
+                psf_cut = psf[:, cutpixels // 2: -cutpixels // 2, cutpixels // 2: -cutpixels // 2]
 
             # FoV kernel
             if self._kernelobj is not None and self.kernel_at_fov():
@@ -493,12 +571,14 @@ class SH(BaseProcessingObj):
 
             # Back-transform from N x np x np to 2d subap tiling
             # For an explanation of how this works, ask ChatGPT
-            psf_cut = psf_cut.reshape(ny, nx, cutsize, cutsize)
-            psf_cut = psf_cut.transpose(1, 2, 0, 3)
-            psf_cut = psf_cut.reshape(nx * cutsize, ny * cutsize)
+            with show_in_profiler('reshape2'):
+                psf_cut = psf_cut.reshape(ny, nx, cutsize, cutsize)
+                psf_cut = psf_cut.transpose(1, 2, 0, 3)
+                psf_cut = psf_cut.reshape(nx * cutsize, ny * cutsize)
             
             # Insert subap strip into overall PSF image
-            self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
+            with show_in_profiler('psf'):
+                self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
         self._psfimage /= psfTotalAtFft + 1e-6 # Avoid dividing by zero
 
@@ -519,7 +599,8 @@ class SH(BaseProcessingObj):
                     subap_tmp = self.xp.convolve(subap, subap_gkern, mode='same')
                     self._psfimage[x1:x2, y1:y2] = self.xp.abs(self.xp.fft.fftshift(self.xp.fft.fft2(subap_tmp)))
 
-        ccd = toccd(self._psfimage, (self._ccd_side, self._ccd_side), xp=self.xp)
+        with show_in_profiler('toccd'):
+            ccd = toccd(self._psfimage, (self._ccd_side, self._ccd_side), xp=self.xp)
 
         # Apply kernel at subaperture level if necessary
         if self._kernelobj is not None and self.kernel_at_subap():
