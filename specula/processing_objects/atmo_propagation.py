@@ -12,12 +12,11 @@ import numpy as np
 sec2rad = 4.848e-6
 degree2rad = np.pi / 180.
 
-#@fuse(kernel_name='rot_points')
-def rot_points(angle , xx, yy, half_pixel_layer, p0, p1, xp):
-    x = xp.cos(angle) * xx - xp.sin(angle) * yy + half_pixel_layer[0] + p0
-    y = xp.sin(angle) * xx + xp.cos(angle) * yy + half_pixel_layer[1] + p1
-    points = xp.vstack((x.ravel(), y.ravel())).T
-    return points
+@fuse(kernel_name='rot_points')
+def rot_points(angle , xx, yy, half_pixel_layer0, half_pixel_layer1, p0, p1, xp):
+    x = xp.cos(angle) * (xx - half_pixel_layer0) - xp.sin(angle) * (yy - half_pixel_layer1) + half_pixel_layer0 + p0
+    y = xp.sin(angle) * (xx - half_pixel_layer0) + xp.cos(angle) * (yy - half_pixel_layer1) + half_pixel_layer1 + p1
+    return x, y
 
 class AtmoPropagation(BaseProcessingObj):
     '''Atmospheric propagation'''
@@ -142,7 +141,8 @@ class AtmoPropagation(BaseProcessingObj):
                         layer.phaseInNm = tempP
                     #with self.map_streams[kk*j+i]:
                     angle = self.rotAnglePhInDeg_list[i]
-                    points = rot_points(angle, self.xx, self.yy, half_pixel_layer, pixel_position[0], pixel_position[1], xp=self.xp)
+                    x, y = rot_points(angle, self.xx.ravel(), self.yy.ravel(), half_pixel_layer[0], half_pixel_layer[1], pixel_position[0], pixel_position[1], xp=self.xp)
+                    points = self.xp.stack((x, y)).T
                     interpolator_A = self.RegularGridInterpolator(self.LL[i], layer.A, bounds_error=False, fill_value=0)
                     interpolator_phase = self.RegularGridInterpolator(self.LL[i], layer.phaseInNm, bounds_error=False, fill_value=0)
                     self.update_ef.A *= interpolator_A(points).reshape(self.pixel_pupil_size, self.pixel_pupil_size)
@@ -153,7 +153,6 @@ class AtmoPropagation(BaseProcessingObj):
         for name, source in self.source_dict.items():
             self.update_ef = self.outputs['out_'+name+'_ef']
             self.update_ef.generation_time = self.current_time
-
 
     def run_check(self, time_step):
         # TODO here for no better place, we need something like a "setup()" method called before the loop starts        
