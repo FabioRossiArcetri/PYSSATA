@@ -32,7 +32,6 @@ class Source(BaseDataObj):
             print(f'there is a desired error ({error_coord[0]},{error_coord[1]}) on source coordinates.')
             print(f'final coordinates are: {polar_coordinate[0]},{polar_coordinate[1]}')
         
-        self.polar_coordinate_t = None
         self.polar_coordinate = polar_coordinate
         self.height = height
         self.magnitude = magnitude
@@ -48,9 +47,14 @@ class Source(BaseDataObj):
     @polar_coordinate.setter
     def polar_coordinate(self, value):
         self._polar_coordinate = np.array(value, dtype=self.dtype)
-        self.polar_coordinate_t = self.polar_coordinate.copy()
-        self.polar_coordinate_t[0] *= sec2rad
-        self.polar_coordinate_t[1] *= degree2rad
+
+    @property
+    def r(self):
+        return self._polar_coordinate[0] * sec2rad
+
+    @property
+    def phi(self):
+        return self._polar_coordinate[1] * degree2rad
 
     @property
     def x_coord(self):
