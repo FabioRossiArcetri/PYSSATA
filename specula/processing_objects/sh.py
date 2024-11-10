@@ -31,15 +31,66 @@ def abs2(u_fp, xp):
  
 
 class Interp2D():
-    def __init__(self, input_shape, output_shape, rotInDeg, rowShiftInPixels, colShiftInPixels, dtype, xp):
+    
+    if cp:
+        interp2_kernel = r'''
+            extern "C" __global__
+            void interp2_kernel_TYPE(TYPE *g_in, TYPE *g_out, int out_dx, int out_dy, int in_dx, TYPE *xx, TYPE *yy) {
+
+                int y = blockIdx.y * blockDim.y + threadIdx.y;
+                int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+                if ((y<out_dy) && (x<out_dx)) {
+                    TYPE xcoord = xx[y*out_dx+x];
+                    TYPE ycoord = yy[y*out_dx+x];
+                    int xin = floor(xcoord);
+                    int yin = floor(ycoord);
+                    int xin2 = xin+1;
+                    int yin2 = yin+1;
+
+                    TYPE xdist = xcoord-xin;
+                    TYPE ydist = ycoord-yin;
+
+                    int idx_a = yin*in_dx + xin;
+                    int idx_b = yin*in_dx + xin2;
+                    int idx_c = yin2*in_dx + xin;
+                    int idx_d = yin2*in_dx + xin2;
+
+                    TYPE value = g_in[idx_a]*(1-xdist)*(1-ydist) +
+                                g_in[idx_b]*xdist*(1-ydist) +
+                                g_in[idx_c]*ydist*(1-xdist) +
+                                g_in[idx_d]*xdist*ydist;
+
+                    g_out[y*out_dx + x] = value;
+                    }
+                }
+            '''
+        interp2_kernel_float = cp.RawKernel(interp2_kernel.replace('TYPE', 'float'), name='interp2_kernel_float')
+        interp2_kernel_double = cp.RawKernel(interp2_kernel.replace('TYPE', 'double'), name='interp2_kernel_double')
+
+    def __init__(self, input_shape, output_shape, rotInDeg=0, rowShiftInPixels=0, colShiftInPixels=0, yy=None, xx=None, dtype=np.float32, xp=np):
+        '''
+        Setup a resampling matrix from <input_shape> to <output_shape>,
+        with optional rotation and shift.
+        If xx and yy are given, they have to be the same shape as <output_shape>
+        and they will be used as sampling points over <input_shape>
+        '''
         self.xp = xp
         self.dtype = dtype
         self.input_shape = input_shape
         self.output_shape = output_shape
 
-        yy, xx = map(self.dtype, np.mgrid[0:output_shape[0], 0:output_shape[1]])
-        yy *= input_shape[0] / output_shape[0]
-        xx *= input_shape[1] / output_shape[1]
+        if xx is None or yy is None:
+            yy, xx = map(self.dtype, np.mgrid[0:output_shape[0], 0:output_shape[1]])
+            yy *= input_shape[0] / output_shape[0]
+            xx *= input_shape[1] / output_shape[1]
+        else:
+            if yy.shape != output_shape or xx.shape != output_shape:
+                raise ValueError(f'yy and xx must have shape {output_shape}')
+            else:
+                yy = xp.array(yy, dtype=dtype)
+                xx = xp.array(xx, dtype=dtype)
+
         if rotInDeg != 0:
             yc = input_shape[0] / 2 - 0.5
             xc = input_shape[1] / 2 - 0.5
@@ -47,8 +98,9 @@ class Interp2D():
             sin_ = np.sin(rotInDeg * 3.1415 / 180.0)
             xxr = (xx-xc)*cos_ - (yy-yc)*sin_ + xc
             yyr = (xx-xc)*sin_ + (yy-yc)*cos_ + yc
-            xx = xxr
-            yy = yyr
+            xx = xxr + xc
+            yy = yyr + yc
+            
         if rowShiftInPixels != 0 or colShiftInPixels != 0:
             yy += rowShiftInPixels
             xx += colShiftInPixels
@@ -58,47 +110,9 @@ class Interp2D():
         yy[np.where(yy > input_shape[0]-1)] = input_shape[0]-1
         xx[np.where(xx > input_shape[1]-1)] = input_shape[1]-1
 
-        self.yy = self.xp.array(yy).ravel()
-        self.xx = self.xp.array(xx).ravel()
+        self.yy = self.xp.array(yy, dtype=dtype).ravel()
+        self.xx = self.xp.array(xx, dtype=dtype).ravel()
 
-        if cp:
-            interp2_kernel = r'''
-                extern "C" __global__
-                void interp2_kernel_TYPE(TYPE *g_in, TYPE *g_out, int out_dx, int out_dy, int in_dx, int *xx, int *yy) {
-
-                    int y = blockIdx.y * blockDim.y + threadIdx.y;
-                    int x = blockIdx.x * blockDim.x + threadIdx.x;
-
-                    float ovs_ratio = in_dx / out_dx;
-                    
-                    if ((y<out_dy) && (x<out_dx)) {
-                        float xcoord = x * ovs_ratio;
-                        float ycoord = y * ovs_ratio;
-                        int xin = floor(xcoord);
-                        int yin = floor(ycoord);
-                        int xin2 = xin+1;
-                        int yin2 = yin+1;
-
-                        float xdist = xcoord-xin;
-                        float ydist = ycoord-yin;
-
-                        int idx_a = yin*in_dx + xin;
-                        int idx_b = yin*in_dx + xin2;
-                        int idx_c = yin2*in_dx + xin;
-                        int idx_d = yin2*in_dx + xin2;
-
-                        TYPE value = g_in[idx_a]*(1-xdist)*(1-ydist) +
-                                    g_in[idx_b]*xdist*(1-ydist) +
-                                    g_in[idx_c]*ydist*(1-xdist) +
-                                    g_in[idx_d]*xdist*ydist;
-
-                        g_out[y*out_dx + x] = value;
-                        }
-                    }
-                '''
-            self.interp2_kernel_float = cp.RawKernel(interp2_kernel.replace('TYPE', 'float'), name='interp2_kernel_float')
-            self.interp2_kernel_double = cp.RawKernel(interp2_kernel.replace('TYPE', 'double'), name='interp2_kernel_double')
- 
     def interpolate(self, value, out=None):
         if value.shape != self.input_shape:
             raise ValueError(f'Array to be interpolated must have shape {self.input_shape} instead of {value.shape}')
@@ -475,11 +489,18 @@ class SH(BaseProcessingObj):
                  
                 shape_ovs = (int(s[0] * fov_oversample), int(s[1] * fov_oversample))
                 if not self.interp:
-                    self.interp = Interp2D(s, shape_ovs, self._rotAnglePhInDeg, self._xyShiftPhInPixel[0], self._xyShiftPhInPixel[1], self.dtype, self.xp)
+                    self.interp = Interp2D(s, shape_ovs, self._rotAnglePhInDeg, self._xyShiftPhInPixel[0], self._xyShiftPhInPixel[1], dtype=self.dtype, xp=self.xp)
 
                 self.interp.interpolate(in_ef.A, out=self._wf1.A)
                 self.interp.interpolate(phaseInNmNew, out=self._wf1.phaseInNm)
                 
+                # import matplotlib.pyplot as plt
+                # plt.figure()
+                # plt.imshow(in_ef.A.get())
+                # plt.figure()
+                # plt.imshow(self._wf1.A.get())
+                # plt.show()
+        
             else:
                 # wf1 already set to in_ef
                 pass
