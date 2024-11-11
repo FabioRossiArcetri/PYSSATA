@@ -72,24 +72,17 @@ class SH(BaseProcessingObj):
             self._gkern = False
             self._gkern_size = 0
 
-        self._kernel_fov_scale = 1.0
         self._fov_ovs_coeff = fov_ovs_coeff
         self._squaremask = squaremask
         self._fov_resolution_arcsec = 0.03 if FoVres30mas else 0
-        self._kernel_application = ''
-        self._kernel_precalc_fft = False
         self._debugOutput = False
         self._noprints = False
-        self._idx_valid = False
-        self._scale_ovs = 1.0
-        self._floatShifts = False
         self._rotAnglePhInDeg = rotAnglePhInDeg
         self._aRotAnglePhInDeg = aRotAnglePhInDeg  # TODO if intended to change, set _trigger_geometry_calculated=False to force recalculation
         self._xShiftPhInPixel = xShiftPhInPixel
         self._yShiftPhInPixel = yShiftPhInPixel
         self._aXShiftPhInPixel = aXShiftPhInPixel  # Same TODO as above
         self._aYShiftPhInPixel = aYShiftPhInPixel
-        self._fov_ovs = 1
         self._set_fov_res_to_turbpxsc = set_fov_res_to_turbpxsc
         self._do_not_double_fov_ovs = do_not_double_fov_ovs
         self._np_sub = 0
@@ -98,12 +91,17 @@ class SH(BaseProcessingObj):
         self._trigger_geometry_calculated = False
         self._extrapol_mat1 = None
         self._extrapol_mat2 = None
-        
+
+        # TODO these are fixed but should become parameters 
+        self._fov_ovs = 1
+        self._floatShifts = False
+        self._kernel_fov_scale = 1.0
+        self._kernel_application = ''
+        self._kernel_precalc_fft = False
+
         self._ccd_side = self._subap_npx * self._lenslet.n_lenses
         self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self.target_device_idx)
 
-        self.yy = None
-        self.xx = None
         self.interp = None
 
         self.inputs['in_ef'] = InputValue(type=ElectricField)
@@ -119,7 +117,7 @@ class SH(BaseProcessingObj):
             raise ValueError("Kernel application string must be one of 'FFT', 'FOV', or 'SUBAP'")
         self._kernel_application = str_val
 
-    def set_in_ef(self, in_ef, noprints=False):
+    def set_in_ef(self, in_ef):
         rad2arcsec = 180 / np.pi * 3600
         arcsec2rad = 1.0 / rad2arcsec
 
@@ -194,9 +192,9 @@ class SH(BaseProcessingObj):
             print(f'FoV internal resolution parameter set as [arcsec]: {self._fov_resolution_arcsec}')
 
         # Compute FFT FoV resolution element in arcsec
-        self._scale_ovs = round(turbulence_pxscale / self._fov_resolution_arcsec)
+        scale_ovs = round(turbulence_pxscale / self._fov_resolution_arcsec)
 
-        dTelPaddedInM = ef_size * in_ef.pixel_pitch * self._scale_ovs
+        dTelPaddedInM = ef_size * in_ef.pixel_pitch * scale_ovs
         dSubApPaddedInM = dTelPaddedInM / self._lenslet.dimx
         fft_pxscale_arcsec = self._wavelengthInNm * 1e-9 / dSubApPaddedInM * rad2arcsec
 
@@ -205,7 +203,7 @@ class SH(BaseProcessingObj):
         subap_real_fov_arcsec = subap_real_fov_pix * fft_pxscale_arcsec
         mcmx = np.lcm(int(self._subap_npx), int(subap_real_fov_pix))
 
-        turbulence_fov_pix = int(self._scale_ovs * np_sub)
+        turbulence_fov_pix = int(scale_ovs * np_sub)
 
         # Avoid increasing the FoV if it's already more than twice the requested one
         if turbulence_fov_pix > 2 * subap_real_fov_pix:
@@ -228,12 +226,12 @@ class SH(BaseProcessingObj):
 
         self._sensor_pxscale = subap_real_fov_arcsec / self._subap_npx / rad2arcsec
         self._congrid_np_sub = int(ef_size * self._fov_ovs * lens[2] * 0.5)
-        self._fft_size = self._congrid_np_sub * self._scale_ovs
+        self._fft_size = self._congrid_np_sub * scale_ovs
 
         if self._verbose:
             print('\n-->     FoV resolution [asec], {}'.format(self._fov_resolution_arcsec))
             print('-->     turb. pix. sc.,        {}'.format(turbulence_pxscale))
-            print('-->     sc. over sampl.,       {}'.format(self._scale_ovs))
+            print('-->     sc. over sampl.,       {}'.format(scale_ovs))
             print('-->     FoV over sampl.,       {}'.format(self._fov_ovs))
             print('-->     FFT pix. sc. [asec],   {}'.format(fft_pxscale_arcsec))
             print('-->     no. elements FoV,      {}'.format(subap_real_fov_pix))
