@@ -33,6 +33,11 @@ class BaseDataObj(BaseTimeObj):
     def generation_time(self, value):
         self._generation_time = value
 
+    def get_fits_header(self):
+        hdr = fits.Header()
+        hdr['VERSION'] = 1
+        return hdr
+
     def save(self, filename):
         hdr = fits.Header()
         hdr['GEN_TIME'] = self._generation_time

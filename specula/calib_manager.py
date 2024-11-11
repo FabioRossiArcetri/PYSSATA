@@ -23,7 +23,7 @@ class CalibManager():
             'background': 'backgrounds/',
             'pupils': 'pupils/',
             'pupdata': 'pupils',
-            'subapdata': 'subapdata/',
+            'subapdata': 'subaps/',
             'ShSubapCalibrator': 'subapdata/',
             'rec': 'rec/',
             'recmat': 'rec/',
@@ -34,6 +34,7 @@ class CalibManager():
             'filter': 'filter/',
             'kernel': 'kernels/',
             'pupilstop': 'pupilstop/',
+            'Pupilstop': 'pupilstop/',
             'maskef': 'maskef/',
             'vibrations': 'vibrations/',
             'data': 'data/',
@@ -97,8 +98,7 @@ class CalibManager():
             return filename
         print('Reading:', filename)
         if not os.path.exists(filename):
-            print(f"Missing file: {filename}")
-            return None
+            raise FileNotFoundError(filename)
         return fits.getdata(filename)
 
     def write_phasescreen(self, name, data):
@@ -148,8 +148,7 @@ class CalibManager():
         if get_filename:
             return filename
         if not os.path.exists(filename):
-            print(f"Missing file: {filename}")
-            return None
+            raise FileNotFoundError(filename)
 
         output = []
         ext = 1

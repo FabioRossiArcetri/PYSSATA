@@ -5,16 +5,18 @@ from specula.base_data_obj import BaseDataObj
 class ElectricField(BaseDataObj):
     '''Electric field'''
 
-    def __init__(self, dimx, dimy, pixel_pitch, target_device_idx=None, precision=None):
+    def __init__(self, dimx, dimy, pixel_pitch, S0=0.0, target_device_idx=None, precision=None):
         super().__init__(precision=precision, target_device_idx=target_device_idx)
-
         dimx = int(dimx)
         dimy = int(dimy)
         self.pixel_pitch = pixel_pitch        
-        self.S0 = 0.0
-
+        self.S0 = S0
         self.A = self.xp.ones((dimx, dimy), dtype=self.dtype)
         self.phaseInNm = self.xp.zeros((dimx, dimy), dtype=self.dtype)
+
+    def set_value(self, v):
+        self.A = v[0]
+        self.phaseInNm = v[1]
 
     def reset(self):
         self.A = self.xp.ones_like(self.A)
@@ -32,7 +34,7 @@ class ElectricField(BaseDataObj):
         diff0 = self.size[0] - subrect[0]
         diff1 = self.size[1] - subrect[1]
         if ef2.size[0] != diff0 or ef2.size[1] != diff1:
-            raise ValueError(f'{ef2} has size {sz2} instead of the required ({diff0}, {diff1})')
+            raise ValueError(f'{ef2} has size {ef2.size} instead of the required ({diff0}, {diff1})')
         return subrect
         
     def phi_at_lambda(self, wavelengthInNm):
@@ -43,7 +45,7 @@ class ElectricField(BaseDataObj):
         return self.A * self.xp.exp(1j * phi, dtype=self.complex_dtype)
 
     def product(self, ef2, subrect=None):
-        subrect = self.checkOther(ef2, subrect=subrect)
+#        subrect = self.checkOther(ef2, subrect=subrect)    # TODO check subrect from atmo_propagation, even in PASSATA it does not seem right
         x2 = subrect[0] + self.size[0]
         y2 = subrect[1] + self.size[1]
         self.A *= ef2.A[subrect[0] : x2, subrect[1] : y2]
@@ -74,20 +76,35 @@ class ElectricField(BaseDataObj):
     def compare(self, ef2):
         return not (self.xp.array_equal(self.A, ef2._A) and self.xp.array_equal(self.phaseInNm, ef2._phaseInNm))
 
-    def save(self, filename):
-        A = self.A
-        phaseInNm = self.phaseInNm
+    def get_fits_header(self):
         hdr = fits.Header()
         hdr['VERSION'] = 1
-        hdr['DIMX'] = A.shape[0]
-        hdr['DIMY'] = A.shape[1]
+        hdr['DIMX'] = self.A.shape[0]
+        hdr['DIMY'] = self.A.shape[1]
         hdr['PIXPITCH'] = self.pixel_pitch
         hdr['S0'] = self.S0
+        return hdr
 
+    def save(self, filename):
+        hdr = self.get_fits_header()
+        A = self.A        
         hdu_A = fits.PrimaryHDU(A, header=hdr)
         hdu_phase = fits.ImageHDU(phaseInNm)
         hdul = fits.HDUList([hdu_A, hdu_phase])
         hdul.writeto(filename, overwrite=True)
+
+    @staticmethod
+    def from_header(hdr):    
+        version = hdr['VERSION']
+        if version != 1:
+            raise ValueError(f"Error: unknown version {version} in file {filename}")
+        dimx = hdr['DIMX']
+        dimy = hdr['DIMY']
+        pitch = hdr['PIXPITCH']
+        S0 = hdr['S0']
+        ef = ElectricField(dimx, dimy, pitch, S0)        
+        return ef
+
 
     @staticmethod
     def restore(filename):

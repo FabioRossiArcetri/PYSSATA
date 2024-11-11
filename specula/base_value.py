@@ -14,6 +14,10 @@ class BaseValue(BaseDataObj):
         super().__init__(target_device_idx=target_device_idx)
         self._description = description
         self._value = value
+        
+    
+    def set_value(self, val):
+        self._value = val
 
     @property
     def value(self):

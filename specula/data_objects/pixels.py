@@ -31,6 +31,9 @@ class Pixels(BaseDataObj):
         ]
         return type_matrix[(bits - 1) // 8][signed]
 
+    def set_value(self, v):
+        self._pixels = v
+
     @property
     def size(self):
         return self.pixels.shape
@@ -41,23 +44,39 @@ class Pixels(BaseDataObj):
     def set_size(self, size):
         self.pixels = self.xp.zeros(size, dtype=self.dtype)
 
-    def save(self, filename, hdr=None):
-        if hdr is None:
-            hdr = fits.Header()
+    def get_fits_header(self):
+        hdr = fits.Header()
         hdr['VERSION'] = 1
-        hdr['TYPE'] = self._type.name
+        hdr['TYPE'] = str(self._type)
         hdr['BPP'] = self._bpp
         hdr['BYTESPP'] = self._bytespp
         hdr['SIGNED'] = self._signed
         hdr['DIMX'] = self.size[0]
         hdr['DIMY'] = self.size[1]
+        return hdr
 
+    def save(self, filename):
+        hdr = self.get_fits_header()            
         super().save(filename, hdr)
         fits.append(filename, self.pixels, hdr)
 
     def read(self, filename, hdr=None, exten=0):
         super().read(filename, hdr, exten)
         self.pixels = fits.getdata(filename, ext=exten)
+
+
+    @staticmethod
+    def from_header(hdr):    
+        version = hdr['VERSION']
+        if version != 1:
+            raise ValueError(f"Error: unknown version {version} in file {filename}")
+        dimx = hdr['DIMX']
+        dimy = hdr['DIMY']
+        bits = hdr['BPP']
+        signed = hdr['SIGNED']
+
+        pixels = Pixels(dimx, dimy, bits=bits, signed=signed)
+        return pixels
 
     @staticmethod
     def restore(filename):
