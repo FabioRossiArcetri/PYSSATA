@@ -49,7 +49,7 @@ class Pupilstop(Layer):
         fits.append(filename, [self._pixel_pitch])
 
     @staticmethod
-    def restore(filename):
+    def restore(filename, target_device_idx=None):
         hdr = fits.getheader(filename)
         version = int(hdr['VERSION'])
 
@@ -60,7 +60,7 @@ class Pupilstop(Layer):
         dim = fits.getdata(filename, ext=2)
         pixel_pitch = fits.getdata(filename, ext=3)[0]
 
-        pupilstop = PupilStop(dim[0], dim[1], pixel_pitch, 0, input_mask=input_mask)
+        pupilstop = Pupilstop(dim[0], pixel_pitch, input_mask=input_mask, target_device_idx=target_device_idx)
         return pupilstop
 
     # TODO: this is a data object, not a processing object

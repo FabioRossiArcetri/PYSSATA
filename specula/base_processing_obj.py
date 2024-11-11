@@ -82,10 +82,12 @@ class BaseProcessingObj(BaseTimeObj):
             elif type(input_obj) is InputList:
                 self.local_inputs[input_name] = []
                 self.last_seen[input_name] = []
-                for tt in input_obj.get(self.target_device_idx):
-                    self.local_inputs[input_name].append(tt)
-                    if self.local_inputs[input_name] is not None:
-                        self.last_seen[input_name].append(tt.generation_time)
+                input_list = input_obj.get(self.target_device_idx)
+                if input_list is not None:
+                    for tt in input_list:
+                        self.local_inputs[input_name].append(tt)
+                        if self.local_inputs[input_name] is not None:
+                            self.last_seen[input_name].append(tt.generation_time)
 
     def trigger_code(self):
         '''

@@ -150,6 +150,13 @@ class Simul():
             hints = self._get_type_hints(klass)
 
             target_device_idx = pars.get('target_device_idx', None)
+
+            if 'tag' in pars:
+                if len(pars) > 2:
+                    raise ValueError('Extra parameters with "tag" are not allowed')
+                filename = cm.filename(classname, pars['tag'])
+                self.objs[key] = klass.restore(filename, target_device_idx=target_device_idx)
+                continue
                 
             pars2 = {}
             for name, value in pars.items():
@@ -266,6 +273,9 @@ class Simul():
             if not key=='data_source':
                 if 'inputs' in pars.keys():
                     for input_name, output_name_full in pars['inputs'].items():
+                        if type(output_name_full) is list:
+                            print('TODO: list of inputs is not handled in output replay')
+                            continue
                         if output_name_full in data_source_outputs.keys():
                             self.replay_params[key]['inputs'][input_name] = data_source_outputs[output_name_full]
 

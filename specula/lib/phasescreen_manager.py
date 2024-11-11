@@ -29,10 +29,10 @@ def phasescreens_manager(L0, dimension, pixel_pitch, directory, seed=None, targe
             raise ValueError("The number of elements in L0 must be 1 or the same as the number of seeds!")
 
         # Construct the file names
-        phasescreen_name = f'ps_seed{xp.around(element)}_dim{xp.around(dimension)}_pixpit{pixel_pitch:.3f}_L0{float(L0i)}_{precision_str}.fits'
-        phasescreen_name1 = f'ps_seed{xp.around(element)}_dim{xp.around(dimension)}_pixpit{pixel_pitch:.3f}_L0{xp.around(L0i)}_{precision_str}.fits'
-        phasescreen_name2 = f'ps_seed{float(element)}_dim{xp.around(dimension)}_pixpit{pixel_pitch:.3f}_L0{float(L0i)}_{precision_str}.fits'
-        phasescreen_name3 = f'ps_seed{float(element)}_dim{xp.around(dimension)}_pixpit{pixel_pitch:.3f}_L0{xp.around(L0i)}_{precision_str}.fits'
+        phasescreen_name = f'ps_seed{xp.around(element)}_dim{xp.around(dimension)}_pixpit{pixel_pitch:.3f}_L0{float(L0i):.4f}_{precision_str}.fits'
+        phasescreen_name1 = f'ps_seed{xp.around(element)}_dim{xp.around(dimension)}_pixpit{pixel_pitch:.3f}_L0{xp.around(L0i):.4f}_{precision_str}.fits'
+        phasescreen_name2 = f'ps_seed{float(element)}_dim{xp.around(dimension)}_pixpit{pixel_pitch:.3f}_L0{float(L0i):.4f}_{precision_str}.fits'
+        phasescreen_name3 = f'ps_seed{float(element)}_dim{xp.around(dimension)}_pixpit{pixel_pitch:.3f}_L0{xp.around(L0i):.4f}_{precision_str}.fits'
 
         # Check if the phase screen file exists in the directory
         if os.path.exists(os.path.join(directory, phasescreen_name)):
@@ -45,8 +45,10 @@ def phasescreens_manager(L0, dimension, pixel_pitch, directory, seed=None, targe
             phasescreen = fits.getdata(os.path.join(directory, phasescreen_name3), memmap=True)
         else:
             # Calculate the phase screen if it does not exist
+            print('Calculating phasescreen...')
             phasescreen = calc_phasescreen(L0i, dimension, pixel_pitch, seed=element, precision=precision, verbose=verbose)
             fits.writeto(os.path.join(directory, phasescreen_name), cpuArray(phasescreen), overwrite=True)
+            print('Done')
         
         # Add the phase screen to the list
         phasescreens.append(phasescreen)

@@ -1,6 +1,7 @@
 from specula.base_value import BaseValue
 from specula.connections import InputValue
 
+from specula.data_objects.m2c import M2C
 from specula.data_objects.ifunc import IFunc
 from specula.data_objects.layer import Layer
 from specula.data_objects.pupilstop import Pupilstop
@@ -11,6 +12,7 @@ class DM(BaseProcessingObj):
                  pixel_pitch: float,
                  height: float,
                  ifunc: IFunc=None,
+                 m2c: M2C=None,
                  type_str: str=None,
                  nmodes: int=None,
                  nzern: int=None,
@@ -42,23 +44,33 @@ class DM(BaseProcessingObj):
         s = self._ifunc.mask_inf_func.shape
         nmodes_if = self._ifunc.size[0]
         
-        self.if_commands = self.xp.zeros(nmodes_if, dtype=self._ifunc.dtype)
+        self.if_commands = self.xp.zeros(nmodes_if, dtype=self.dtype)
         self.layer = Layer(s[0], s[1], pixel_pitch, height, target_device_idx=target_device_idx, precision=precision)
         self.layer.A = self._ifunc.mask_inf_func
         
+        if m2c is not None:
+            nmodes_m2c = m2c.m2c.shape[1]
+            self.m2c_commands = self.xp.zeros(nmodes_m2c, dtype=self.dtype)
+            self.m2c = m2c.m2c
+        else:
+            self.m2c = None
+            self.m2c_commands = None
+
         # Default sign is -1 to take into account the reflection in the propagation
         self.sign = sign
         self.inputs['in_command'] = InputValue(type=BaseValue)
         self.outputs['out_layer'] = self.layer
 
     def trigger_code(self):
-        commands = self.local_inputs['in_command'].value
-        # Compute phase only if commands vector is not zero
-        # if self.xp.sum(self.xp.abs(commands)) != 0:
-        #    if len(commands) > len(self.if_commands):
-        #        raise ValueError(f"Error: command vector length ({len(commands)}) is greater than the Influence function size ({len(self.if_commands)})")
-        self.if_commands[:len(commands)] = self.sign * commands
-        self.layer.phaseInNm[self._ifunc.idx_inf_func] = self.xp.dot(self.if_commands, self._ifunc.ptr_ifunc)
+        input_commands = self.local_inputs['in_command'].value
+        if self.m2c is not None:
+            self.m2c_commands[:len(input_commands)] = input_commands
+            cmd = self.if_commands @ self.m2c
+        else:
+            cmd = input_commands
+            
+        self.if_commands[:len(cmd)] = self.sign * cmd
+        self.layer.phaseInNm[self._ifunc.idx_inf_func] = self.if_commands @ self._ifunc.influence_function
         self.layer.generation_time = self.current_time
     
     # Getters and Setters for the attributes

@@ -34,7 +34,7 @@ class ElectricField(BaseDataObj):
         diff0 = self.size[0] - subrect[0]
         diff1 = self.size[1] - subrect[1]
         if ef2.size[0] != diff0 or ef2.size[1] != diff1:
-            raise ValueError(f'{ef2} has size {sz2} instead of the required ({diff0}, {diff1})')
+            raise ValueError(f'{ef2} has size {ef2.size} instead of the required ({diff0}, {diff1})')
         return subrect
         
     def phi_at_lambda(self, wavelengthInNm):
@@ -45,7 +45,7 @@ class ElectricField(BaseDataObj):
         return self.A * self.xp.exp(1j * phi, dtype=self.complex_dtype)
 
     def product(self, ef2, subrect=None):
-        subrect = self.checkOther(ef2, subrect=subrect)
+#        subrect = self.checkOther(ef2, subrect=subrect)    # TODO check subrect from atmo_propagation, even in PASSATA it does not seem right
         x2 = subrect[0] + self.size[0]
         y2 = subrect[1] + self.size[1]
         self.A *= ef2.A[subrect[0] : x2, subrect[1] : y2]
