@@ -16,9 +16,9 @@ class BaseTimeObj:
         self._time_resolution = int(1e9)        
         
         if precision is None:
-            self._precision = global_precision
+            self.precision = global_precision
         else:
-            self._precision = precision
+            self.precision = precision
 
         if target_device_idx is None:
             self.target_device_idx = default_target_device_idx
@@ -27,13 +27,13 @@ class BaseTimeObj:
 
         if self.target_device_idx>=0:
             self._target_device = cp.cuda.Device(self.target_device_idx)      # GPU case
-            self.dtype = gpu_float_dtype_list[self._precision]
-            self.complex_dtype = gpu_complex_dtype_list[self._precision]
+            self.dtype = gpu_float_dtype_list[self.precision]
+            self.complex_dtype = gpu_complex_dtype_list[self.precision]
             self.xp = cp
         else:
             self._target_device = default_target_device                # CPU case
-            self.dtype = cpu_float_dtype_list[self._precision]
-            self.complex_dtype = cpu_complex_dtype_list[self._precision]
+            self.dtype = cpu_float_dtype_list[self.precision]
+            self.complex_dtype = cpu_complex_dtype_list[self.precision]
             self.xp = np
 
     def t_to_seconds(self, t):
