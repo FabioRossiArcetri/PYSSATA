@@ -170,7 +170,7 @@ class AtmoEvolution(BaseProcessingObj):
                     square_phasescreens = phasescreens_manager(L0, self.pixel_square_phasescreens,
                                                                self.pixel_pitch, self.data_dir,
                                                                seed=seed, precision=self.precision,
-                                                               verbose=self.verbose)
+                                                               verbose=self.verbose, xp=self.xp)
 
                 square_ps_index = -1
                 ps_index = 0
@@ -213,7 +213,7 @@ class AtmoEvolution(BaseProcessingObj):
                 square_phasescreens = phasescreens_manager(self.L0, self.pixel_square_phasescreens,
                                                            self.pixel_pitch, self.data_dir,
                                                            seed=seed, precision=self.precision,
-                                                           verbose=self.verbose)
+                                                           verbose=self.verbose, xp=self.xp)
 
                 for i in range(self.n_phasescreens):
                     temp_screen = square_phasescreens[i][:, :self.pixel_phasescreens]
