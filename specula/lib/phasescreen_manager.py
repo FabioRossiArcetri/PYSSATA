@@ -1,13 +1,11 @@
 import os
-import numpy as np
 
-from specula import xp
 from specula import cpuArray
 from astropy.io import fits
 
 from specula.lib.calc_phasescreen import calc_phasescreen
 
-def phasescreens_manager(L0, dimension, pixel_pitch, directory, seed=None, target_device_idx=None, precision=None, verbose=False):
+def phasescreens_manager(L0, dimension, pixel_pitch, directory, xp, seed=None, target_device_idx=None, precision=None, verbose=False):
     if seed is None:
         seed = [0]
     
@@ -46,7 +44,7 @@ def phasescreens_manager(L0, dimension, pixel_pitch, directory, seed=None, targe
         else:
             # Calculate the phase screen if it does not exist
             print('Calculating phasescreen...')
-            phasescreen = calc_phasescreen(L0i, dimension, pixel_pitch, seed=element, precision=precision, verbose=verbose)
+            phasescreen = calc_phasescreen(L0i, dimension, pixel_pitch, seed=element, precision=precision, verbose=verbose, xp=xp)
             fits.writeto(os.path.join(directory, phasescreen_name), cpuArray(phasescreen), overwrite=True)
             print('Done')
         

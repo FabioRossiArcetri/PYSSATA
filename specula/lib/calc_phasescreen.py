@@ -1,13 +1,10 @@
-import numpy as np
-
-from specula import xp
 from specula import global_precision
 from specula import float_dtype_list
 from specula import complex_dtype_list
 
 from specula.lib.calc_spatialfrequency import calc_spatialfrequency
 
-def calc_phasescreen(L0, dimension, pixel_pitch, seed=0, target_device_idx=None, precision=None, verbose=False):
+def calc_phasescreen(L0, dimension, pixel_pitch, xp, seed=0, target_device_idx=None, precision=None, verbose=False):
     if verbose:
         print("Phase-screen computation")
 
