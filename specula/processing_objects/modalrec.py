@@ -191,7 +191,7 @@ class Modalrec(BaseProcessingObj):
         if self._modes_first_step.generation_time != self.current_time:
             if self._polc:
                 self.compute_pseudo_ol_slopes(self.current_time)
-                m = self.compute_modes(self._recmat, self._pseudo_ol_slopes.ptr_slopes)
+                m = self.compute_modes(self._recmat, self._pseudo_ol_slopes.slopes)
                 self._pseudo_ol_modes.value = m
                 self._pseudo_ol_modes.generation_time = self.current_time
 
@@ -248,7 +248,7 @@ class Modalrec(BaseProcessingObj):
 
         if slope_ptr is None:
             if isinstance(self._slopes, Slopes):
-                slope_ptr = self._slopes.ptr_slopes
+                slope_ptr = self._slopes.slopes
                 if self._verbose:
                     print('Slopes')
                     print(f"modalrec.compute_modes slope RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
