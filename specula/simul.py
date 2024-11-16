@@ -197,7 +197,7 @@ class Simul():
 
             # Add global and class-specific params if needed
             my_params = {k: main[k] for k in args if k in main}
-            if 'data_dir' in args:  # TODO special case
+            if 'data_dir' in args and 'data_dir' not in my_params:  # TODO special case
                 my_params['data_dir'] = cm.root_subdir(classname)
 
             my_params.update(pars2)
@@ -282,10 +282,6 @@ class Simul():
             if key=='data_source':
                 self.replay_params[key]['outputs'] = list(self.replay_params[key]['inputs'].keys())
                 del self.replay_params[key]['inputs']
-
-        print(self.replay_params)
-
-        skip_pars = 'class inputs outputs'.split()
 
         for key, pars in params.items():
             if key == 'main':

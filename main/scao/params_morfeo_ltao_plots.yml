@@ -5,7 +5,7 @@ main:
   store_dir:         './output'             # Data result directory: 'store_dir'/TN/
   pixel_pupil:       480                    # Linear dimension of pupil phase array
   pixel_pitch:       0.0802                 # [m] Pitch of the pupil phase array
-  total_time:        0.050                  # [s] Total simulation running time
+  total_time:        4.040                  # [s] Total simulation running time
   time_step:         0.002                  # [s] Simulation time step
 #  store:                                    # Dict of data products to store, 'name': 'output'
 #    sr: 'psf.out_sr'
@@ -353,3 +353,43 @@ psf:
       in_ef:  'prop.out_on_axis_source_ef'
   outputs:  ['out_psf', 'out_sr']
 
+
+sc1_disp:
+ class:            'SlopecDisplay'
+ inputs:
+   slopes:       'slopec1.out_slopes'
+   subapdata:    'slopec1.out_subapdata'
+   pixels:       'detector1.out_pixels'
+ disp_factor:      1
+
+sc3_disp:
+ class:            'SlopecDisplay'
+ inputs:
+   slopes:       'slopec3.out_slopes'
+   subapdata:    'slopec3.out_subapdata'
+   pixels:       'detector3.out_pixels'
+ disp_factor:      1
+ window:           12
+
+#psf_disp:
+#  class:            'PsfDisplay'
+#  inputs:
+#    psf:       "psf.out_psf"
+#  window:           14
+#  title:            'PSF'
+#  disp_factor:      1
+
+sr_disp:
+  class:            'PlotDisplay'
+  inputs:
+    value:       'psf.out_sr'
+  window:           11
+  title:            'SR'
+
+# dm_disp:
+#   class:            'PhaseDisplay'
+#   inputs:
+#     phase:       "dm.out_layer"
+#   window:           13
+#   title:            'DM'
+#   disp_factor:      2

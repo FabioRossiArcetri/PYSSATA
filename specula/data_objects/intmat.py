@@ -1,6 +1,7 @@
 
 
 from astropy.io import fits
+from specula import cpuArray
 
 from specula.base_data_obj import BaseDataObj
 from specula.data_objects.recmat import Recmat
@@ -41,12 +42,12 @@ class Intmat(BaseDataObj):
 
     def save(self, filename, hdr=None):
         if hdr is None:
-            hdr = {}
+            hdr = fits.Header()
         hdr['VERSION'] = 1
         hdr['PUP_TAG'] = self._pupdata_tag
         hdr['NORMFACT'] = self._norm_factor
         # Save fits file
-        fits.writeto(filename, self._intmat, hdr, overwrite=True)
+        fits.writeto(filename, cpuArray(self._intmat), hdr, overwrite=True)
         if self._slope_mm is not None:
             fits.append(filename, self._slope_mm)
         if self._slope_rms is not None:
