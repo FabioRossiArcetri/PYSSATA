@@ -4,8 +4,8 @@ pushpull:
   class:     'FuncGenerator'
   func_type: 'PUSHPULL'
   nmodes:     54
-  vect_amplitude:  [50,50,50,50,50,50,50,50,50,50,
-                      50,50,50,50,50,50,50,50,50,50,
+  vect_amplitude:  [250,250,250,250,250,250,250,250,250,250,
+                      250,250,250,250,250,50,50,50,50,50,
                       50,50,50,50,50,50,50,50,50,50,
                       50,50,50,50,50,50,50,50,50,50,
                       50,50,50,50,50,50,50,50,50,50,
@@ -39,7 +39,15 @@ calibrator:
     in_slopes: 'slopec.out_slopes'
     in_commands: 'pushpull.output'
 
-
+pixels_disp:
+  class:            'PixelsDisplay'
+  inputs:
+    pixels:      "detector.out_pixels"
+  window:           15
+  title:            "Pixels"
+  disp_factor:      1
+  sh_as_pyr:        true
+  subapdata_object:  'scao_subaps_n20_th0.5'
 
 remove: ['atmo'] #, 'rec']
  
