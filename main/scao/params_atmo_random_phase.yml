@@ -104,7 +104,6 @@ sc_disp:
    inputs:
      slopes:       'slopec.out_slopes'
      pupdata:      'slopec.out_pupdata'
-     pixels:       'detector.out_pixels'
    window:           16
    disp_factor:      4
 

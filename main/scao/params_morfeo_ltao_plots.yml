@@ -359,7 +359,6 @@ sc1_disp:
  inputs:
    slopes:       'slopec1.out_slopes'
    subapdata:    'slopec1.out_subapdata'
-   pixels:       'detector1.out_pixels'
  disp_factor:      1
 
 sc3_disp:
@@ -367,7 +366,6 @@ sc3_disp:
  inputs:
    slopes:       'slopec3.out_slopes'
    subapdata:    'slopec3.out_subapdata'
-   pixels:       'detector3.out_pixels'
  disp_factor:      1
  window:           12
 

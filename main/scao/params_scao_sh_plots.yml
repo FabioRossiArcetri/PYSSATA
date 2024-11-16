@@ -144,7 +144,6 @@ sc_disp:
   inputs:
     slopes:       'slopec.out_slopes'
     subapdata:    'slopec.out_subapdata'
-    pixels:       'detector.out_pixels'
   disp_factor:      4
 sr_disp:
   class:            'PlotDisplay'
