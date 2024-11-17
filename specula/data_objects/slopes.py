@@ -77,16 +77,26 @@ class Slopes(BaseDataObj):
                 print('WARNING (slopes object): s2 (base_value) is empty!')
 
     def x_remap2d(self, frame, idx):
-        frame[idx] = self.slopes[self.indx()]
+        if len(idx.shape) == 1:
+            frame.flat[idx] = self.slopes[self.indx()]
+        elif len(idx.shape) == 2:
+            frame[idx] = self.slopes[self.indx()]
+        else:
+            raise ValueError('Frame index must be either 1d for flattened indexes or 2d')
 
     def y_remap2d(self, frame, idx):
-        frame[idx] = self.slopes[self.indy()]
+        if len(idx.shape) == 1:
+            frame.flat[idx] = self.slopes[self.indy()]
+        elif len(idx.shape) == 2:
+            frame[idx] = self.slopes[self.indy()]
+        else:
+            raise ValueError('Frame index must be either 1d for flattened indexes or 2d')
 
     def get2d(self, cm, pupdata=None):
         if pupdata is None:
             pupdata = cm.read_pupils(self.pupdata_tag)
         mask = pupdata.single_mask()
-        idx = self.xp.where(mask)
+        idx = pupdata.display_map
         fx = self.xp.zeros_like(mask, dtype=self.dtype)
         fy = self.xp.zeros_like(mask, dtype=self.dtype)
         self.x_remap2d(fx, idx)

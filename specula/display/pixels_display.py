@@ -51,8 +51,6 @@ class PixelsDisplay(BaseProcessingObj):
 #            plt.colorbar()
         self.fig.canvas.draw()
         plt.pause(0.001)
-        import code
-        code.interact(local=dict(locals(), **globals()))
     def run_check(self, time_step):
         psf = self.inputs['pixels'].get(self.target_device_idx)
         return psf is not None
@@ -65,14 +63,14 @@ class PixelsDisplay(BaseProcessingObj):
         pupil = subapdata.copyTo(-1).single_mask()
         idx2d = self.xp.unravel_index(subapdata.idxs, pixels.shape)
         A, B, C, D = pupil.copy(), pupil.copy(), pupil.copy(), pupil.copy()
-        pix_idx = np.where(A)
+        pix_idx = subapdata.display_map
         half_sub = subapdata.np_sub // 2
         for i in range(subapdata.n_subaps):
             subap = pixels[idx2d[0][i], idx2d[1][i]].reshape(half_sub*2, half_sub*2)
-            A[pix_idx[0][i], pix_idx[1][i]] = subap[:half_sub, :half_sub].sum()
-            B[pix_idx[0][i], pix_idx[1][i]] = subap[:half_sub, half_sub:].sum()
-            C[pix_idx[0][i], pix_idx[1][i]] = subap[half_sub:, :half_sub].sum()
-            D[pix_idx[0][i], pix_idx[1][i]] = subap[half_sub:, half_sub:].sum()
+            A.flat[pix_idx[i]] = subap[:half_sub, :half_sub].sum()
+            B.flat[pix_idx[i]] = subap[:half_sub, half_sub:].sum()
+            C.flat[pix_idx[i]] = subap[half_sub:, :half_sub].sum()
+            D.flat[pix_idx[i]] = subap[half_sub:, half_sub:].sum()
             
-        pyr_pixels = np.vstack((np.hstack((D, B)), np.hstack((C, A))))
+        pyr_pixels = np.vstack((np.hstack((A, B)), np.hstack((C, D))))
         return pyr_pixels
