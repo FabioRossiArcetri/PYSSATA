@@ -60,7 +60,7 @@ class AtmoEvolution(BaseProcessingObj):
             alpha_fov = 0.0
             for element in source_dict.values():
                 alpha_fov = max(alpha_fov, *abs(cv_coord(from_polar=[element.polar_coordinate[1], element.polar_coordinate[0]],
-                                                       to_rect=True, degrees=True)))
+                                                       to_rect=True, degrees=True, xp=np)))
             if mcao_fov is not None:
                 alpha_fov = max(alpha_fov, mcao_fov / 2.0)
         
@@ -170,7 +170,7 @@ class AtmoEvolution(BaseProcessingObj):
                     square_phasescreens = phasescreens_manager(L0, self.pixel_square_phasescreens,
                                                                self.pixel_pitch, self.data_dir,
                                                                seed=seed, precision=self.precision,
-                                                               verbose=self.verbose)
+                                                               verbose=self.verbose, xp=self.xp)
 
                 square_ps_index = -1
                 ps_index = 0
@@ -213,7 +213,7 @@ class AtmoEvolution(BaseProcessingObj):
                 square_phasescreens = phasescreens_manager(self.L0, self.pixel_square_phasescreens,
                                                            self.pixel_pitch, self.data_dir,
                                                            seed=seed, precision=self.precision,
-                                                           verbose=self.verbose)
+                                                           verbose=self.verbose, xp=self.xp)
 
                 for i in range(self.n_phasescreens):
                     temp_screen = square_phasescreens[i][:, :self.pixel_phasescreens]
@@ -266,7 +266,7 @@ class AtmoEvolution(BaseProcessingObj):
             ipli = int(self.pixel_layer[ii])
             ipli_p = int(pos + self.pixel_layer[ii])
             layer_phase = (1.0 - new_position_rem[ii]) * p[0: ipli, pos: ipli_p] + new_position_rem[ii] * p[0: ipli, pos + 1: ipli_p + 1]
-            layer_phase = self.xp.rot90(layer_phase, wdi)
+            layer_phase = self.xp.rot90(layer_phase, wdi[ii])
             if not wdf_full[ii]==0:
                 layer_phase = self.rotate(layer_phase, wdf_full[ii], reshape=False, order=1)
             self.layer_list[ii].phaseInNm = layer_phase * scale_coeff

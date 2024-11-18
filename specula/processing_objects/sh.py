@@ -1,13 +1,16 @@
 import numpy as np
-import cupy as cp # TODO fuse
+
+from specula import cpuArray, fuse, show_in_profiler
+from specula.lib.extrapolate_edge_pixel import extrapolate_edge_pixel
+from specula.lib.extrapolate_edge_pixel_mat_define import extrapolate_edge_pixel_mat_define
 from specula.lib.toccd import toccd
+from specula.lib.interp2d import Interp2D
 from specula.lib.make_mask import make_mask
 from specula.connections import InputValue
 from specula.data_objects.ef import ElectricField
 from specula.data_objects.intensity import Intensity
 from specula.base_processing_obj import BaseProcessingObj
 from specula.data_objects.lenslet import Lenslet
-from specula.data_objects.subap_data import SubapData
 
 
 # TODO
@@ -22,10 +25,13 @@ if 0:
             sh.kernelobj = kernelobj
         
 
-@cp.fuse(kernel_name='abs2')
-def abs2(u_fp):
-     psf = cp.real(u_fp * cp.conj(u_fp))
+@fuse(kernel_name='abs2')
+def abs2(u_fp, xp):
+     psf = xp.real(u_fp * xp.conj(u_fp))
      return psf
+ 
+
+
 
 class SH(BaseProcessingObj):
     def __init__(self,
@@ -66,34 +72,37 @@ class SH(BaseProcessingObj):
             self._gkern = False
             self._gkern_size = 0
 
-        self._kernel_fov_scale = 1.0
         self._fov_ovs_coeff = fov_ovs_coeff
         self._squaremask = squaremask
         self._fov_resolution_arcsec = 0.03 if FoVres30mas else 0
-        self._kernel_application = ''
-        self._kernel_precalc_fft = False
         self._debugOutput = False
         self._noprints = False
-        self._idx_valid = False
-        self._scale_ovs = 1.0
-        self._floatShifts = False
         self._rotAnglePhInDeg = rotAnglePhInDeg
         self._aRotAnglePhInDeg = aRotAnglePhInDeg  # TODO if intended to change, set _trigger_geometry_calculated=False to force recalculation
         self._xShiftPhInPixel = xShiftPhInPixel
         self._yShiftPhInPixel = yShiftPhInPixel
         self._aXShiftPhInPixel = aXShiftPhInPixel  # Same TODO as above
         self._aYShiftPhInPixel = aYShiftPhInPixel
-        self._fov_ovs = 1
         self._set_fov_res_to_turbpxsc = set_fov_res_to_turbpxsc
         self._do_not_double_fov_ovs = do_not_double_fov_ovs
         self._np_sub = 0
         self._fft_size = 0
         self._input_ef_set = False
         self._trigger_geometry_calculated = False
-        self._extrapol_mat = None
-        
+        self._extrapol_mat1 = None
+        self._extrapol_mat2 = None
+
+        # TODO these are fixed but should become parameters 
+        self._fov_ovs = 1
+        self._floatShifts = False
+        self._kernel_fov_scale = 1.0
+        self._kernel_application = ''
+        self._kernel_precalc_fft = False
+
         self._ccd_side = self._subap_npx * self._lenslet.n_lenses
         self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self.target_device_idx)
+
+        self.interp = None
 
         self.inputs['in_ef'] = InputValue(type=ElectricField)
         self.outputs['out_i'] = self._out_i
@@ -108,7 +117,7 @@ class SH(BaseProcessingObj):
             raise ValueError("Kernel application string must be one of 'FFT', 'FOV', or 'SUBAP'")
         self._kernel_application = str_val
 
-    def set_in_ef(self, in_ef, noprints=False):
+    def set_in_ef(self, in_ef):
         rad2arcsec = 180 / np.pi * 3600
         arcsec2rad = 1.0 / rad2arcsec
 
@@ -183,9 +192,9 @@ class SH(BaseProcessingObj):
             print(f'FoV internal resolution parameter set as [arcsec]: {self._fov_resolution_arcsec}')
 
         # Compute FFT FoV resolution element in arcsec
-        self._scale_ovs = round(turbulence_pxscale / self._fov_resolution_arcsec)
+        scale_ovs = round(turbulence_pxscale / self._fov_resolution_arcsec)
 
-        dTelPaddedInM = ef_size * in_ef.pixel_pitch * self._scale_ovs
+        dTelPaddedInM = ef_size * in_ef.pixel_pitch * scale_ovs
         dSubApPaddedInM = dTelPaddedInM / self._lenslet.dimx
         fft_pxscale_arcsec = self._wavelengthInNm * 1e-9 / dSubApPaddedInM * rad2arcsec
 
@@ -194,7 +203,7 @@ class SH(BaseProcessingObj):
         subap_real_fov_arcsec = subap_real_fov_pix * fft_pxscale_arcsec
         mcmx = np.lcm(int(self._subap_npx), int(subap_real_fov_pix))
 
-        turbulence_fov_pix = int(self._scale_ovs * np_sub)
+        turbulence_fov_pix = int(scale_ovs * np_sub)
 
         # Avoid increasing the FoV if it's already more than twice the requested one
         if turbulence_fov_pix > 2 * subap_real_fov_pix:
@@ -217,12 +226,12 @@ class SH(BaseProcessingObj):
 
         self._sensor_pxscale = subap_real_fov_arcsec / self._subap_npx / rad2arcsec
         self._congrid_np_sub = int(ef_size * self._fov_ovs * lens[2] * 0.5)
-        self._fft_size = self._congrid_np_sub * self._scale_ovs
+        self._fft_size = self._congrid_np_sub * scale_ovs
 
         if self._verbose:
             print('\n-->     FoV resolution [asec], {}'.format(self._fov_resolution_arcsec))
             print('-->     turb. pix. sc.,        {}'.format(turbulence_pxscale))
-            print('-->     sc. over sampl.,       {}'.format(self._scale_ovs))
+            print('-->     sc. over sampl.,       {}'.format(scale_ovs))
             print('-->     FoV over sampl.,       {}'.format(self._fov_ovs))
             print('-->     FFT pix. sc. [asec],   {}'.format(fft_pxscale_arcsec))
             print('-->     no. elements FoV,      {}'.format(subap_real_fov_pix))
@@ -252,9 +261,9 @@ class SH(BaseProcessingObj):
 
         # Check for valid phase size
         if abs((ef_size * round(self._fov_ovs) * lens[2]) / 2.0 - round((ef_size * round(self._fov_ovs) * lens[2]) / 2.0)) > 1e-4:
-            raise ValueError(f'ERROR: interpolated input phase size {ef_size} * {round(self._fov_ovs)} is not divisible by subapertures.')
+            raise ValueError(f'ERROR: interpolated input phase size {ef_size} * {round(self._fov_ovs)} is not divisible by  {self._lenslet.n_lenses} subapertures.')
         elif not self._noprints:
-            print(f'GOOD: interpolated input phase size is divisible by {self._lenslet.n_lenses} subapertures.')
+            print(f'GOOD: interpolated input phase size {ef_size} * {round(self._fov_ovs)} is divisible by {self._lenslet.n_lenses} subapertures.')
     
     def calc_trigger_geometry(self):
         
@@ -272,9 +281,13 @@ class SH(BaseProcessingObj):
         # Test: chunks of 2 full rows each
 #        for i in range(0, self._lenslet.dimx, 2):
             #self._subap_chunks.append((slice(i, i+2), slice(0, self._lenslet.dimy)))
+
+        # Test: chunks of 1 rows each
+        for i in range(0, self._lenslet.dimx):
+            self._subap_chunks.append((slice(i, i+1), slice(0, self._lenslet.dimy)))
             
         # Whole SH in one go
-        self._subap_chunks.append((slice(0, self._lenslet.dimx), slice(0, self._lenslet.dimy)))
+#        self._subap_chunks.append((slice(0, self._lenslet.dimx), slice(0, self._lenslet.dimy)))
 
         nx = self._subap_chunks[0][0].stop - self._subap_chunks[0][0].start
         ny = self._subap_chunks[0][1].stop - self._subap_chunks[0][1].start
@@ -295,7 +308,7 @@ class SH(BaseProcessingObj):
         if fov_oversample != 1 or self._rotAnglePhInDeg != 0 or np.sum(np.abs(self._xyShiftPhInPixel)) != 0:
             M0 = s[0] * fov_oversample
             M1 = s[1] * fov_oversample
-            wf1 = ElectricField(M0, M1, in_ef.pixel_pitch / fov_oversample)
+            wf1 = ElectricField(M0, M1, in_ef.pixel_pitch / fov_oversample, target_device_idx=self.target_device_idx)
         else:
             wf1 = in_ef            
         
@@ -353,23 +366,32 @@ class SH(BaseProcessingObj):
         subap_npx = self._subap_npx
 
         # Interpolation of input array if needed
-        if fov_oversample != 1 or self._rotAnglePhInDeg != 0 or np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
-            if self._extrapol_mat is None:
-                self._extrapol_mat = extrapolate_edge_pixel_mat_define(in_ef.a, do_ext_2_pix=True)
+        with show_in_profiler('interpolation'):
+            if fov_oversample != 1 or self._rotAnglePhInDeg != 0 or np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
+                if self._extrapol_mat1 is None or self._extrapol_mat2 is None:
+                    sum_1pix_extra, sum_2pix_extra = extrapolate_edge_pixel_mat_define(cpuArray(in_ef.A), do_ext_2_pix=True)
+                    self._extrapol_mat1 = self.xp.array(sum_1pix_extra)
+                    self._extrapol_mat2 = self.xp.array(sum_2pix_extra)
 
-            phaseInNmNew = extrapolate_edge_pixel(in_ef.phaseInNm, self._extrapol_mat)
-            tempA = congrid(in_ef.a, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
-            tempW = congrid(phaseInNmNew, s[0] * fov_oversample, s[1] * fov_oversample, interp=True, minus_one=True)
+                phaseInNmNew = extrapolate_edge_pixel(in_ef.phaseInNm, self._extrapol_mat1, self._extrapol_mat2, xp=self.xp)
+                 
+                shape_ovs = (int(s[0] * fov_oversample), int(s[1] * fov_oversample))
+                if not self.interp:
+                    self.interp = Interp2D(s, shape_ovs, self._rotAnglePhInDeg, self._xyShiftPhInPixel[0], self._xyShiftPhInPixel[1], dtype=self.dtype, xp=self.xp)
 
-            if self._rotAnglePhInDeg != 0 or np.sum(np.abs([self._xyShiftPhInPixel])) != 0:
-                self._wf1.A = (rot_and_shift_image(tempA, self._rotAnglePhInDeg, self._xyShiftPhInPixel, 1.0, use_interpolate=True) >= 0.5).astype(np.uint8)
-                self._wf1.phaseInNm = rot_and_shift_image(tempW, self._rotAnglePhInDeg, self._xyShiftPhInPixel, 1.0, use_interpolate=True)
+                self.interp.interpolate(in_ef.A, out=self._wf1.A)
+                self.interp.interpolate(phaseInNmNew, out=self._wf1.phaseInNm)
+                
+                # import matplotlib.pyplot as plt
+                # plt.figure()
+                # plt.imshow(in_ef.A.get())
+                # plt.figure()
+                # plt.imshow(self._wf1.A.get())
+                # plt.show()
+        
             else:
-                self._wf1.A = tempA
-                self._wf1.phaseInNm = tempW
-        else:
-            # wf1 already set to in_ef
-            pass
+                # wf1 already set to in_ef
+                pass
 
         fft_size = self._fft_size
         psfTotalAtFft = 0
@@ -382,7 +404,8 @@ class SH(BaseProcessingObj):
 
         congrid_np_sub = self._congrid_np_sub
 
-        ef_whole = self._wf1.ef_at_lambda(self._wavelengthInNm)
+        with show_in_profiler('ef_at_lambda'):
+            ef_whole = self._wf1.ef_at_lambda(self._wavelengthInNm)
 
         for chunk in self._subap_chunks:
             xslice, yslice = chunk
@@ -394,24 +417,28 @@ class SH(BaseProcessingObj):
             y2 = yslice.stop * congrid_np_sub
             n = nx * ny
 
-            ef = ef_whole[x1:x2, y1:y2]
+            with show_in_profiler('slice'):
+                ef = ef_whole[x1:x2, y1:y2]
 
             # Transform from 2d subap tiling into N x np x np
             # For an explanation of how this works, ask ChatGPT
-            ef = ef.reshape(nx, congrid_np_sub, ny, congrid_np_sub)
-            ef = ef.transpose((2, 0, 1, 3))
-            ef = ef.reshape(n, congrid_np_sub, congrid_np_sub)
+            with show_in_profiler('reshape1'):
+                ef = ef.reshape(nx, congrid_np_sub, ny, congrid_np_sub)
+                ef = ef.transpose((2, 0, 1, 3))
+                ef = ef.reshape(n, congrid_np_sub, congrid_np_sub)
 
             # Insert into padded array
-            self._wf3[:, :congrid_np_sub, :congrid_np_sub] = ef * self._tltf[self.xp.newaxis, :, :]
+            with show_in_profiler('padding'):
+                self._wf3[:, :congrid_np_sub, :congrid_np_sub] = ef * self._tltf[self.xp.newaxis, :, :]
 
             if self._debugOutput:
                 tempefcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = self._wf3
 
             # PSF generation
-            fp4 = self.xp.fft.fft2(self._wf3, axes=(1, 2))
-            psf_shifted = abs2(fp4)
-            psfTotalAtFft += self.xp.sum(psf_shifted)
+            with show_in_profiler('FFT'):
+                fp4 = self.xp.fft.fft2(self._wf3, axes=(1, 2))
+                psf_shifted = abs2(fp4, xp=self.xp)
+                psfTotalAtFft += self.xp.sum(psf_shifted)
 
             # Full resolution kernel
             if self._kernelobj is not None and self.kernel_at_fft():
@@ -436,9 +463,10 @@ class SH(BaseProcessingObj):
                 psf = self.xp.fft.fftshift(psf_shifted, axes=(1, 2))
                 psf *= self._fp_mask[self.xp.newaxis, :, :]
 
-            cutsize = self._cutsize
-            cutpixels = self._cutpixels
-            psf_cut = psf[:, cutpixels // 2: -cutpixels // 2, cutpixels // 2: -cutpixels // 2]
+            with show_in_profiler('cut'):
+                cutsize = self._cutsize
+                cutpixels = self._cutpixels
+                psf_cut = psf[:, cutpixels // 2: -cutpixels // 2, cutpixels // 2: -cutpixels // 2]
 
             # FoV kernel
             if self._kernelobj is not None and self.kernel_at_fov():
@@ -452,12 +480,14 @@ class SH(BaseProcessingObj):
 
             # Back-transform from N x np x np to 2d subap tiling
             # For an explanation of how this works, ask ChatGPT
-            psf_cut = psf_cut.reshape(ny, nx, cutsize, cutsize)
-            psf_cut = psf_cut.transpose(1, 2, 0, 3)
-            psf_cut = psf_cut.reshape(nx * cutsize, ny * cutsize)
+            with show_in_profiler('reshape2'):
+                psf_cut = psf_cut.reshape(ny, nx, cutsize, cutsize)
+                psf_cut = psf_cut.transpose(1, 2, 0, 3)
+                psf_cut = psf_cut.reshape(nx * cutsize, ny * cutsize)
             
             # Insert subap strip into overall PSF image
-            self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
+            with show_in_profiler('psf'):
+                self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
         self._psfimage /= psfTotalAtFft + 1e-6 # Avoid dividing by zero
 
@@ -478,7 +508,8 @@ class SH(BaseProcessingObj):
                     subap_tmp = self.xp.convolve(subap, subap_gkern, mode='same')
                     self._psfimage[x1:x2, y1:y2] = self.xp.abs(self.xp.fft.fftshift(self.xp.fft.fft2(subap_tmp)))
 
-        ccd = toccd(self._psfimage, (self._ccd_side, self._ccd_side), xp=self.xp)
+        with show_in_profiler('toccd'):
+            ccd = toccd(self._psfimage, (self._ccd_side, self._ccd_side), xp=self.xp)
 
         # Apply kernel at subaperture level if necessary
         if self._kernelobj is not None and self.kernel_at_subap():
