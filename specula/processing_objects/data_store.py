@@ -12,7 +12,8 @@ import time
 from specula import cpuArray
 from specula.base_processing_obj import BaseProcessingObj
 from specula.base_value import BaseValue
-from specula.connections import InputValue
+from specula.base_data_obj import BaseDataObj
+from specula.connections import InputValue, InputList
 from specula.data_objects.ef import ElectricField
 from specula.data_objects.pixels import Pixels
 from specula.data_objects.slopes import Slopes
@@ -31,11 +32,7 @@ class DataStore(BaseProcessingObj):
         self.data_filename = ''
         self.tn_dir = store_dir
         self.data_format = data_format
-        self.inputs['atmo_phase'] = InputValue(type=ElectricField)
-        self.inputs['res_ef'] = InputValue(type=ElectricField)                
-        self.inputs['ccd_pixels'] = InputValue(type=Pixels)
-        self.inputs['sr'] = InputValue(type=BaseValue)
-
+        
     def setParams(self, params):
         self.params = params
 
@@ -50,17 +47,12 @@ class DataStore(BaseProcessingObj):
         self.items[name] = data_obj
         self.storage[name] = OrderedDict()
 
-    def add_array(self, data, name):
-        if name in self.items:
-            raise ValueError(f'Storing already has an object with name {name}')
-        self.storage[name] = data
-
     def save_pickle(self, compress=False):
         times = {k: np.array(list(v.keys()), dtype=self.dtype) for k, v in self.storage.items() if isinstance(v, OrderedDict)}
         data = {k: np.array(list(v.values()), dtype=self.dtype) for k, v in self.storage.items() if isinstance(v, OrderedDict)}        
         for k,v in times.items():            
             filename = os.path.join(self.tn_dir,k+'.pickle')
-            hdr = self.local_inputs[k].get_fits_header()
+            hdr = self.inputs[k].get(target_device_idx=-1).get_fits_header()
             with open(filename, 'wb') as handle:
                 data_to_save = {'data': data[k], 'times': times[k], 'hdr':hdr}
                 pickle.dump(data_to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -79,9 +71,11 @@ class DataStore(BaseProcessingObj):
     def save_fits(self, compress=False):
         times = {k: np.array(list(v.keys()), dtype=self.dtype) for k, v in self.storage.items() if isinstance(v, OrderedDict)}
         data = {k: np.array(list(v.values()), dtype=self.dtype) for k, v in self.storage.items() if isinstance(v, OrderedDict)}        
-        for k,v in times.items():            
-            filename = os.path.join(self.tn_dir,k+'.fits')            
-            hdr = self.local_inputs[k].get_fits_header()
+        
+        for k,v in times.items():
+        
+            filename = os.path.join(self.tn_dir,k+'.fits')
+            hdr = self.inputs[k].get(target_device_idx=-1).get_fits_header()
             hdu_time = fits.ImageHDU(times[k], header=hdr)
             hdu_data = fits.PrimaryHDU(data[k], header=hdr)
             hdul = fits.HDUList([hdu_data, hdu_time])

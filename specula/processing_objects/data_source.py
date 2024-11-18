@@ -14,13 +14,18 @@ from specula.base_processing_obj import BaseProcessingObj
 from specula.base_value import BaseValue
 from specula.connections import InputValue
 from specula.data_objects.ef import ElectricField
+from specula.data_objects.ifunc import IFunc
+from specula.data_objects.iirfilter import IIRFilter
+from specula.data_objects.intensity import Intensity
+from specula.data_objects.intmat import Intmat
+from specula.data_objects.layer import Layer
+from specula.data_objects.lenslet import Lenslet
 from specula.data_objects.pixels import Pixels
+from specula.data_objects.pupdata import PupData
+from specula.data_objects.pupilstop import Pupilstop
+from specula.data_objects.recmat import Recmat
 from specula.data_objects.slopes import Slopes
-
-obj_type = {'atmo_phase':ElectricField,
-            'res_ef':ElectricField,
-            'ccd_pixels': Pixels,
-            'sr': BaseValue}
+from specula.data_objects.source import Source
 
 class DataSource(BaseProcessingObj):
     '''Data source object'''
@@ -37,12 +42,13 @@ class DataSource(BaseProcessingObj):
         self.tn_dir = store_dir
         self.data_format = data_format
         self.headers = {}
+        self.obj_type = {}
 
         for aout in outputs:            
             self.loadFromFile(aout)
         for k in self.storage.keys():
-            if not obj_type[k] is BaseValue:
-                self.outputs[k] = obj_type[k].from_header(self.headers[k])
+            if not self.obj_type[k] is 'BaseValue':
+                self.outputs[k] = globals().get(self.obj_type[k]).from_header(self.headers[k])
             else:
                 self.outputs[k] = BaseValue()
 
@@ -69,6 +75,7 @@ class DataSource(BaseProcessingObj):
         times = hdul[1]
         data = hdul[0]
         self.storage[name] = { t:data.data[i] for i, t in enumerate(times.data.tolist())}
+        self.obj_type[name] = self.headers[name]['OBJ_TYPE']
 
     def get(self, name):
         return self.storage[name]
