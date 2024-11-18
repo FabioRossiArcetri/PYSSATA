@@ -79,6 +79,7 @@ class ElectricField(BaseDataObj):
     def get_fits_header(self):
         hdr = fits.Header()
         hdr['VERSION'] = 1
+        hdr['OBJ_TYPE'] = 'ElectricField'
         hdr['DIMX'] = self.A.shape[0]
         hdr['DIMY'] = self.A.shape[1]
         hdr['PIXPITCH'] = self.pixel_pitch

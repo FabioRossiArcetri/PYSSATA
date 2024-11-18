@@ -36,6 +36,7 @@ class BaseDataObj(BaseTimeObj):
     def get_fits_header(self):
         hdr = fits.Header()
         hdr['VERSION'] = 1
+        hdr['OBJ_TYPE'] = 'BaseDataObj'
         return hdr
 
     def save(self, filename):
