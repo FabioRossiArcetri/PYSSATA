@@ -489,7 +489,7 @@ class SH(BaseProcessingObj):
             with show_in_profiler('psf'):
                 self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
-        self._psfimage /= psfTotalAtFft + 1e-6 # Avoid dividing by zero
+        self._psfimage /= (psfTotalAtFft + 1e-6) # Avoid dividing by zero
 
         # Post-processing kernel (Gaussian convolution)
         if self._gkern:

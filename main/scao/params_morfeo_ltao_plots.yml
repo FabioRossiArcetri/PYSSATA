@@ -15,7 +15,6 @@ main:
 seeing:
   class:             'FuncGenerator'
   constant:          0.65                  # ["] seeing value
-  func_type:         'SIN'                 # TODO necessary for factory.py line 217
   outputs: ['output']
 
 
@@ -269,6 +268,7 @@ detector6:
 
 slopec1:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -277,6 +277,7 @@ slopec1:
 
 slopec2:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -285,6 +286,7 @@ slopec2:
 
 slopec3:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -293,6 +295,7 @@ slopec3:
 
 slopec4:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -301,6 +304,7 @@ slopec4:
 
 slopec5:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -309,6 +313,7 @@ slopec5:
 
 slopec6:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -317,11 +322,12 @@ slopec6:
 
 rec:
   class:              'Modalrec'
-#  recmat_object:      'maory_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.50_mn1000_ce'         # reconstruction matrix tag
-  recmat_object:      'MORFEO_LTAO'         # reconstruction matrix tag
+  recmat_object:      'maory_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.50_mn1000_ce'         # reconstruction matrix tag
+#  recmat_object:      'MORFEO_LTAO'         # reconstruction matrix tag
 #  recmat_object:      '/tmp/ltao_full_rec'         # reconstruction matrix tag
+  recmat_object:      '/tmp/ltao_rec0'         # reconstruction matrix tag
   inputs:
-    in_slopes_list:        ['slopec1.out_slopes','slopec2.out_slopes','slopec3.out_slopes','slopec4.out_slopes','slopec5.out_slopes','slopec6.out_slopes']
+    in_slopes_list:        ['slopec1.out_slopes']#,'slopec2.out_slopes','slopec3.out_slopes','slopec4.out_slopes','slopec5.out_slopes','slopec6.out_slopes']
   outputs:  ['out_modes', 'out_pseudo_ol_modes', 'out_modes_first_step']
 
 
@@ -354,22 +360,22 @@ psf:
   outputs:  ['out_psf', 'out_sr']
 
 
-sc1_disp:
- class:            'SlopecDisplay'
- inputs:
-   slopes:       'slopec1.out_slopes'
-   subapdata:    'slopec1.out_subapdata'
- disp_factor:      1
+# sc1_disp:
+#  class:            'SlopecDisplay'
+#  inputs:
+#    slopes:       'slopec1.out_slopes'
+#    subapdata:    'slopec1.out_subapdata'
+#  disp_factor:      1
 
-sc3_disp:
- class:            'SlopecDisplay'
- inputs:
-   slopes:       'slopec3.out_slopes'
-   subapdata:    'slopec3.out_subapdata'
- disp_factor:      1
- window:           12
+# sc3_disp:
+#  class:            'SlopecDisplay'
+#  inputs:
+#    slopes:       'slopec3.out_slopes'
+#    subapdata:    'slopec3.out_subapdata'
+#  disp_factor:      1
+#  window:           12
 
-#psf_disp:
+# psf_disp:
 #  class:            'PsfDisplay'
 #  inputs:
 #    psf:       "psf.out_psf"
@@ -391,3 +397,26 @@ sr_disp:
 #   window:           13
 #   title:            'DM'
 #   disp_factor:      2
+
+# ph1_disp:
+#   class:            'PhaseDisplay'
+#   inputs:
+#     phase:       "prop.out_on_axis_source_ef"
+#   window:           15
+#   title:            'PHASE ON AXIS'
+#   disp_factor:      2
+
+# ph2_disp:
+#   class:            'PhaseDisplay'
+#   inputs:
+#     phase:       "prop.out_ngs1_source_ef"
+#   window:           14
+#   title:            'PHASE OFF AXIS'
+#   disp_factor:      2
+
+# cmd_disp:
+#   class:            'ModesDisplay'
+#   inputs:
+#     modes:       "rec.out_modes"
+#   window:           16
+#   title:            'rec.out_modes'

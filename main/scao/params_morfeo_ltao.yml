@@ -7,7 +7,7 @@ main:
   pixel_pitch:       0.0802                 # [m] Pitch of the pupil phase array
   total_time:        0.050                  # [s] Total simulation running time
   time_step:         0.002                  # [s] Simulation time step
-#  store:                                    # Dict of data products to store, 'name': 'output'
+#  store:                                  # Dict of data products to store, 'name': 'output'
 #    sr: 'psf.out_sr'
 #    res_ef: 'prop.out_on_axis_source_ef'
 
@@ -15,7 +15,6 @@ main:
 seeing:
   class:             'FuncGenerator'
   constant:          0.65                  # ["] seeing value
-  func_type:         'SIN'                 # TODO necessary for factory.py line 217
   outputs: ['output']
 
 
@@ -269,6 +268,7 @@ detector6:
 
 slopec1:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -277,6 +277,7 @@ slopec1:
 
 slopec2:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -285,6 +286,7 @@ slopec2:
 
 slopec3:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -293,6 +295,7 @@ slopec3:
 
 slopec4:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -301,6 +304,7 @@ slopec4:
 
 slopec5:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:
@@ -309,6 +313,7 @@ slopec5:
 
 slopec6:
   class:             'ShSlopec'
+  thr_value:         10
   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'  # tag of the pyramid WFS pupils
   sn_object:         'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25_ce'  # tag of the slope reference vector
   inputs:

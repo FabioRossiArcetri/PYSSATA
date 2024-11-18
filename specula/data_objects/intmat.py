@@ -41,6 +41,8 @@ class Intmat(BaseDataObj):
         self._intmat = self._intmat[start_mode:, :]
 
     def save(self, filename, hdr=None):
+        if not filename.endswith('.fits'):
+            filename += '.fits'
         if hdr is None:
             hdr = fits.Header()
         hdr['VERSION'] = 1
@@ -58,7 +60,7 @@ class Intmat(BaseDataObj):
         intmat = fits.getdata(filename, ext=exten)
         hdr = fits.getheader(filename, ext=exten)
         norm_factor = float(hdr.get('NORMFACT', 0.0))
-        pupdata_tag = float(hdr.get('PUP_TAG', ''))
+        pupdata_tag = hdr.get('PUP_TAG', '')
         # Reading additional fits extensions
         num_ext = len(fits.open(filename))
         if num_ext >= exten + 2:

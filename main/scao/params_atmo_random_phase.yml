@@ -97,7 +97,6 @@ test_disp:
      modes:       "modal_analysis.out_modes"
    window:           15
    title:            'test'
-   disp_factor:      2
 
 sc_disp:
    class:            'SlopecDisplay'
