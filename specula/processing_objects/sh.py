@@ -11,26 +11,15 @@ from specula.data_objects.ef import ElectricField
 from specula.data_objects.intensity import Intensity
 from specula.base_processing_obj import BaseProcessingObj
 from specula.data_objects.lenslet import Lenslet
+from specula.data_objects.gaussian_convolution_kernel import GaussianConvolutionKernel
 
-
-# TODO
-if 0:
-        convolGaussSpotSize = self.extract(params, 'convolGaussSpotSize', default=None)        
-        
-        if convolGaussSpotSize is not None:
-            kernelobj = KernelGauss()
-            kernelobj.spotsize = convolGaussSpotSize
-            kernelobj.lenslet = sh.lenslet
-            kernelobj.cm = self._cm
-            sh.kernelobj = kernelobj
-        
+import os       
 
 @fuse(kernel_name='abs2')
 def abs2(u_fp, xp):
      psf = xp.real(u_fp * xp.conj(u_fp))
      return psf
  
-
 
 
 class SH(BaseProcessingObj):
@@ -42,7 +31,6 @@ class SH(BaseProcessingObj):
                  subap_npx: int,
                  FoVres30mas: bool = False,
                  squaremask: bool = True,
-                 gauss_kern = None,
                  fov_ovs_coeff: float = 0,
                  xShiftPhInPixel: float = 0,
                  yShiftPhInPixel: float = 0,
@@ -52,26 +40,19 @@ class SH(BaseProcessingObj):
                  aRotAnglePhInDeg: float = 0,
                  do_not_double_fov_ovs: bool = False,
                  set_fov_res_to_turbpxsc: bool = False,
+                 convolGaussSpotSize: float = 0,
                  target_device_idx: int = None, 
                  precision: int = None,
         ):
 
         super().__init__(target_device_idx=target_device_idx, precision=precision)        
 
-        self._kernelobj = None   # TODO
         rad2arcsec = 180 / self.xp.pi * 3600
         self._wavelengthInNm = wavelengthInNm
         self._lenslet = Lenslet(subap_on_diameter)
         self._subap_wanted_fov = subap_wanted_fov / rad2arcsec
         self._sensor_pxscale = sensor_pxscale / rad2arcsec
         self._subap_npx = subap_npx
-        if gauss_kern is not None:
-            self._gkern = True
-            self._gkern_size = gauss_kern / rad2arcsec
-        else:
-            self._gkern = False
-            self._gkern_size = 0
-
         self._fov_ovs_coeff = fov_ovs_coeff
         self._squaremask = squaremask
         self._fov_resolution_arcsec = 0.03 if FoVres30mas else 0
@@ -95,10 +76,15 @@ class SH(BaseProcessingObj):
         # TODO these are fixed but should become parameters 
         self._fov_ovs = 1
         self._floatShifts = False
-        self._kernel_fov_scale = 1.0
-        self._kernel_application = ''
-        self._kernel_precalc_fft = False
+        self._convolGaussSpotSize = convolGaussSpotSize
 
+
+        if self._convolGaussSpotSize != 0:                        
+            self._kernelobj = GaussianConvolutionKernel(self._convolGaussSpotSize, self._lenslet.dimx, self._lenslet.dimy)
+            # self._gkern_size = gauss_kern / rad2arcsec ????        
+        else:
+            self._kernelobj = None
+            
         self._ccd_side = self._subap_npx * self._lenslet.n_lenses
         self._out_i = Intensity(self._ccd_side, self._ccd_side, precision=self.precision, target_device_idx=self.target_device_idx)
 
@@ -106,16 +92,6 @@ class SH(BaseProcessingObj):
 
         self.inputs['in_ef'] = InputValue(type=ElectricField)
         self.outputs['out_i'] = self._out_i
-
-    @property
-    def kernel_application(self):
-        return self._kernel_application
-
-    @kernel_application.setter
-    def kernel_application(self, str_val):
-        if str_val not in ['FFT', 'FOV', 'SUBAP']:
-            raise ValueError("Kernel application string must be one of 'FFT', 'FOV', or 'SUBAP'")
-        self._kernel_application = str_val
 
     def set_in_ef(self, in_ef):
         rad2arcsec = 180 / np.pi * 3600
@@ -240,24 +216,20 @@ class SH(BaseProcessingObj):
 
         # Kernel object initialization
         if self._kernelobj is not None:
-            self._kernelobj.ef = in_ef
+            self._kernelobj.pixel_pitch =  in_ef.pixel_pitch * (ef_size / 2.0)
+            self._kernelobj.pxscale = self._kernelobj.pixel_pitch * rad2arcsec
+            self._kernelobj.dimension = self._fft_size
+            self._kernelobj.oversampling = 1
+            self._kernelobj.positiveShiftTT = True
+            kernel_fn = self._kernelobj.build()
 
-            if self.kernel_at_fft():
-                self._kernelobj.pxscale = pixel_pitch_fft * rad2arcsec
-                self._kernelobj.dimension = self._fft_size
-                self._kernelobj.oversampling = 1
-                self._kernelobj.positiveShiftTT = True
-                self._kernelobj.returnFft = self._kernel_precalc_fft
+            if os.path.exists(kernel_fn):
+                self._kernelobj = GaussianConvolutionKernel.restore(kernel_fn)
+            else:
+                self._kernelobj.calculate_lgs_map()
 
-            if self.kernel_at_fov():
-                self._kernelobj.pxscale = pixel_pitch_fft * rad2arcsec
-                self._kernelobj.dimension = (self._fft_size - self._cutpixels) * self._kernel_fov_scale
-                self._kernelobj.oversampling = 1
+            self._kernelobj.save(kernel_fn)
 
-            if self.kernel_at_subap():
-                self._kernelobj.pxscale = self._sensor_pxscale * rad2arcsec
-                self._kernelobj.dimension = self._subap_npx * self._kernel_fov_scale
-                self._kernelobj.oversampling = 3
 
         # Check for valid phase size
         if abs((ef_size * round(self._fov_ovs) * lens[2]) / 2.0 - round((ef_size * round(self._fov_ovs) * lens[2]) / 2.0)) > 1e-4:
@@ -354,10 +326,7 @@ class SH(BaseProcessingObj):
         if not self._trigger_geometry_calculated:
             self.calc_trigger_geometry()
             self._trigger_geometry_calculated = True
-
-        if self._kernelobj is not None:
-            self._kernelobj.trigger(t)
-
+        
         s = in_ef.size
 
         fov_oversample = self._fov_ovs
@@ -441,22 +410,14 @@ class SH(BaseProcessingObj):
                 psfTotalAtFft += self.xp.sum(psf_shifted)
 
             # Full resolution kernel
-            if self._kernelobj is not None and self.kernel_at_fft():
-                if not self._kernelobj.returnFft:
-                    subap_kern = self.xp.fft.fftshift(self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i])
-                    subap_kern /= self.xp.sum(subap_kern)
-                    subap_kern_fft = self.xp.fft.fft2(subap_kern)
-                else:
-                    subap_kern_fft = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
+            if self._kernelobj is not None:
+                idx_list = np.mgrid[x1:x2,y1:y2].flatten()
 
-                psf_fft = self.xp.fft.fft2(psf_shifted)
-                psf = self.xp.fft.ifft2(psf_fft * subap_kern_fft).real
-                psf = self.xp.fft.fftshift(psf)
+                subap_kern_fft = self._kernelobj.kernels[idx_list]
 
-                if self._debugOutput:
-                    temppsfcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf_shifted
-                    tempfftcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf_fft
-                    tempconvcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = psf
+                psf_fft = self.xp.fft.fft2(psf_shifted, axes=(1, 2))
+                psf = self.xp.fft.ifft2(psf_fft * subap_kern_fft, axes=(1, 2)).real
+                psf = self.xp.fft.fftshift(psf, axes=(1, 2))
 
                 psf *= self._fp_mask
             else:
@@ -467,16 +428,6 @@ class SH(BaseProcessingObj):
                 cutsize = self._cutsize
                 cutpixels = self._cutpixels
                 psf_cut = psf[:, cutpixels // 2: -cutpixels // 2, cutpixels // 2: -cutpixels // 2]
-
-            # FoV kernel
-            if self._kernelobj is not None and self.kernel_at_fov():
-                subap_kern = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
-                subap_kern /= self.xp.sum(subap_kern)
-                sKernel = subap_kern.shape[0]
-                if sKernel == cutsize:
-                    psf_cut = self.xp.fft.fftshift(self.xp.convolve(psf_cut, subap_kern, mode='same'))
-                else:
-                    psf_cut = self.xp.fft.fftshift(self.xp.convolve(psf_cut, self.xp.fft.fftshift(subap_kern, axes=(-2, -1)), mode='same'))
 
             # Back-transform from N x np x np to 2d subap tiling
             # For an explanation of how this works, ask ChatGPT
@@ -489,40 +440,10 @@ class SH(BaseProcessingObj):
             with show_in_profiler('psf'):
                 self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
-        self._psfimage /= psfTotalAtFft + 1e-6 # Avoid dividing by zero
-
-        # Post-processing kernel (Gaussian convolution)
-        if self._gkern:
-            psf_size = self._psfimage.shape[0] // self._lenslet.dimx
-            kern_pixsize = self._gkern_size / subap_wanted_fov * psf_size
-            subap_gkern = gaussian_function(kern_pixsize / (2.0 * np.sqrt(2 * np.log(2))), width=psf_size, maximum=1.0)
-            subap_gkern /= np.sum(subap_gkern)
-
-            for i in range(self._lenslet.dimx):
-                for j in range(self._lenslet.dimy):
-                    x1 = i * psf_size
-                    x2 = x1 + psf_size
-                    y1 = j * psf_size
-                    y2 = y1 + psf_size
-                    subap = self._psfimage[x1:x2, y1:y2]
-                    subap_tmp = self.xp.convolve(subap, subap_gkern, mode='same')
-                    self._psfimage[x1:x2, y1:y2] = self.xp.abs(self.xp.fft.fftshift(self.xp.fft.fft2(subap_tmp)))
-
+        self._psfimage /= psfTotalAtFft + 1e-6 # Avoid dividing by zero        
+        
         with show_in_profiler('toccd'):
             ccd = toccd(self._psfimage, (self._ccd_side, self._ccd_side), xp=self.xp)
-
-        # Apply kernel at subaperture level if necessary
-        if self._kernelobj is not None and self.kernel_at_subap():
-            for i in range(self._lenslet.dimx):
-                for j in range(self._lenslet.dimy):
-                    x1 = i * subap_npx
-                    x2 = x1 + subap_npx
-                    y1 = j * subap_npx
-                    y2 = y1 + subap_npx
-                    subap = ccd[x1:x2, y1:y2]
-                    subap_kern = self._kernelobj.out_kernels.value[j * self._lenslet.dimx + i]
-                    subap_kern /= self.xp.sum(subap_kern)
-                    ccd[x1:x2, y1:y2] = self.xp.fft.fftshift(self.xp.convolve(subap, subap_kern, mode='same'))
 
         phot = in_ef.S0 * in_ef.masked_area()
         ccd *= phot

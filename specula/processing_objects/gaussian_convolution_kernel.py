@@ -104,3 +104,4 @@ class GaussianConvolutionKernel(ConvolutionKernel):
             errmsg += "Kernel (kernel_gauss) ef object is not valid"
 
         return valid
+
