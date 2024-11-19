@@ -19,6 +19,8 @@ float_dtype = None
 complex_dtype = None
 default_target_device_idx = None
 default_target_device = None
+process_comm = None
+process_rank = None
 
 # precision = 0 -> double precision
 # precision = 1 -> single precision
@@ -32,7 +34,7 @@ default_target_device = None
 # a GPU device (idx>=0).
 # This can be checked later looking at the  value of gpuEnabled.
 
-def init(device_idx=-1, precision=0):
+def init(device_idx=-1, precision=0, comm=None, rank=None):
     global xp
     global cp
     global gpuEnabled
@@ -45,7 +47,12 @@ def init(device_idx=-1, precision=0):
     global complex_dtype
     global default_target_device_idx
     global default_target_device
+    global process_comm
+    global process_rank
     
+    process_comm = comm
+    process_rank = rank
+
     default_target_device_idx = device_idx
     systemDisable = os.environ.get('SPECULA_DISABLE_GPU', 'FALSE')
     if systemDisable=='FALSE':

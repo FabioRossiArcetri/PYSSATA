@@ -5,6 +5,8 @@ from copy import copy
 from specula import cp, np
 from functools import cache
 
+from types import ModuleType
+
 @cache
 def get_properties(cls):
     result = []
@@ -75,6 +77,8 @@ class BaseDataObj(BaseTimeObj):
                         setattr(destobj, attr, cp.asarray( concrete_attr ) )                            
         return destobj
 
+    def __getstate__(self):
+        return {k:v for (k, v) in self.__dict__.items() if type(v) is not type(v) is ModuleType}
 
     def copyTo(self, target_device_idx):
         cloned = self
