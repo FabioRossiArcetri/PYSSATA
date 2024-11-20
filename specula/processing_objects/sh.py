@@ -311,8 +311,7 @@ class SH(BaseProcessingObj):
         self._wf1 = wf1
         self._wf3 = wf3
 
-    def run_check(self, dt):
-        # TODO
+    def run_check(self, dt):        
         return True
 
     def trigger(self):

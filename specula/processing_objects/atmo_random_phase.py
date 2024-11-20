@@ -165,7 +165,7 @@ class AtmoRandomPhase(BaseProcessingObj):
         self.last_t = last_t
 
     def run_check(self, time_step):
-        self.prepare_trigger(0)
+        # self.prepare_trigger(0)
 
         errmsg = ''
         if not (self.seed > 0):

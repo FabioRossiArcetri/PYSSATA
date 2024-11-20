@@ -78,11 +78,11 @@ class BaseDataObj(BaseTimeObj):
         return destobj
 
     def __getstate__(self):
-        return {k:v for (k, v) in self.__dict__.items() if type(v) is not type(v) is ModuleType}
+        return {k:v for (k, v) in self.__dict__.items() if type(v) is not ModuleType}
 
     def copyTo(self, target_device_idx):
         cloned = self
-        excluded = ['_tag']
+        excluded = ['_tag', 'xp']
         if target_device_idx==self.target_device_idx:
             return self
         else:

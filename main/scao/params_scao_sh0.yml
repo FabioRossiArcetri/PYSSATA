@@ -4,7 +4,7 @@ main:
   root_dir:          './calib/SCAO'         # Root directory for calibration manager
   pixel_pupil:       160                    # Linear dimension of pupil phase array
   pixel_pitch:       0.05                   # [m] Pitch of the pupil phase array
-  total_time:        0.050                  # [s] Total simulation running time
+  total_time:        0.10                  # [s] Total simulation running time
   time_step:         0.001                  # [s] Simulation time step
 
 seeing:
@@ -50,7 +50,7 @@ prop:
   inputs:
     layer_list: ['atmo.layer_list',
                   'pupilstop',
-                  'data_comm.out_layer:-1']
+                  'data_comm.out_layer']
   outputs: ['out_on_axis_source_ef']
 
 psf:
@@ -74,8 +74,9 @@ data_comm:
   comm_port_out:        '9000'
   items_to_receive: ['out_layer']
   outputs_origin_proc: [1]
+  send_first:        true
   inputs:    
-    input_list: ['res_ef-prop.out_on_axis_source_ef']
+    input_list: ['res_ef-prop.out_on_axis_source_ef:-1']
   outputs: ['out_layer']
   
 

@@ -53,11 +53,14 @@ class BaseProcessingObj(BaseTimeObj):
         else:
             return nullcontext()
 
-    def checkInputTimes(self):        
+    def checkInputTimes(self):
+        if self.__class__.__name__ == 'DataComm':
+            return True
         if len(self.inputs)==0:
             return True
         for input_name, input_obj in self.inputs.items():
             if type(input_obj) is InputValue:
+                # print('input_name', input_name)
                 if input_name not in self.last_seen and input_obj.get_time() is not None and input_obj.get_time() >= 0:  # First time
                     return True
                 if input_name in self.last_seen and input_obj.get_time() > self.last_seen[input_name]:

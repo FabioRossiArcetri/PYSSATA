@@ -77,7 +77,7 @@ class PyrSlopec(Slopec):
             self.accumulated_slopes.resize(len(self.pupdata.ind_pup) * 2)
 
     def run_check(self, time_step, errmsg=''):
-        self.prepare_trigger(0)
+        #self.prepare_trigger(0)
         #super().build_stream()
         if self.use_sn and not self.sn:
             errmsg += 'Slopes null are not valid'

@@ -290,7 +290,7 @@ class CCD(BaseProcessingObj):
         self._pixelGains = pixelGains
 
     def run_check(self, time_step, errmsg=''):
-        self.prepare_trigger(0)
+        # self.prepare_trigger(0)
         in_i = self.inputs['in_i'].get(self.target_device_idx)
         if self._loop_dt == 0:
             self._loop_dt = time_step

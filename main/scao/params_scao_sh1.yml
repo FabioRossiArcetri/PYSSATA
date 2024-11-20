@@ -4,17 +4,18 @@ main:
   root_dir:          './calib/SCAO'         # Root directory for calibration manager
   pixel_pupil:       160                    # Linear dimension of pupil phase array
   pixel_pitch:       0.05                   # [m] Pitch of the pupil phase array
-  total_time:        0.050                  # [s] Total simulation running time
+  total_time:        0.10                  # [s] Total simulation running time
   time_step:         0.001                  # [s] Simulation time step
 
 data_comm:
   class:             'DataComm'
   comm_port_in:         '0:9000'
   comm_port_out:        '8000'
+  send_first:         false
   outputs_origin_proc: [0]
   items_to_receive: ['out_on_axis_source_ef']
   inputs:    
-    input_list: ['res_surf-dm.out_layer']
+    input_list: ['res_surf-dm.out_layer:-1']
   outputs:    ['out_on_axis_source_ef']
 
 sh:
@@ -26,7 +27,7 @@ sh:
   wavelengthInNm:    750                     # [nm] Pyramid wavelength
   convolGaussSpotSize: 0
   inputs:
-    in_ef: 'data_comm.out_on_axis_source_ef:-1'
+    in_ef: 'data_comm.out_on_axis_source_ef'
   outputs:  ['out_i']
 
 detector:
@@ -90,11 +91,11 @@ psf:
       in_ef:  'data_comm.out_on_axis_source_ef'
   outputs:  ['out_psf', 'out_sr']
 
-#data_store:
-#  class:             'DataStore'
-#  store_dir:         './output'             # Data result directory: 'store_dir'/TN/
-#  inputs:    
-#    input_list: ['res_ef-data_comm.out_on_axis_source_ef']
+data_store:
+  class:             'DataStore'
+  store_dir:         './output'             # Data result directory: 'store_dir'/TN/
+  inputs:    
+    input_list: ['res_ef-data_comm.out_on_axis_source_ef']
 
 sc_disp:
   class:            'SlopecDisplay'
@@ -120,18 +121,18 @@ dm_disp:
   title:            'DM'
   disp_factor:      2
 
-psf_disp:
-  class:            'PsfDisplay'
-  inputs:
-    psf:       "psf.out_psf"
-  window:           14
-  title:            'PSF'
-  disp_factor:      2
+#psf_disp:
+#  class:            'PsfDisplay'
+#  inputs:
+#    psf:       "psf.out_psf"
+#  window:           14
+#  title:            'PSF'
+#  disp_factor:      2
 
-cmd_disp:
-  class:            'ModesDisplay'
-  inputs:
-    modes:       "rec.out_modes"
-  window:           16
-  title:            'rec.out_modes'
-  disp_factor:      2
+#cmd_disp:
+#  class:            'ModesDisplay'
+#  inputs:
+#    modes:       "rec.out_modes"
+#  window:           16
+#  title:            'rec.out_modes'
+#  disp_factor:      2

@@ -129,6 +129,7 @@ class Simul():
                 order_index.append(ii)
                 del params[leaf]
                 self.remove_inputs(params, leaf)
+                # print(leaf, 'ws removed')
             ii+=1
         if len(params) > 0:
             print('Warning: the following objects will not be triggered:', params.keys())
@@ -221,12 +222,13 @@ class Simul():
                 continue
             
             for input_name, output_name in pars['inputs'].items():
-
+                # print('Connection', input_name, output_name, dest_object)
                 if isinstance(output_name, list) and input_name=='input_list':
                     inputs = [x.split('-')[0] for x in output_name]
                     outputs = [self.output_ref(x.split('-')[1]) for x in output_name]
+
                     for ii, oo in zip(inputs, outputs):
-                        print(oo)
+                        # print('Connecting', ii, oo)
                         self.objs[dest_object].inputs[ii] = InputValue(type = type(oo) )
                         self.objs[dest_object].inputs[ii].set(oo)
                         self.objs[dest_object].add(oo, name=ii)
@@ -299,7 +301,7 @@ class Simul():
                     self.replay_params[key]['outputs'].append(kk)
                 del self.replay_params[key]['inputs']
 
-        print(self.replay_params)
+        # print(self.replay_params)
 
         skip_pars = 'class inputs outputs'.split()
 

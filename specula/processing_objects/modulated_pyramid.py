@@ -456,7 +456,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self.out_transmission.generation_time = self.current_time
     
     def run_check(self, time_step):
-        self.prepare_trigger(0)
+        # self.prepare_trigger(0)
         self.toccd_side = int(self.toccd_side)
         super().build_stream()
         if self.extended_source_in_on:

@@ -111,12 +111,12 @@ class Slopec(BaseProcessingObj):
             self.slopes.slopes = m
 
     def run_check(self, time_step, errmsg=''):
-        self.prepare_trigger(0)
+        # self.prepare_trigger(0)
         if self.use_sn and not self.sn:
             errmsg += 'Slopes null are not valid'
         if self.weight_from_accumulated and self.accumulate:
             errmsg += 'weightFromAccumulated and accumulate must not be set together'
         if errmsg != '':
             print(errmsg)
-        return not (self.weight_from_accumulated and self.accumulate) and self.local_inputs['in_pixels'] and self.slopes and ((not self.use_sn) or (self.use_sn and self.sn))
+        return not (self.weight_from_accumulated and self.accumulate) and self.inputs['in_pixels'].get(self.target_device_idx) and self.slopes and ((not self.use_sn) or (self.use_sn and self.sn))
 

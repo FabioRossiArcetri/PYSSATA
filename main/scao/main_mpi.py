@@ -1,8 +1,10 @@
 # mpiexec -n 2 python script.py args
 
 from mpi4py import MPI
+from mpi4py.util import pkl5
 
-comm = MPI.COMM_WORLD
+# comm = MPI.COMM_WORLD
+comm = pkl5.Intracomm(MPI.COMM_WORLD)
 rank = comm.Get_rank()
 
 import sys

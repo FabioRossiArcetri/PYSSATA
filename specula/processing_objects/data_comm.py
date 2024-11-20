@@ -29,7 +29,8 @@ class DataComm(BaseProcessingObj):
                 comm_port_in: str,
                 comm_port_out: str,
                 outputs_origin_proc: list,
-                items_to_receive: list
+                items_to_receive: list,
+                send_first: bool
                 ):
         super().__init__()
         self.items_to_send = {}
@@ -39,10 +40,16 @@ class DataComm(BaseProcessingObj):
         self.peer_rank, self.peer_port = int(prpp[0]), int(prpp[1])
         self.out_port = int(comm_port_out)
         self.outputs_origin_proc = outputs_origin_proc
-
+        self.send_first = send_first
         self.items_to_receive = items_to_receive
-        self.outputs['out_layer'] = Layer(160, 160, 1, 0)
-        self.outputs['out_on_axis_source_ef'] = ElectricField(160, 160, 1)
+        for out_name in self.items_to_receive:
+            if 'layer' in out_name:
+                self.outputs[out_name] = Layer(160, 160, 1, 0)
+            elif 'ef' in out_name:
+                self.outputs[out_name] = ElectricField(160, 160, 1)
+                self.outputs[out_name].reset()
+        self.dbgfilename = 'mpiout' + str(process_rank) + '.txt'
+        self.dbgfile = open(self.dbgfilename, 'a+')
 
     def add(self, data_obj, name=None):
         if name is None:
@@ -51,28 +58,64 @@ class DataComm(BaseProcessingObj):
             raise ValueError(f'Communication already has an object with name {name}')
         self.items_to_send[name] = data_obj        
 
-    def trigger_code(self):
-        send_reqs = []
-        recv_reqs = []
-        tag_idx = -1
-        print('Process ', process_rank, ' sending requests')
-        for k, item in self.items_to_send.items():
-            tag_idx += 1
-            if item is not None and item.generation_time == self.current_time:
-                # here send item to the peer
-                sreq = process_comm.isend(item, dest=self.peer_rank, tag=tag_idx)
-                sreq.wait()
-                # send_reqs.append(sreq)
-                
-        print('Process ', process_rank, ' receiving requests')
+
+    def receive(self):
         # here receive from the peer        
         tag_idx = -1
         for k in self.items_to_receive:
             tag_idx += 1
-            rreq = process_comm.irecv(source=self.outputs_origin_proc[tag_idx], tag=tag_idx)
-            self.outputs[k] = rreq.wait()
-            # recv_reqs.append(rreq)
+            # self.dbgfile.write('Process '+str(process_rank)+' receiving requests A\n')
+            # self.dbgfile.flush()
             
+            #rreq = process_comm.irecv(source=self.outputs_origin_proc[tag_idx], tag=tag_idx)
+            #self.outputs[k] = rreq.wait()
+            tmp = process_comm.recv(source=self.outputs_origin_proc[tag_idx], tag=tag_idx)
+            if 'layer' in k:
+                self.outputs[k].height = tmp.height
+                self.outputs[k].shiftXYinPixel = tmp.shiftXYinPixel
+                self.outputs[k].rotInDeg = tmp.rotInDeg
+                self.outputs[k].magnification = tmp.magnification
+            elif 'ef' in k:                
+                self.outputs[k].A = tmp.A
+                self.outputs[k].phaseInNm = tmp.phaseInNm
+
+            self.dbgfile.write('Process ' + str(process_rank) + ' ' + k + ' RECEIVED!!!!\n')
+            self.dbgfile.flush()
+            self.outputs[k].generation_time = self.current_time
+            self.outputs[k].xp = np
+            # recv_reqs.append(rreq)
+
+    def send(self):
+        tag_idx = -1
+        for k, item in self.items_to_send.items():
+            tag_idx += 1
+            if item is not None: # and item.generation_time == self.current_time:
+
+                # self.dbgfile.write('Process '+str(process_rank)+' sending requests\n')                
+                # self.dbgfile.flush()
+                            
+                #sreq = process_comm.isend(item.copyTo(-1), dest=self.peer_rank, tag=tag_idx)
+                #sreq.wait()
+                process_comm.ssend(item.copyTo(-1), dest=self.peer_rank, tag=tag_idx)
+                self.dbgfile.write('Process '+str(process_rank) + ' ' + item.__class__.__name__ + ' SENT!!!!\n')
+                # send_reqs.append(sreq)
+
+    def trigger_code(self):
+        send_reqs = []
+        recv_reqs = []
+        if self.send_first:
+            self.send()
+            self.receive()
+        else:
+            self.receive()
+            self.send()
+
+        for out_name in self.items_to_receive:
+            
+            self.outputs[out_name].generation_time = self.current_time
+            self.outputs[out_name].xp = np
+
+
 #        print('Process ', process_rank, ' waiting to send')
 #        for sreq in send_reqs:
 #            sreq.wait()
