@@ -20,13 +20,17 @@ class Simul():
     '''
     Simulation organizer
     '''
-    def __init__(self, *param_files):
+    def __init__(self, *param_files, overrides=None):
         if len(param_files) < 1:
             raise ValueError('At least one Yaml parameter file must be present')
         self.param_files = param_files
         self.objs = {}
         self.verbose = False  #TODO
         self.isReplay = False
+        if overrides is None:
+            self.overrides = []
+        else:
+            self.overrides = overrides
 
     def _camelcase_to_snakecase(self, s):
         tokens = re.findall('[A-Z]+[0-9a-z]*', s)
@@ -361,7 +365,15 @@ class Simul():
                 if name in params:
                     raise ValueError(f'Parameter file already has an object named {name}')
                 params[name] = values
-        
+    
+    def apply_overrides(self, params):
+        print('overrides:', self.overrides)
+        if len(self.overrides) > 0:
+            for k, v in yaml.full_load(self.overrides).items():
+                obj_name, param_name = k.split('.')
+                params[obj_name][param_name] = v
+                print(obj_name, param_name, v)
+
     def run(self):
         params = {}
         # Read YAML file(s)
@@ -379,6 +391,7 @@ class Simul():
         loop = LoopControl(run_time=params['main']['total_time'], dt=params['main']['time_step'])        
 
         # Actual creation code
+        self.apply_overrides(params)
         self.build_objects(params)
 
 
