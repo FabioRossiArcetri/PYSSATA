@@ -53,8 +53,16 @@ class Source(BaseDataObj):
         return self._polar_coordinate[0] * sec2rad
 
     @property
+    def r_arcsec(self):
+        return self._polar_coordinate[0]
+
+    @property
     def phi(self):
         return self._polar_coordinate[1] * degree2rad
+
+    @property
+    def phi_deg(self):
+        return self._polar_coordinate[1]
 
     @property
     def x_coord(self):
