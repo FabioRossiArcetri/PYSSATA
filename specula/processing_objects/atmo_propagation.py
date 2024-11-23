@@ -24,7 +24,7 @@ class AtmoPropagation(BaseProcessingObj):
                  precision=None,
                  doFresnel: bool=False,
                  wavelengthInNm: float=500.0,
-                 pupil_position=(0., 0.)):
+                 pupil_position=None):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
 
         if doFresnel and wavelengthInNm is None:
@@ -33,9 +33,13 @@ class AtmoPropagation(BaseProcessingObj):
         self.pixel_pupil_size = pixel_pupil
         self.pixel_pitch = pixel_pitch
         self.source_dict = source_dict
-        self.pupil_position_arr = np.array(pupil_position)
-        self.pupil_position_cond = self.pupil_position_arr.any()
-
+        if pupil_position is not None:
+            self.pupil_position = np.array(pupil_position, dtype=self.dtype)
+            if self.pupil_position.size != 2:
+                raise ValueError('Pupil position must be an array with 2 elements')
+        else:
+            self.pupil_position = None
+            
         self.doFresnel = doFresnel
         self.wavelengthInNm = wavelengthInNm
         self.propagators = None
@@ -126,7 +130,7 @@ class AtmoPropagation(BaseProcessingObj):
                 diff_height = source.height - layer.height
                 if (layer.height == 0 or (np.isinf(source.height) and source.r == 0)) and \
                                 not self.shiftXY_cond[layer] and \
-                                not self.pupil_position_cond and \
+                                self.pupil_position is None and \
                                 layer.rotInDeg == 0 and \
                                 self.magnification_list[layer] == 1:
                     self.interpolators[source][layer] = None
@@ -142,13 +146,13 @@ class AtmoPropagation(BaseProcessingObj):
         cos_sin_phi =  np.array( [np.cos(source.phi), np.sin(source.phi)]) 
         half_pixel_layer -= layer.shiftXYinPixel
 
-        if pixel_layer > self.pixel_pupil_size and np.isinf(source.height):
+        if self.pupil_position is not None and pixel_layer > self.pixel_pupil_size and np.isinf(source.height):
             pixel_position_s = source.r * layer.height / layer.pixel_pitch
-            pixel_position = pixel_position_s * cos_sin_phi + self.pupil_position_arr / layer.pixel_pitch
-        elif pixel_layer > self.pixel_pupil_size and not np.isinf(source.height):
+            pixel_position = pixel_position_s * cos_sin_phi + self.pupil_position / layer.pixel_pitch
+        elif self.pupil_position is not None and pixel_layer > self.pixel_pupil_size and not np.isinf(source.height):
             pixel_position_s = source.r * source.height / layer.pixel_pitch
             sky_pixel_position = pixel_position_s * cos_sin_phi
-            pupil_pixel_position = self.pupil_position_arr / layer.pixel_pitch
+            pupil_pixel_position = self.pupil_position / layer.pixel_pitch
             pixel_position = (sky_pixel_position - pupil_pixel_position) * layer.height / source.height + pupil_pixel_position
         else:
             pixel_position_s = source.r * layer.height / layer.pixel_pitch
@@ -165,11 +169,11 @@ class AtmoPropagation(BaseProcessingObj):
 
         angle = -layer.rotInDeg % 360
         xx, yy = make_xy(self.pixel_pupil_size, pixel_pupmeta/2., xp=self.xp)
-        xx += half_pixel_layer[0]
-        yy += half_pixel_layer[1]
+        xx1 = xx + half_pixel_layer[0] + pixel_position[0]
+        yy1 = yy + half_pixel_layer[1] + pixel_position[1]
         print(layer.size, angle, self.pixel_pupil_size, pixel_pupmeta, half_pixel_layer, pixel_position)
-        return Interp2D(layer.size, (self.pixel_pupil_size, self.pixel_pupil_size), xx=xx, yy=yy,
-                        rotInDeg=angle*180.0/3.1415, rowShiftInPixels=pixel_position[0], colShiftInPixels=pixel_position[1], xp=self.xp, dtype=self.dtype)
+        return Interp2D(layer.size, (self.pixel_pupil_size, self.pixel_pupil_size), xx=xx1, yy=yy1,
+                        rotInDeg=angle*180.0/3.1415, xp=self.xp, dtype=self.dtype)
 
     def run_check(self, time_step):
         # TODO here for no better place, we need something like a "setup()" method called before the loop starts        
