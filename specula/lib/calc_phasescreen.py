@@ -1,10 +1,8 @@
-from specula import global_precision
 from specula import float_dtype_list
 from specula import complex_dtype_list
-
 from specula.lib.calc_spatialfrequency import calc_spatialfrequency
 
-def calc_phasescreen(L0, dimension, pixel_pitch, xp, seed=0, target_device_idx=None, precision=None, verbose=False):
+def calc_phasescreen(L0, dimension, pixel_pitch, xp, precision, seed=0,verbose=False):
     if verbose:
         print("Phase-screen computation")
 
@@ -17,12 +15,8 @@ def calc_phasescreen(L0, dimension, pixel_pitch, xp, seed=0, target_device_idx=N
             print(f"Dimension is not a multiple of 2, it has been set to {dimension}")
 
     # Data type based on precision
-    if precision is None:
-        _precision = global_precision
-    else:
-        _precision = precision
-    dtype = float_dtype_list[_precision]
-    complex_dtype = complex_dtype_list[_precision]
+    dtype = float_dtype_list[precision]
+    complex_dtype = complex_dtype_list[precision]
 
     # Dimension in meters
     m_dimension = dimension * pixel_pitch
@@ -74,7 +68,7 @@ def calc_phasescreen(L0, dimension, pixel_pitch, xp, seed=0, target_device_idx=N
         print("Compute spatial frequency matrix")
 
     # Compute spatial frequency matrix
-    spatial_frequency = calc_spatialfrequency(dimension, precision=_precision)
+    spatial_frequency = calc_spatialfrequency(dimension, xp=xp, precision=precision)
     spatial_frequency = spatial_frequency / m_dimension**2
 
     # Check for non-finite elements and handle them
@@ -88,6 +82,9 @@ def calc_phasescreen(L0, dimension, pixel_pitch, xp, seed=0, target_device_idx=N
         print(f"Not finite elements: {len(idx_inf[0])}")
         phasescreen[idx_inf] = xp.mean(phasescreen[idx_fin])
 
+    print(spatial_frequency, L0)
+    print(type(spatial_frequency))
+    print(type(L0))
     # Apply spatial frequency
     phasescreen *= (spatial_frequency + 1. / L0**2)**(-11./12.)
     phasescreen *= xp.sqrt(0.033/2./m_dimension**2) * (2 * xp.pi)**(2./3.) * xp.sqrt(0.06) * (1 / pixel_pitch)**(5./6.)
