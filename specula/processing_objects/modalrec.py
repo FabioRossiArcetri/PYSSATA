@@ -73,7 +73,6 @@ class Modalrec(BaseProcessingObj):
         self._polc = polc
 
         self._layer_modes_list = None
-        self.set_layer_modes_list()
         self._control_list = []
         self._past_step_list = []
 
@@ -86,16 +85,6 @@ class Modalrec(BaseProcessingObj):
         self.outputs['out_modes'] = self.out_modes
         self.outputs['out_pseudo_ol_modes'] = self.pseudo_ol_modes
         self.outputs['out_modes_first_step'] = self.modes_first_step
-
-
-    def set_layer_modes_list(self):
-        if self._recmat.modes2recLayer is not None:
-            self._layer_modes_list = []
-            self._layer_idx_list = []
-            n = self._recmat.modes2recLayer.shape[0]
-            for i in range(n):
-                self._layer_modes_list.append(BaseValue(f'output modes for layer no {i + 1}'))
-                self._layer_idx_list.append(self.xp.where(self._recmat.modes2recLayer[i, :] > 0)[0])
 
     @property
     def recmat(self):
@@ -125,10 +114,6 @@ class Modalrec(BaseProcessingObj):
     @projmat.setter
     def projmat(self, value):
         self._projmat = value
-
-    @property
-    def modes2rec_layer(self):
-        return self._recmat.modes2rec_layer
 
     @property
     def out_layer_modes_list(self):
