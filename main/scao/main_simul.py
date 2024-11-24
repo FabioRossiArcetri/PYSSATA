@@ -1,20 +1,23 @@
 import sys
+#import os
+#os.chdir('/home/puglisi/git/PYSSATA/main/scao')
+#sys.argv=['', '--gpu', 'params_morfeo_scao_plots.yml']
+#sys.argv=['', 'params_morfeo_scao_plots.yml']
 
 import argparse
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--cpu', action='store_true')
-parser.add_argument('--gpu', action='store_true')
 parser.add_argument('--overrides', type=str)
 parser.add_argument('yml_file', nargs='+', type=str, help='YAML parameter files')
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    target_device_idx = -1
-    if args.gpu:
-        target_device_idx = 0
+    target_device_idx = 0
+    if args.cpu:
+        target_device_idx = -1
 
     import specula
     specula.init(target_device_idx, precision=1)
