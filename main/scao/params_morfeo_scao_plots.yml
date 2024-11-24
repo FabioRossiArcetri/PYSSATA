@@ -7,6 +7,7 @@ main:
   pixel_pitch:       0.08125                 # [m] Pitch of the pupil phase array
   total_time:        0.080                  # [s] Total simulation running time
   time_step:         0.002                  # [s] Simulation time step
+  zenithAngleInDeg:  30.0                   # [deg] Airmass correction
 
 
 data_store:
@@ -72,7 +73,6 @@ atmo:
                          0.0159970, 0.0258951, 0.0190964, 0.00986813, 0.00616883, 0.00400924, 0.00246953, 0.00215959, 0.00184965, 0.00135974,
                          0.00110979, 0.000616883, 0.000925825, 0.000493907, 0.000431918] # Cn2 weights (total must be eq 1)
   mcao_fov:             180.0               # MCAO fov in arcsec (?)
-  zenithAngleInDeg:     30.0                # Airmass correction (?)
   source_dict_ref:      ['on_axis_source', 'lgs1_source']
   inputs:
     seeing: 'seeing.output'

@@ -22,10 +22,9 @@ class Source(BaseDataObj):
         super().__init__()
         
         if zenithAngleInDeg is not None:
-            airmass = 1. / np.cos(zenithAngleInDeg / 180. * np.pi)
+            airmass = 1. / np.cos(np.radians(zenithAngleInDeg), dtype=self.dtype)
             height *= airmass
-            if verbose:
-                    print(f'get_source: changing source height by airmass value ({airmass})')
+            print(f'get_source: changing source height by airmass value ({airmass})')
 
         polar_coordinate = np.array(polar_coordinate, dtype=self.dtype) + np.array(error_coord, dtype=self.dtype)
         if any(error_coord):

@@ -50,11 +50,6 @@ class AtmoEvolution(BaseProcessingObj):
             self.airmass = self.xp.array(1.0, dtype=self.dtype)
         heights = np.array(heights, dtype=self.dtype) * self.airmass
 
-        # TODO we modify souce heights!
-        print('Modifying source airmass...')
-        for source in source_dict.values():
-            source.height *= self.airmass
-
         # Conversion coefficient from arcseconds to radians
         sec2rad = 4.848e-6
         
