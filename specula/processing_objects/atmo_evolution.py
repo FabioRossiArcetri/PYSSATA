@@ -47,7 +47,7 @@ class AtmoEvolution(BaseProcessingObj):
             print(f'Atmo_Evolution: zenith angle is defined as: {zenithAngleInDeg} deg')
             print(f'Atmo_Evolution: airmass is: {self.airmass}')
         else:
-            self.airmass = self.xp.array(1.0, dtype=self.dtype)
+            self.airmass = np.array(1.0, dtype=self.dtype)
         heights = np.array(heights, dtype=self.dtype) * self.airmass
 
         # Conversion coefficient from arcseconds to radians
