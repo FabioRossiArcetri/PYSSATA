@@ -328,6 +328,7 @@ class SH(BaseProcessingObj):
         
         self._cutpixels = int(np.round(fov_cut / fp4_pixel_pitch) / 2 * 2)
         self._cutsize = fft_size - self._cutpixels
+        self._psfimage = self.xp.zeros((self._cutsize * self._lenslet.dimx, self._cutsize * self._lenslet.dimy), dtype=self.dtype)
         
         # 1/2 Px tilt
         self._tltf = self.get_tlt_f(np_sub, fft_size - np_sub)
@@ -380,9 +381,14 @@ class SH(BaseProcessingObj):
 
                 self.interp.interpolate(in_ef.A, out=self._wf1.A)
                 self.interp.interpolate(phaseInNmNew, out=self._wf1.phaseInNm)
-#               import code
-#               code.interact(local=dict(locals(), **globals()))
                 
+                # import matplotlib.pyplot as plt
+                # plt.figure()
+                # plt.imshow(in_ef.A.get())
+                # plt.figure()
+                # plt.imshow(self._wf1.A.get())
+                # plt.show()
+        
             else:
                 # wf1 already set to in_ef
                 pass
@@ -410,10 +416,6 @@ class SH(BaseProcessingObj):
             y1 = yslice.start * congrid_np_sub
             y2 = yslice.stop * congrid_np_sub
             n = nx * ny
-            x1_psf = xslice.start * self._subap_npx
-            x2_psf = xslice.stop * self._subap_npx
-            y1_psf = yslice.start * self._subap_npx
-            y2_psf = yslice.stop * self._subap_npx
 
             with show_in_profiler('slice'):
                 ef = ef_whole[x1:x2, y1:y2]
@@ -464,7 +466,7 @@ class SH(BaseProcessingObj):
             with show_in_profiler('cut'):
                 cutsize = self._cutsize
                 cutpixels = self._cutpixels
-                psf_image = psf[:, cutpixels // 2: -cutpixels // 2, cutpixels // 2: -cutpixels // 2]
+                psf_cut = psf[:, cutpixels // 2: -cutpixels // 2, cutpixels // 2: -cutpixels // 2]
 
             # FoV kernel
             if self._kernelobj is not None and self.kernel_at_fov():
@@ -479,17 +481,15 @@ class SH(BaseProcessingObj):
             # Back-transform from N x np x np to 2d subap tiling
             # For an explanation of how this works, ask ChatGPT
             with show_in_profiler('reshape2'):
-                psf_image = psf_image.reshape(ny, nx, cutsize, cutsize)
-                psf_image = psf_image.transpose(1, 2, 0, 3)
-                psf_image = psf_image.reshape(nx * cutsize, ny * cutsize)
+                psf_cut = psf_cut.reshape(ny, nx, cutsize, cutsize)
+                psf_cut = psf_cut.transpose(1, 2, 0, 3)
+                psf_cut = psf_cut.reshape(nx * cutsize, ny * cutsize)
             
             # Insert subap strip into overall PSF image
             with show_in_profiler('psf'):
-                factor = 1.0 / (psfTotalAtFft + 1e-6) # Avoid dividing by zero
-                psf_image *= factor
+                self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
-            with show_in_profiler('toccd'):
-                self._out_i.i[x1_psf:x2_psf, y1_psf:y2_psf] = toccd(psf_image, (x2_psf-x1_psf, y2_psf-y1_psf), xp=self.xp)
+        self._psfimage /= (psfTotalAtFft + 1e-6) # Avoid dividing by zero
 
         # Post-processing kernel (Gaussian convolution)
         if self._gkern:
@@ -508,6 +508,9 @@ class SH(BaseProcessingObj):
                     subap_tmp = self.xp.convolve(subap, subap_gkern, mode='same')
                     self._psfimage[x1:x2, y1:y2] = self.xp.abs(self.xp.fft.fftshift(self.xp.fft.fft2(subap_tmp)))
 
+        with show_in_profiler('toccd'):
+            ccd = toccd(self._psfimage, (self._ccd_side, self._ccd_side), xp=self.xp)
+
         # Apply kernel at subaperture level if necessary
         if self._kernelobj is not None and self.kernel_at_subap():
             for i in range(self._lenslet.dimx):
@@ -522,20 +525,10 @@ class SH(BaseProcessingObj):
                     ccd[x1:x2, y1:y2] = self.xp.fft.fftshift(self.xp.convolve(subap, subap_kern, mode='same'))
 
         phot = in_ef.S0 * in_ef.masked_area()
-        self._out_i.i *= phot
+        ccd *= phot
+
+        self._out_i.i = ccd
         self._out_i.generation_time = self.current_time
-        # print(f'{phot=}')
-        # import matplotlib.pyplot as plt
-        # plt.ion()
-        # f, axarr = plt.subplots(3,2) 
-        # axarr[0][0].imshow(in_ef.A.get())
-        # axarr[0][1].imshow(self._wf1.A.get())
-        # axarr[1][0].imshow(in_ef.phaseInNm.get())
-        # axarr[1][1].imshow(self._wf1.phaseInNm.get())
-        # axarr[2][0].imshow(ccd.get())
-        # plt.show()
-        # import code
-        # code.interact(local=dict(locals(), **globals()))
 
     def get_tlt_f(self, p, c):
         iu = complex(0, 1)
