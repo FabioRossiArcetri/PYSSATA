@@ -229,23 +229,27 @@ class Modalrec(BaseProcessingObj):
         self._pseudo_ol_slopes.slopes += comm_slopes
         self._pseudo_ol_slopes.generation_time = t
 
-    def compute_modes(self, matrix, slope_ptr, intmat=False):
+    def compute_modes(self, matrix, slopes_vector=None, intmat=False):
 
-        if slope_ptr is None:
+        if slopes_vector is None:
             if isinstance(self._slopes, Slopes):
-                slope_ptr = self._slopes.slopes
+                slopes_vector = self._slopes.slopes
                 if self._verbose:
                     print('Slopes')
                     print(f"modalrec.compute_modes slope RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
             elif isinstance(self._slopes, BaseValue):
-                slope_ptr = self._slopes.ptr_value
+                slopes_vector = self._slopes.ptr_value
                 if self._verbose:
                     print(f"modalrec.compute_modes base_value RMS: {self.xp.sqrt(self.xp.mean(slope_ptr**2))}")
+            else:
+                raise TypeError('Unsupported self._slopes type:', type(self._slopes))
 
         if intmat:
-            m = slope_ptr @ intmat
+            m = slopes_vector @ intmat
         else:
-            m = slope_ptr @ self.xp.transpose(matrix.recmat)
+            if len(slopes_vector) != matrix.recmat.shape[1]:
+                raise ValueError(f'Cannot multiply slopes vector of length {len(slopes_vector)} with rec. matrix of shape {matrix.recmat.T.shape}')
+            m = slopes_vector @ matrix.recmat.T
 
         return m
 
