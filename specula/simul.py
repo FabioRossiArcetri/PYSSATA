@@ -230,7 +230,6 @@ class Simul():
                     inputs = [x.split('-')[0] for x in output_name]
                     outputs = [self.output_ref(x.split('-')[1]) for x in output_name]
                     for ii, oo in zip(inputs, outputs):
-                        print(oo)
                         self.objs[dest_object].inputs[ii] = InputValue(type = type(oo) )
                         self.objs[dest_object].inputs[ii].set(oo)
                         self.objs[dest_object].add(oo, name=ii)

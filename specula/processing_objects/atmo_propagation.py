@@ -171,7 +171,6 @@ class AtmoPropagation(BaseProcessingObj):
         xx, yy = make_xy(self.pixel_pupil_size, pixel_pupmeta/2., xp=self.xp)
         xx1 = xx + half_pixel_layer[0] + pixel_position[0]
         yy1 = yy + half_pixel_layer[1] + pixel_position[1]
-        print(layer.size, angle, self.pixel_pupil_size, pixel_pupmeta, half_pixel_layer, pixel_position)
         return Interp2D(layer.size, (self.pixel_pupil_size, self.pixel_pupil_size), xx=xx1, yy=yy1,
                         rotInDeg=angle*180.0/3.1415, xp=self.xp, dtype=self.dtype)
 
