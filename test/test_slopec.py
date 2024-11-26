@@ -5,24 +5,19 @@ specula.init(0)  # Default target device
 
 import unittest
 
-from specula import cp, np
+from specula import np
 from specula import cpuArray
 
 from specula.data_objects.pixels import Pixels
 from specula.data_objects.pupdata import PupData
 from specula.processing_objects.pyr_slopec import PyrSlopec
 
+from specula_testlib import cpu_and_gpu
 
 class TestSlopec(unittest.TestCase):
-
-    @unittest.skipIf(cp is None, 'Cupy not found')
-    def test_slopec_gpu(self):
-        self._test_slopec(target_device_idx=0, xp=cp)
-
-    def test_slopec_cpu(self):
-        self._test_slopec(target_device_idx=-1, xp=np)
-        
-    def _test_slopec(self, target_device_idx, xp):
+   
+    @cpu_and_gpu
+    def test_slopec(self, target_device_idx, xp):
         pixels = Pixels(5, 5, target_device_idx=target_device_idx)
         pixels.pixels = xp.arange(25,  dtype=xp.uint16).reshape((5,5))
         pixels.generation_time = 1

@@ -1,7 +1,7 @@
 
 
 import specula
-specula.init(1)
+specula.init(0)
 
 import os
 import unittest
@@ -11,7 +11,10 @@ from astropy.io import fits
 from specula.lib.extrapolate_edge_pixel_mat_define import extrapolate_edge_pixel_mat_define
 
 class TestExtrapolMatDefine(unittest.TestCase):
-
+    '''
+    This test is CPU only, since it is a helper matrix
+    that is loaded on CPU once calculated.
+    '''
     def test_extrapolmat_define(self):
         
         datadir = os.path.join(os.path.dirname(__file__), 'data')

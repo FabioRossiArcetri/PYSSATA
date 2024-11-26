@@ -5,7 +5,6 @@ specula.init(0)  # Default target device
 
 import unittest
 
-from specula import cp, np
 from specula import cpuArray
 
 from specula.data_objects.source import Source
@@ -13,17 +12,13 @@ from specula.processing_objects.func_generator import FuncGenerator
 from specula.processing_objects.atmo_evolution import AtmoEvolution
 from specula.processing_objects.atmo_propagation import AtmoPropagation
 
+from specula_testlib import cpu_and_gpu
+
 
 class TestAtmo(unittest.TestCase):
 
-    @unittest.skipIf(cp is None, 'Cupy not found')
-    def test_atmo_gpu(self):
-        self._test_atmo(target_device_idx=0, xp=cp)
-
-    def test_atmo_cpu(self):
-        self._test_atmo(target_device_idx=-1, xp=np)
-        
-    def _test_atmo(self, target_device_idx, xp):
+    @cpu_and_gpu
+    def test_atmo(self, target_device_idx, xp):
         
         data_dir = os.path.join(os.path.dirname(__file__), 'data')
         seeing = FuncGenerator(constant=0.65, target_device_idx=target_device_idx)
