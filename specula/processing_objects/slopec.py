@@ -18,6 +18,14 @@ class Slopec(BaseProcessingObj):
                 ):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
 
+        # TODO this can become a single parameter (no need for separate flag)
+        if use_sn and not sn:
+            raise ValueError('Slopes null are not valid')
+        
+        # TODO this can become a single parameter (no need for separate flag)
+        if weight_from_accumulated and accumulate:
+            raise ValueError('weightFromAccumulated and accumulate must not be set together')
+
         self.slopes = Slopes(2)  # TODO resized in derived class
         self.sn = sn
         self.cm = cm
@@ -36,7 +44,6 @@ class Slopec(BaseProcessingObj):
         self.inputs['in_pixels'] = InputValue(type=Pixels)
         self.inputs['in_pixels_list'] = InputValue(type=Pixels)
         self.outputs['out_slopes'] = self.slopes
-
 
     @property
     def sn_tag(self):
@@ -80,14 +87,4 @@ class Slopec(BaseProcessingObj):
             m = self.xp.dot(self.slopes.slopes, self.recmat.recmat)
             self.slopes.slopes = m
 
-    def run_check(self, time_step, errmsg=''):
-        self.prepare_trigger(0)
-        if self.use_sn and not self.sn:
-            errmsg += 'Slopes null are not valid'
-        if self.weight_from_accumulated and self.accumulate:
-            errmsg += 'weightFromAccumulated and accumulate must not be set together'
-        if errmsg != '':
-            print(errmsg)
-        pixels_ok = self.local_inputs['in_pixels'] or self.local_inputs['in_pixels_list']
-        return not (self.weight_from_accumulated and self.accumulate) and pixels_ok and self.slopes and ((not self.use_sn) or (self.use_sn and self.sn))
 

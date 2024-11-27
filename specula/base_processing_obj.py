@@ -33,8 +33,8 @@ class BaseProcessingObj(BaseTimeObj):
         self.current_time_seconds = 0
 
         self._verbose = 0
-        self._loop_dt = int(0)
-        self._loop_niters = 0
+        self._loop_dt = None
+        self._loop_niters = None
         
         # Stream/input management
         self.stream  = None
@@ -163,33 +163,23 @@ class BaseProcessingObj(BaseTimeObj):
     def verbose(self, value):
         self._verbose = value
 
-    @property
-    def loop_dt(self):
-        return self._loop_dt
-
-    @loop_dt.setter
-    def loop_dt(self, value):
-        self._loop_dt = value
-
-    @property
-    def loop_niters(self):
-        return self._loop_niters
-
-    @loop_niters.setter
-    def loop_niters(self, value):
-        self._loop_niters = value
-
-
-    def run_check(self, time_step, errmsg=None):
+    def setup(self, loop_dt, loop_niters):
         """
-        Must be implemented by derived classes.
+        Override this method to perform any setup
+        just before the simulation is started.
 
+        The base class implementation also checks that
+        all non-optional inputs have been set.
+        
         Parameters:
-        time_step (int): The time step for the simulation
-        errmsg (str, optional): Error message
+        loop_dt (int): Simulation time step (in units of self._time_resolution)
+        loop_niters (int): Total number of loop iterations that will be performed
         """
-        print(f"Problem with {self}: please implement run_check() in your derived class!")
-        return 1
+        self._loop_dt = loop_dt
+        self._loop_niters = loop_niters
+        for name, input in self.inputs.items():
+            if input.get(self.target_device_idx) is None and not input.optional:
+                raise ValueError(f'Input {name} for object {self} has not been set')
 
     def finalize(self):
         '''
@@ -199,10 +189,6 @@ class BaseProcessingObj(BaseTimeObj):
         pass
 
     def save(self, filename):
-        hdr = fits.Header()
-        hdr['VERBOSE'] = self._verbose
-        hdr['LOOP_DT'] = self._loop_dt
-        hdr['LOOP_NITERS'] = self._loop_niters        
         with fits.open(filename, mode='update') as hdul:
             hdr = hdul[0].header
             hdr['VERBOSE'] = self._verbose

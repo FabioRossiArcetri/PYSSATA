@@ -53,10 +53,3 @@ class PsfDisplay(BaseProcessingObj):
         self.fig.canvas.draw()
         plt.pause(0.001)
 
-    def run_check(self, time_step):
-        psf = self.inputs['psf'].get(self.target_device_idx)
-        return psf is not None
-
-    @classmethod
-    def from_dict(cls, params):
-        return cls(**params)

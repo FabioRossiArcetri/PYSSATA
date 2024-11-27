@@ -183,9 +183,6 @@ class DataStore(BaseProcessingObj):
                     raise TypeError(f"Error: don't know how to save an object of type {type(item)}")
                 self.storage[k][self.current_time] = v
 
-    def run_check(self, time_step, errmsg=''):
-        return True
-
     def finalize(self):        
         self.create_TN_folder()
         self.save_params()

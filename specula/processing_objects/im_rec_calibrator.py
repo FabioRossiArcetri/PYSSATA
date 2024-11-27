@@ -56,6 +56,3 @@ class ImRecCalibrator(BaseProcessingObj):
         if self._rec_filename:
             rec = im.generate_rec(self._nmodes)
             rec.save(os.path.join(self._data_dir, self._rec_filename))
-
-    def run_check(self, time_step):
-        return True

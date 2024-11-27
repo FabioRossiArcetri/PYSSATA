@@ -188,8 +188,6 @@ class CCD(BaseProcessingObj):
         if self._start_time <= 0 or self.current_time >= self._start_time:
             in_i = self.local_inputs['in_i']
             if in_i.generation_time == self.current_time:
-                if self._loop_dt == 0:
-                    raise ValueError('ccd object loop_dt property must be set.')
                 if self._doNotChangeI:
                     self._integrated_i.sum(in_i, factor=self._loop_dt / self._dt)
                 else:
@@ -289,27 +287,15 @@ class CCD(BaseProcessingObj):
                            (dim2d[1] // self._binning // 2) * j:(dim2d[1] // self._binning // 2) * (j + 1)] = quadrantsGains[j * 2 + i]
         self._pixelGains = pixelGains
 
-    def run_check(self, time_step, errmsg=''):
-        self.prepare_trigger(0)
+    def setup(self, loop_dt, loop_niters):
+        super().setup(loop_dt, loop_niters)
         in_i = self.inputs['in_i'].get(self.target_device_idx)
-        if self._loop_dt == 0:
-            self._loop_dt = time_step
         if in_i is None:
-            errmsg = 'Input intensity object has not been set'
-        if self._pixels is None:
-            errmsg = 'Pixel object has not been set'
-        if self._dt % time_step != 0:
-            errmsg = f'integration time dt={self._dt} must be a multiple of the basic simulation time_step={time_step}'
+            raise ValueError('Input intensity object has not been set')
         if self._dt <= 0:
-            errmsg = f'dt (integration time) is {self._dt} and must be greater than zero'
+            raise ValueError(f'dt (integration time) is {self._dt} and must be greater than zero')
+        if self._dt % loop_dt != 0:
+            raise ValueError(f'integration time dt={self._dt} must be a multiple of the basic simulation time_step={loop_dt}')
         if self._cte_noise and self._cte_mat is None:
-            errmsg = 'CTE matrix must be set!'
-
-
-        is_check_ok = (in_i is not None and self._pixels is not None and
-                       (self._dt > 0) and (self._dt % time_step == 0) and
-                       (not self._cte_noise or self._cte_mat is not None))
-        print(errmsg)
-        # super().build_stream()
-        return is_check_ok
+            raise ValueError('CTE matrix must be set if CTE noise is activated')
 

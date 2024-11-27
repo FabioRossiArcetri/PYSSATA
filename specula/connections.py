@@ -1,13 +1,13 @@
 
 class InputValue():
-    def __init__(self, type):
+    def __init__(self, type, optional=False):
         """
         Wrapper for simple input values
         """
         self.wrapped_type = type
         self.wrapped_value = None
-        # self.cloned_values = {}
         self.cloned_value = None
+        self.optional = optional
 
     def get_time(self):
         if not self.wrapped_value is None:
@@ -34,12 +34,13 @@ class InputValue():
 
 
 class InputList():
-    def __init__(self, type):
+    def __init__(self, type, optional=False):
         """
         Wrapper for input lists
         """
         self.wrapped_type = type
         self.wrapped_list = None
+        self.optional = optional
 
     def get_time(self):
         if not self.wrapped_type is None:

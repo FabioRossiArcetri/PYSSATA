@@ -339,10 +339,6 @@ class SH(BaseProcessingObj):
         self._wf1 = wf1
         self._wf3 = wf3
 
-    def run_check(self, dt):
-        # TODO
-        return True
-
     def trigger(self):
         
         in_ef = self.local_inputs['in_ef']

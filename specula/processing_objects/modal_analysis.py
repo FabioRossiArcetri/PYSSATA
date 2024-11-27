@@ -70,12 +70,4 @@ class ModalAnalysis(BaseProcessingObj):
             if self.dorms:
                 print(f"Phase RMS: {self.rms.value}")
 
-    # TODO
-    def run_check(self, time_step):
-        errmsg = ""
-        #if self.in_ef is None:
-        #    errmsg += "EF is not valid. "
-        #if self.ifunc is None:
-        #    errmsg += "ifunc is not valid. "
-        return 1
 

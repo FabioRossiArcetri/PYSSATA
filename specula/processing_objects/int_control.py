@@ -23,7 +23,3 @@ class IntControl(IIRControl):
     @property
     def ff(self):
         return self._iirfilter.poles
-
-    def run_check(self, time_step, errmsg=""):
-        return True
-
