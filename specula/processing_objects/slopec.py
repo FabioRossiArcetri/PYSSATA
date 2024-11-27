@@ -42,7 +42,6 @@ class Slopec(BaseProcessingObj):
         self.accumulated_slopes = Slopes(2)   # TODO resized in derived class.
 
         self.inputs['in_pixels'] = InputValue(type=Pixels)
-        self.inputs['in_pixels_list'] = InputValue(type=Pixels)
         self.outputs['out_slopes'] = self.slopes
 
     @property
