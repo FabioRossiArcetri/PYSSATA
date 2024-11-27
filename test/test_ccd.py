@@ -9,7 +9,7 @@ from specula.data_objects.intensity import Intensity
 
 from specula_testlib import cpu_and_gpu
 
-class TestModalrec(unittest.TestCase):
+class TestCCD(unittest.TestCase):
 
     @cpu_and_gpu
     def test_ccd_wrong_dt(self, target_device_idx, xp):
