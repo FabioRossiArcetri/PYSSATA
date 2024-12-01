@@ -489,7 +489,7 @@ class SH(BaseProcessingObj):
             with show_in_profiler('psf'):
                 self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
-        self._psfimage /= (psfTotalAtFft + 1e-6) # Avoid dividing by zero
+        self._psfimage *= 1.0 / (psfTotalAtFft + 1e-6) # Avoid dividing by zero
 
         # Post-processing kernel (Gaussian convolution)
         if self._gkern:
@@ -525,7 +525,7 @@ class SH(BaseProcessingObj):
                     ccd[x1:x2, y1:y2] = self.xp.fft.fftshift(self.xp.convolve(subap, subap_kern, mode='same'))
 
         phot = in_ef.S0 * in_ef.masked_area()
-        ccd *= phot
+        ccd *= (phot / ccd.sum())
 
         self._out_i.i = ccd
         self._out_i.generation_time = self.current_time
