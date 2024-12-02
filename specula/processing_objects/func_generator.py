@@ -124,14 +124,13 @@ class FuncGenerator(BaseProcessingObj):
         i = int(np.round(t / self.loop_dt))
         return self.xp.array(self.time_hist[i])
 
-    def run_check(self, time_step, errmsg=""):
+    def setup(self, loop_dt, loop_niters):
         if self.vib:
-            self.vib.set_niters(self.loop_niters + 1)
-            self.vib.set_samp_freq(1.0 / self.t_to_self.current_time_seconds(self.loop_dt))
+            self.vib.set_niters(loop_niters + 1)
+            self.vib.set_samp_freq(1.0 / self.t_to_seconds(loop_dt))
             self.vib.compute()
             self.time_hist = self.vib.get_time_hist()
 
 #        if self.type in ['SIN', 'LINEAR', 'RANDOM']:
 #            self.build_stream()
-        return True
 
