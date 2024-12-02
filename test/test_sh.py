@@ -10,18 +10,13 @@ from specula import cpuArray
 
 from specula.data_objects.ef import ElectricField
 from specula.processing_objects.sh import SH
+from specula_testlib import cpu_and_gpu
 
 
 class TestSH(unittest.TestCase):
 
-    @unittest.skipIf(cp is None, 'Cupy not found')
-    def test_sh_flux_gpu(self):
-        self._test_sh_flux(target_device_idx=0, xp=cp)
-
-    def test_sh_flux_cpu(self):
-        self._test_sh_flux(target_device_idx=-1, xp=np)
-        
-    def _test_sh_flux(self, target_device_idx, xp):
+    @cpu_and_gpu
+    def test_sh_flux(self, target_device_idx, xp):
         
         ref_S0 = 100
         t = 1
