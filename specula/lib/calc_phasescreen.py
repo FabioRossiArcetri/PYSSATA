@@ -82,9 +82,6 @@ def calc_phasescreen(L0, dimension, pixel_pitch, xp, precision, seed=0,verbose=F
         print(f"Not finite elements: {len(idx_inf[0])}")
         phasescreen[idx_inf] = xp.mean(phasescreen[idx_fin])
 
-    print(spatial_frequency, L0)
-    print(type(spatial_frequency))
-    print(type(L0))
     # Apply spatial frequency
     phasescreen *= (spatial_frequency + 1. / L0**2)**(-11./12.)
     phasescreen *= xp.sqrt(0.033/2./m_dimension**2) * (2 * xp.pi)**(2./3.) * xp.sqrt(0.06) * (1 / pixel_pitch)**(5./6.)

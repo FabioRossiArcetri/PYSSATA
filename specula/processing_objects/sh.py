@@ -390,7 +390,6 @@ class SH(BaseProcessingObj):
                 pass
 
         fft_size = self._fft_size
-        psfTotalAtFft = 0
  
         if self._debugOutput:
             tempefcpu = np.zeros((self._lenslet.dimx * self._fft_size, self._lenslet.dimy * self._fft_size), dtype=complex)
@@ -434,7 +433,6 @@ class SH(BaseProcessingObj):
             with show_in_profiler('FFT'):
                 fp4 = self.xp.fft.fft2(self._wf3, axes=(1, 2))
                 psf_shifted = abs2(fp4, xp=self.xp)
-                psfTotalAtFft += self.xp.sum(psf_shifted)
 
             # Full resolution kernel
             if self._kernelobj is not None and self.kernel_at_fft():
@@ -485,8 +483,6 @@ class SH(BaseProcessingObj):
             with show_in_profiler('psf'):
                 self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
-        self._psfimage /= (psfTotalAtFft + 1e-6) # Avoid dividing by zero
-
         # Post-processing kernel (Gaussian convolution)
         if self._gkern:
             psf_size = self._psfimage.shape[0] // self._lenslet.dimx
@@ -521,7 +517,7 @@ class SH(BaseProcessingObj):
                     ccd[x1:x2, y1:y2] = self.xp.fft.fftshift(self.xp.convolve(subap, subap_kern, mode='same'))
 
         phot = in_ef.S0 * in_ef.masked_area()
-        ccd *= phot
+        ccd *= (phot / ccd.sum())
 
         self._out_i.i = ccd
         self._out_i.generation_time = self.current_time
