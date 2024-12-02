@@ -20,6 +20,7 @@ class BaseProcessingObj(BaseTimeObj):
             from cupyx.scipy.ndimage import rotate
             from cupyx.scipy.interpolate import RegularGridInterpolator
             from cupyx.scipy.fft import get_fft_plan
+            selfl._target_device.use()
         else:
             from scipy.ndimage import rotate
             from scipy.interpolate import RegularGridInterpolator
@@ -149,6 +150,8 @@ class BaseProcessingObj(BaseTimeObj):
     
     def trigger(self):        
         if self.ready:
+            if self.target_device_idx>=0:
+                self._target_device.use()
             if self.target_device_idx>=0 and self.cuda_graph:
                 self.cuda_graph.launch(stream=self.stream)
             else:
