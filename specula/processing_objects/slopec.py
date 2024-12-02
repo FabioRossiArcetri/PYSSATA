@@ -77,7 +77,7 @@ class Slopec(BaseProcessingObj):
     def post_trigger(self):
         # super().post_trigger()
         if self.do_rec:
-            m = self.xp.dot(self.slopes.ptr_slopes, self.recmat.ptr_recmat)
+            m = self.xp.dot(self.slopes.slopes, self.recmat.recmat)
             self.slopes.slopes = m
 
     def run_check(self, time_step, errmsg=''):
