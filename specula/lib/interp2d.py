@@ -53,9 +53,8 @@ class Interp2D():
 
         if xx is None or yy is None:
             yy, xx = map(self.dtype, np.mgrid[0:output_shape[0], 0:output_shape[1]])
-            # TODO is this -1 really correct??
-            # test case is: input_shape = (480,480); output_shape = (8365,8365)
-            # This is not used in propagation, where xx and yy are set from the caller code
+            # This -1 appears to be correct by comparing with IDL code
+            # It is not used in propagation, where xx and yy are set from the caller code
             yy *= (input_shape[0]-1) / output_shape[0]
             xx *= (input_shape[1]-1) / output_shape[1]
         else:
