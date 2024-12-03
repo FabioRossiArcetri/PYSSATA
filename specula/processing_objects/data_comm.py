@@ -75,9 +75,13 @@ class DataComm(BaseProcessingObj):
                 self.outputs[k].shiftXYinPixel = tmp.shiftXYinPixel
                 self.outputs[k].rotInDeg = tmp.rotInDeg
                 self.outputs[k].magnification = tmp.magnification
+                self.outputs[k].S0 = tmp.S0
+                self.outputs[k].A = tmp.A
+                self.outputs[k].phaseInNm = tmp.phaseInNm
             elif 'ef' in k:                
                 self.outputs[k].A = tmp.A
                 self.outputs[k].phaseInNm = tmp.phaseInNm
+                self.outputs[k].S0 = tmp.S0
 
             self.dbgfile.write('Process ' + str(process_rank) + ' ' + k + ' RECEIVED!!!!\n')
             self.dbgfile.flush()
