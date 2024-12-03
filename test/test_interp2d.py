@@ -41,6 +41,3 @@ class TestInterp2D(unittest.TestCase):
         test_phase[394,365] = ref_phase[394,365]
         # Then a few pixels with 3%
         np.testing.assert_allclose(test_phase, ref_phase, rtol=4e-2)
-
-if __name__ == '__main__':
-    unittest.main()

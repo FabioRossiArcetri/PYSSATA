@@ -34,6 +34,3 @@ class TestModalrec(unittest.TestCase):
         res1 = rec.compute_modes(rec._recmat)
         res2 = rec.compute_modes(rec._recmat, None)
         np.testing.assert_array_equal(cpuArray(res1), cpuArray(res2))
-
-if __name__ == '__main__':
-    unittest.main()
