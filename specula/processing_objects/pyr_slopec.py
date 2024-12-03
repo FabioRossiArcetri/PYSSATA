@@ -24,7 +24,7 @@ def clamp_generic_more1(x, c, y, xp):
 
 
 class PyrSlopec(Slopec):
-    def __init__(self, pupdata: PupData=None, shlike=False, norm_factor=None, thr_value=0, slopes_from_intensity=False, filtmat_tag='', 
+    def __init__(self, pupdata: PupData=None, shlike=False, norm_factor=None, thr_value=0, slopes_from_intensity=False, 
                  target_device_idx=None, 
                  precision=None,
                 **kwargs):
@@ -43,9 +43,6 @@ class PyrSlopec(Slopec):
             self.pup_idx3 = self.pupdata.ind_pup[:, 3]
             self.n_pup = self.pupdata.ind_pup.shape[1]
             self.n_subap = self.pupdata.ind_pup.shape[0]
-
-        if filtmat_tag:
-            self.set_filtmat(self.cm.read_data(filtmat_tag))   # TODO
 
         self.total_counts = BaseValue()
         self.subap_counts = BaseValue()

@@ -363,7 +363,6 @@ class SH(BaseProcessingObj):
                 pass
 
         fft_size = self._fft_size
-        psfTotalAtFft = 0
  
         if self._debugOutput:
             tempefcpu = np.zeros((self._lenslet.dimx * self._fft_size, self._lenslet.dimy * self._fft_size), dtype=complex)
@@ -407,7 +406,6 @@ class SH(BaseProcessingObj):
             with show_in_profiler('FFT'):
                 fp4 = self.xp.fft.fft2(self._wf3, axes=(1, 2))
                 psf_shifted = abs2(fp4, xp=self.xp)
-                psfTotalAtFft += self.xp.sum(psf_shifted)
 
             # Full resolution kernel
             if self._kernelobj is not None:
@@ -440,13 +438,29 @@ class SH(BaseProcessingObj):
             with show_in_profiler('psf'):
                 self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
 
-        self._psfimage /= psfTotalAtFft + 1e-6 # Avoid dividing by zero        
-        
+
+        # Post-processing kernel (Gaussian convolution)
+        if self._gkern:
+            psf_size = self._psfimage.shape[0] // self._lenslet.dimx
+            kern_pixsize = self._gkern_size / subap_wanted_fov * psf_size
+            subap_gkern = gaussian_function(kern_pixsize / (2.0 * np.sqrt(2 * np.log(2))), width=psf_size, maximum=1.0)
+            subap_gkern /= np.sum(subap_gkern)
+
+            for i in range(self._lenslet.dimx):
+                for j in range(self._lenslet.dimy):
+                    x1 = i * psf_size
+                    x2 = x1 + psf_size
+                    y1 = j * psf_size
+                    y2 = y1 + psf_size
+                    subap = self._psfimage[x1:x2, y1:y2]
+                    subap_tmp = self.xp.convolve(subap, subap_gkern, mode='same')
+                    self._psfimage[x1:x2, y1:y2] = self.xp.abs(self.xp.fft.fftshift(self.xp.fft.fft2(subap_tmp)))
+
         with show_in_profiler('toccd'):
             ccd = toccd(self._psfimage, (self._ccd_side, self._ccd_side), xp=self.xp)
 
         phot = in_ef.S0 * in_ef.masked_area()
-        ccd *= phot
+        ccd *= (phot / ccd.sum())
 
         self._out_i.i = ccd
         self._out_i.generation_time = self.current_time
