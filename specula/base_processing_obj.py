@@ -20,7 +20,7 @@ class BaseProcessingObj(BaseTimeObj):
             from cupyx.scipy.ndimage import rotate
             from cupyx.scipy.interpolate import RegularGridInterpolator
             from cupyx.scipy.fft import get_fft_plan
-            selfl._target_device.use()
+            self._target_device.use()
         else:
             from scipy.ndimage import rotate
             from scipy.interpolate import RegularGridInterpolator
