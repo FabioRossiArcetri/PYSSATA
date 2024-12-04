@@ -11,7 +11,7 @@ import hashlib, json
 
 def lgs_map_sh(nsh, diam, rl, zb, dz, profz, fwhmb, ps, ssp,
                overs=2, theta=[0.0, 0.0], rprof_type=0,
-               mask_pupil=False, xp=np):
+               mask_pupil=False, doCube=True, xp=np):
    
     if xp==np:
         from scipy.ndimage import zoom
@@ -72,7 +72,12 @@ def lgs_map_sh(nsh, diam, rl, zb, dz, profz, fwhmb, ps, ssp,
     if mask_pupil:
         mask = xp.sqrt(xsh**2 + ysh**2) <= (diam / 2)
         ccd *= xp.kron(mask, xp.ones((ssp, ssp)))
-   
+
+    if doCube:
+        ccd = ccd.reshape(nsh, ssp, nsh, ssp)
+        ccd = ccd.transpose((2, 0, 1, 3))
+        ccd = ccd.reshape(nsh*nsh, ssp, ssp)
+
     return ccd
 
 class ConvolutionKernel(BaseDataObj):
@@ -121,11 +126,10 @@ class ConvolutionKernel(BaseDataObj):
         layHeights = self.xp.array(self.zlayer) * self.airmass
         zfocus *= self.airmass
 
-        pupil_size_m = self.ef.pixel_pitch * self.ef.size[0]
         self.spotsize = self.xp.sqrt(self.seeing**2 + self.launcher_size**2)
         LGS_TT = (self.xp.array([-0.5, -0.5]) if not self.positiveShiftTT else self.xp.array([0.5, 0.5])) * self.pxscale + self.theta
         
-        self.hash_arr = [self.dimx, pupil_size_m, zfocus, self.spotsize, self.pxscale, self.dimension, self.oversampling, LGS_TT]
+        self.hash_arr = [self.dimx, self.pupil_size_m, zfocus, self.spotsize, self.pxscale, self.dimension, self.oversampling, LGS_TT]
         return 'ConvolutionKernel' + self.generate_hash()
         
     def calculate_focus(self):
@@ -144,8 +148,7 @@ class ConvolutionKernel(BaseDataObj):
     def save(self, filename, hdr=None):
         if hdr is None:
             hdr = fits.Header()
-        hdr['VERSION'] = 2
-        hdr['PIXEL_PITCH'] = self.pixel_pitch
+        hdr['VERSION'] = 1
         hdr['PXSCALE'] = self.pxscale
         hdr['DIMENSION'] = self.dimension
         hdr['OVERSAMPLING'] = self.oversampling
@@ -162,20 +165,13 @@ class ConvolutionKernel(BaseDataObj):
     def restore(filename, target_device_idx=None):
         hdr = fits.getheader(filename)
         version = int(hdr['VERSION'])
-
-        if version > 2:
-            raise ValueError(f"Error: unknown version {version} in file {filename}")
-
         c = ConvolutionKernel(target_device_idx=target_device_idx)
-        if version >= 2:
-            c.pixel_pitch = hdr['PIXEL_PITCH']
-            c.pxscale = hdr['PXSCALE']
-            c.dimension = hdr['DIMENSION']
-            c.oversampling = hdr['OVERSAMPLING']
-            c.positiveShiftTT = hdr['POSITIVESHIFTTT']
-            c.spotsize = hdr['SPOTSIZE']
-            c.dimx = hdr['DIMX']
-            c.dimy = hdr['DIMY']            
-
+        c.pxscale = hdr['PXSCALE']
+        c.dimension = hdr['DIMENSION']
+        c.oversampling = hdr['OVERSAMPLING']
+        c.positiveShiftTT = hdr['POSITIVESHIFTTT']
+        c.spotsize = hdr['SPOTSIZE']
+        c.dimx = hdr['DIMX']
+        c.dimy = hdr['DIMY']
         c.read(filename, hdr)
         return c

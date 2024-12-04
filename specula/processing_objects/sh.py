@@ -20,7 +20,7 @@ def abs2(u_fp, xp):
      psf = xp.real(u_fp * xp.conj(u_fp))
      return psf
  
-
+rad2arcsec = 180 / np.pi * 3600
 
 class SH(BaseProcessingObj):
     def __init__(self,
@@ -46,8 +46,6 @@ class SH(BaseProcessingObj):
         ):
 
         super().__init__(target_device_idx=target_device_idx, precision=precision)        
-
-        rad2arcsec = 180 / self.xp.pi * 3600
         self._wavelengthInNm = wavelengthInNm
         self._lenslet = Lenslet(subap_on_diameter)
         self._subap_wanted_fov = subap_wanted_fov / rad2arcsec
@@ -81,7 +79,6 @@ class SH(BaseProcessingObj):
 
         if self._convolGaussSpotSize != 0:                        
             self._kernelobj = GaussianConvolutionKernel(self._convolGaussSpotSize, self._lenslet.dimx, self._lenslet.dimy)
-            # self._gkern_size = gauss_kern / rad2arcsec ????        
         else:
             self._kernelobj = None
             
@@ -214,22 +211,6 @@ class SH(BaseProcessingObj):
             print('-->     FFT size (turb. FoV),  {}'.format(self._fft_size))
             print('-->     L.C.M. for toccd,      {}'.format(mcmx))
 
-        # Kernel object initialization
-        if self._kernelobj is not None:
-            self._kernelobj.pixel_pitch =  in_ef.pixel_pitch * (ef_size / 2.0)
-            self._kernelobj.pxscale = self._kernelobj.pixel_pitch * rad2arcsec
-            self._kernelobj.dimension = self._fft_size
-            self._kernelobj.oversampling = 1
-            self._kernelobj.positiveShiftTT = True
-            kernel_fn = self._kernelobj.build()
-
-            if os.path.exists(kernel_fn):
-                self._kernelobj = GaussianConvolutionKernel.restore(kernel_fn)
-            else:
-                self._kernelobj.calculate_lgs_map()
-
-            self._kernelobj.save(kernel_fn)
-
 
         # Check for valid phase size
         if abs((ef_size * round(self._fov_ovs) * lens[2]) / 2.0 - round((ef_size * round(self._fov_ovs) * lens[2]) / 2.0)) > 1e-4:
@@ -251,15 +232,15 @@ class SH(BaseProcessingObj):
         self._subap_chunks = []
 
         # Test: chunks of 2 full rows each
-#        for i in range(0, self._lenslet.dimx, 2):
-            #self._subap_chunks.append((slice(i, i+2), slice(0, self._lenslet.dimy)))
+        for i in range(0, self._lenslet.dimx, 2):
+            self._subap_chunks.append((slice(i, i+2), slice(0, self._lenslet.dimy)))
 
         # Test: chunks of 1 rows each
-        for i in range(0, self._lenslet.dimx):
-            self._subap_chunks.append((slice(i, i+1), slice(0, self._lenslet.dimy)))
+        #for i in range(0, self._lenslet.dimx):
+        #    self._subap_chunks.append((slice(i, i+1), slice(0, self._lenslet.dimy)))
             
         # Whole SH in one go
-#        self._subap_chunks.append((slice(0, self._lenslet.dimx), slice(0, self._lenslet.dimy)))
+        # self._subap_chunks.append((slice(0, self._lenslet.dimx), slice(0, self._lenslet.dimy)))
 
         nx = self._subap_chunks[0][0].stop - self._subap_chunks[0][0].start
         ny = self._subap_chunks[0][1].stop - self._subap_chunks[0][1].start
@@ -310,6 +291,22 @@ class SH(BaseProcessingObj):
         # Remember a few things
         self._wf1 = wf1
         self._wf3 = wf3
+
+         # Kernel object initialization
+        if self._kernelobj is not None:
+            self._kernelobj.pxscale = fp4_pixel_pitch * rad2arcsec
+            self._kernelobj.pupil_size_m = in_ef.pixel_pitch * in_ef.size[0]
+            self._kernelobj.dimension = self._fft_size
+            self._kernelobj.oversampling = 1
+            self._kernelobj.positiveShiftTT = True
+            kernel_fn = self._kernelobj.build()
+
+            if os.path.exists(kernel_fn):
+                self._kernelobj = GaussianConvolutionKernel.restore(kernel_fn)
+            else:
+                self._kernelobj.calculate_lgs_map()
+
+            self._kernelobj.save(kernel_fn)
 
     def run_check(self, dt):
         # TODO
@@ -409,10 +406,9 @@ class SH(BaseProcessingObj):
 
             # Full resolution kernel
             if self._kernelobj is not None:
-                idx_list = np.mgrid[x1:x2,y1:y2].flatten()
-
-                subap_kern_fft = self._kernelobj.kernels[idx_list]
-
+                mg = np.mgrid[xslice.start:xslice.stop, yslice.start:yslice.stop]
+                idx_list = np.ravel_multi_index(mg, (self._lenslet.dimx, self._lenslet.dimy)).flatten()            
+                subap_kern_fft = self._kernelobj.kernels[idx_list, :, :]
                 psf_fft = self.xp.fft.fft2(psf_shifted, axes=(1, 2))
                 psf = self.xp.fft.ifft2(psf_fft * subap_kern_fft, axes=(1, 2)).real
                 psf = self.xp.fft.fftshift(psf, axes=(1, 2))
@@ -437,24 +433,6 @@ class SH(BaseProcessingObj):
             # Insert subap strip into overall PSF image
             with show_in_profiler('psf'):
                 self._psfimage[xslice.start * cutsize: xslice.stop * cutsize, yslice.start * cutsize: yslice.stop * cutsize] = psf_cut
-
-
-        # Post-processing kernel (Gaussian convolution)
-        if self._gkern:
-            psf_size = self._psfimage.shape[0] // self._lenslet.dimx
-            kern_pixsize = self._gkern_size / subap_wanted_fov * psf_size
-            subap_gkern = gaussian_function(kern_pixsize / (2.0 * np.sqrt(2 * np.log(2))), width=psf_size, maximum=1.0)
-            subap_gkern /= np.sum(subap_gkern)
-
-            for i in range(self._lenslet.dimx):
-                for j in range(self._lenslet.dimy):
-                    x1 = i * psf_size
-                    x2 = x1 + psf_size
-                    y1 = j * psf_size
-                    y2 = y1 + psf_size
-                    subap = self._psfimage[x1:x2, y1:y2]
-                    subap_tmp = self.xp.convolve(subap, subap_gkern, mode='same')
-                    self._psfimage[x1:x2, y1:y2] = self.xp.abs(self.xp.fft.fftshift(self.xp.fft.fft2(subap_tmp)))
 
         with show_in_profiler('toccd'):
             ccd = toccd(self._psfimage, (self._ccd_side, self._ccd_side), xp=self.xp)
