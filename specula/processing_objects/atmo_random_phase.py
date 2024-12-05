@@ -47,9 +47,6 @@ class AtmoRandomPhase(BaseProcessingObj):
         else:
             self.airmass = 1.0
 
-        # Conversion coefficient from arcseconds to radians
-        sec2rad = 4.848e-6
-               
         # Compute layers dimension in pixels
         self.pixel_layer = pixel_pupil
 
@@ -79,8 +76,9 @@ class AtmoRandomPhase(BaseProcessingObj):
             ef.S0 = source.phot_density()
             self.outputs['out_'+name+'_ef'] = ef
 
-        if seed is not None:
-            self.seed = seed
+        if seed < 1:
+            raise ValueError('Seed must be >1')
+        self.seed = seed
 
         self.inputs['pupilstop'] = InputValue(type=Pupilstop)
     
@@ -164,21 +162,5 @@ class AtmoRandomPhase(BaseProcessingObj):
     def set_last_t(self, last_t):
         self.last_t = last_t
 
-    def run_check(self, time_step):
-        self.prepare_trigger(0)
-
-        errmsg = ''
-        if not (self.seed > 0):
-            errmsg += ' Seed <= 0.'
-        if not isinstance(self.seeing, BaseValue):
-            errmsg += ' Missing input seeing.'
-
-        seeing = self.inputs['seeing'].get(self.target_device_idx)
                 
-        check = self.seed > 0 and isinstance(seeing, BaseValue)
-        if not check:
-            raise ValueError(errmsg)
-          
-        # super().build_stream()
-        return check
 

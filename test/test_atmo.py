@@ -51,7 +51,7 @@ class TestAtmo(unittest.TestCase):
         prop.inputs['layer_list'].set(atmo.outputs['layer_list'])
 
         for obj in [seeing, wind_speed, wind_direction, atmo, prop]:
-            obj.run_check(1)
+            obj.setup(1, 1)
         
         for obj in [seeing, wind_speed, wind_direction, atmo, prop]:
             obj.check_ready(1)

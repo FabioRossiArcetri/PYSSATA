@@ -30,6 +30,13 @@ class AtmoPropagation(BaseProcessingObj):
         if doFresnel and wavelengthInNm is None:
             raise ValueError('get_atmo_propagation: wavelengthInNm is required when doFresnel key is set to correctly simulate physical propagation.')
 
+        if not (len(source_dict) > 0):
+            raise ValueError('No sources have been set')
+
+        if not (pixel_pupil > 0):
+            raise ValueError('Pixel pupil must be >0')
+        
+        
         self.pixel_pupil_size = pixel_pupil
         self.pixel_pitch = pixel_pitch
         self.source_dict = source_dict
@@ -174,24 +181,17 @@ class AtmoPropagation(BaseProcessingObj):
         return Interp2D(layer.size, (self.pixel_pupil_size, self.pixel_pupil_size), xx=xx1, yy=yy1,
                         rotInDeg=angle*180.0/3.1415, xp=self.xp, dtype=self.dtype)
 
-    def run_check(self, time_step):
-        # TODO here for no better place, we need something like a "setup()" method called before the loop starts        
-        self.layer_list = self.inputs['layer_list'].get(self.target_device_idx)        
+    def setup(self, loop_dt, loop_niters):
+        super().setup(loop_dt, loop_niters)
+
+        self.layer_list = self.inputs['layer_list'].get(self.target_device_idx)
+        if len(self.layer_list) < 1:
+            raise ValueError('At least one layer must be set')
+
         self.shiftXY_cond = {layer: np.any(layer.shiftXYinPixel) for layer in self.layer_list}
         self.magnification_list = {layer: max(layer.magnification, 1.0) for layer in self.layer_list}
 
         self.setup_interpolators()
-
-        errmsg = ''
-        if not (len(self.source_dict) > 0):
-            errmsg += 'no source'
-        if not (len(self.layer_list) > 0):
-            errmsg += 'no layers'
-        if not (self.pixel_pupil_size > 0):
-            errmsg += 'pixel pupil <= 0'
-        return (len(self.source_dict) > 0 and
-                len(self.layer_list) > 0 and
-                self.pixel_pupil_size > 0), errmsg
 
     def save(self, filename):
         hdr = fits.Header()

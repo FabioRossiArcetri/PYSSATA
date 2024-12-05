@@ -82,9 +82,4 @@ class DM(BaseProcessingObj):
     def ifunc(self, value):
         self._ifunc.influence_function = value
     
-    def run_check(self, time_step, errmsg=""):
-        commands_input = self.inputs['in_command'].get(self.target_device_idx)
-        if commands_input is None:
-            errmsg += f"{self.repr()} No input command defined"
-        
-        return commands_input is not None and self.layer is not None and self.ifunc is not None
+       

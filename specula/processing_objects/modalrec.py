@@ -80,8 +80,8 @@ class Modalrec(BaseProcessingObj):
         self._pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor', target_device_idx=target_device_idx)
         self._modes_first_step = BaseValue('output (no projection) modes from modal reconstructor', target_device_idx=target_device_idx)
 
-        self.inputs['in_slopes'] = InputValue(type=Slopes)
-        self.inputs['in_slopes_list'] = InputList(type=Slopes)
+        self.inputs['in_slopes'] = InputValue(type=Slopes, optional=True)
+        self.inputs['in_slopes_list'] = InputList(type=Slopes, optional=True)
         self.outputs['out_modes'] = self.out_modes
         self.outputs['out_pseudo_ol_modes'] = self.pseudo_ol_modes
         self.outputs['out_modes_first_step'] = self.modes_first_step
@@ -253,28 +253,21 @@ class Modalrec(BaseProcessingObj):
 
         return m
 
-    def run_check(self, time_step):
-        errmsg = []
+    def setup(self, loop_dt, loop_niters):
+        super().setup(loop_dt, loop_niters)
+
         slopes = self.inputs['in_slopes'].get(self.target_device_idx)
         slopes_list = self.inputs['in_slopes_list'].get(self.target_device_idx)
         
         if not slopes and not all(slopes_list):
-            errmsg.append("Slopes object not valid")
+            raise ValueError("Either 'slopes' or 'slopes_list' must be given as an input")
         if not self._recmat:
-            errmsg.append("Recmat object not valid")
-        out = bool(slopes or all(slopes_list)) and bool(self._recmat)
+            raise ValueError("Recmat object not valid")
         if self._polc:
             if not self._intmat:
-                errmsg.append("Intmat object not valid")
+                raise ValueError("Intmat object not valid")
             if not self._control_list:
-                errmsg.append("ControlList object not valid")
-            out &= bool(self._intmat) and bool(self._control_list)
-        if len(errmsg) > 0:
-            print(", ".join(errmsg))
-
-#        super().build_stream()
-
-        return out
+                raise ValueError("ControlList object not valid")
 
 
 

@@ -26,6 +26,7 @@ class TestSH(unittest.TestCase):
                 sensor_pxscale=0.5,
                 subap_on_diameter=20,
                 subap_npx=6,
+                convolGaussSpotSize=1.0,
                 target_device_idx=target_device_idx)
         
         ef = ElectricField(120,120,0.05, S0=ref_S0, target_device_idx=target_device_idx)

@@ -89,19 +89,6 @@ class BaseOperation(BaseProcessingObj):
             self._out_value.value = temp
             self._out_value.generation_time = self.current_time
 
-    def run_check(self, time_step, errmsg=None):
-        """
-        Check the validity of the operation.
-
-        Parameters:
-        time_step (int): The time step for the simulation
-        errmsg (str, optional): Error message
-
-        Returns:
-        bool: True if the check is successful, False otherwise
-        """
-        return self._out_value is not None and self.inputs['in_value1'].get(self.target_device_idx) is not None
-
     def save(self, filename):
         hdr = fits.Header()
         hdr['CONST_MULT'] = self._constant_mult

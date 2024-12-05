@@ -55,9 +55,3 @@ class SlopecDisplay(BaseProcessingObj):
         self.fig.canvas.draw()
         plt.pause(0.001)
 
-    def run_check(self, time_step):
-        # TODO
-        #slopec = self.inputs['slopec'].get(self.target_device_idx)
-        #return slopec is not None
-        return True
-

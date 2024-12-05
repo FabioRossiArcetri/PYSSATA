@@ -67,10 +67,3 @@ class PhaseDisplay(BaseProcessingObj):
         # plt.draw()
         # plt.pause(0.01)
 
-    def run_check(self, time_step):
-        phase = self.inputs['phase'].get(self.target_device_idx)
-        return phase is not None
-
-    @classmethod
-    def from_dict(cls, params):
-        return cls(**params)
