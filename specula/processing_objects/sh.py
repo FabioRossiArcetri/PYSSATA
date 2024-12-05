@@ -78,7 +78,9 @@ class SH(BaseProcessingObj):
 
 
         if self._convolGaussSpotSize != 0:                        
-            self._kernelobj = GaussianConvolutionKernel(self._convolGaussSpotSize, self._lenslet.dimx, self._lenslet.dimy)
+            self._kernelobj = GaussianConvolutionKernel(self._convolGaussSpotSize,
+                                                        self._lenslet.dimx, self._lenslet.dimy,
+                                                        target_device_idx=self.target_device_idx)
         else:
             self._kernelobj = None
             
@@ -302,15 +304,11 @@ class SH(BaseProcessingObj):
             kernel_fn = self._kernelobj.build()
 
             if os.path.exists(kernel_fn):
-                self._kernelobj = GaussianConvolutionKernel.restore(kernel_fn)
+                self._kernelobj = GaussianConvolutionKernel.restore(kernel_fn, target_device_idx=self.target_device_idx)
             else:
                 self._kernelobj.calculate_lgs_map()
 
             self._kernelobj.save(kernel_fn)
-
-    def run_check(self, dt):
-        # TODO
-        return True
 
     def trigger(self):
         

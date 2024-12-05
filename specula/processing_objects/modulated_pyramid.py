@@ -77,7 +77,7 @@ class ModulatedPyramid(BaseProcessingObj):
         self.fft_sampling = fft_sampling
         self.fft_padding = fft_padding
         self.fft_totsize = fft_totsize
-        self.toccd_side = toccd_side
+        self.toccd_side = int(toccd_side)
         self.final_ccd_side = final_ccd_side
         self.pyr_tlt_coeff = pyr_tlt_coeff
         self.pyr_edge_def_ld = pyr_edge_def_ld
@@ -455,15 +455,13 @@ class ModulatedPyramid(BaseProcessingObj):
         self.out_transmission.value = self.transmission
         self.out_transmission.generation_time = self.current_time
     
-    def run_check(self, time_step):
-        self.prepare_trigger(0)
-        self.toccd_side = int(self.toccd_side)
+    def setup(self, loop_dt, loop_niters):
+        super().setup(loop_dt, loop_niters)
+
         super().build_stream()
-        if self.extended_source_in_on:
-            return 1
-        elif self.mod_steps < self.xp.around(2 * self.xp.pi * self.mod_amp):
-            raise Exception(f'Number of modulation steps is too small ({self.mod_steps}), it must be at least 2*pi times the modulation amplitude ({self.xp.around(2 * self.xp.pi * self.mod_amp)})!')
-        return 1
+        if not self.extended_source_in_on:
+            if self.mod_steps < self.xp.around(2 * self.xp.pi * self.mod_amp):
+                raise Exception(f'Number of modulation steps is too small ({self.mod_steps}), it must be at least 2*pi times the modulation amplitude ({self.xp.around(2 * self.xp.pi * self.mod_amp)})!')
 
     def hdr(self, hdr):
         hdr['MODAMP'] = self.mod_amp

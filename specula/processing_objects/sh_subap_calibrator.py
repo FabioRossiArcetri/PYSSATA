@@ -88,5 +88,3 @@ class ShSubapCalibrator(BaseProcessingObj):
       
         return subap_data
     
-    def run_check(self, time_step):
-        return True

@@ -22,7 +22,11 @@ class PSF(BaseProcessingObj):
                  target_device_idx: int = None, 
                  precision: int = None
                 ):
-        super().__init__(target_device_idx=target_device_idx, precision=precision)        
+        super().__init__(target_device_idx=target_device_idx, precision=precision)       
+
+        if wavelengthInNm <= 0:
+            raise ValueError('PSF wavelength must be >0')
+ 
         self.nd = nd
         self.start_time = start_time
         self.wavelengthInNm = wavelengthInNm
@@ -88,13 +92,6 @@ class PSF(BaseProcessingObj):
         in_ef = self.inputs['in_ef'].get(self.target_device_idx)
         return in_ef.size if in_ef else None
 
-    def run_check(self, time_step, errmsg=''):
-        in_ef = self.inputs['in_ef'].get(self.target_device_idx)
-        if not in_ef:
-            errmsg += ' Input intensity object has not been set'
-        if self.wavelengthInNm == 0:
-            errmsg += ' PSF wavelength is zero'
-        return bool(in_ef) and (self.wavelengthInNm > 0)
 
     def reset_integration(self):
         self.count = 0

@@ -105,9 +105,14 @@ class AtmoEvolution(BaseProcessingObj):
             self.layer_list.append(layer)
         self.outputs['layer_list'] = self.layer_list
         
-        if seed is not None:
-            self.seed = seed
+        self.seed = seed
         self.last_position = np.zeros(self.n_phasescreens, dtype=self.dtype)
+
+        if self.seed <= 0:
+            raise ValueError('seed must be >0')
+        
+        if not np.isclose(np.sum(self.Cn2), 1.0, atol=1e-6):
+            raise ValueError(f' Cn2 total must be 1. Instead is: {np.sum(self.Cn2)}.')
 
     @property
     def seed(self):
@@ -298,29 +303,5 @@ class AtmoEvolution(BaseProcessingObj):
     def set_last_t(self, last_t):
         self.last_t = last_t
 
-    def run_check(self, time_step):
-        self.prepare_trigger(0)
 
-        errmsg = ''
-        if not (self.seed > 0):
-            errmsg += ' Seed <= 0.'
-        if not isinstance(self.seeing, BaseValue):
-            errmsg += ' Missing input seeing.'
-        if not isinstance(self.wind_direction, BaseValue):
-            errmsg += ' Missing input wind direction.'
-        if not isinstance(self.wind_speed, BaseValue):
-            errmsg += ' Missing input speed.'
-        if not np.isclose(np.sum(self.Cn2), 1.0, atol=1e-6):
-            errmsg += f' Cn2 total must be 1. Instead is: {np.sum(self.Cn2)}.'
-
-        seeing = self.inputs['seeing'].get(self.target_device_idx)
-        wind_speed = self.inputs['wind_speed'].get(self.target_device_idx)
-        wind_direction = self.inputs['wind_direction'].get(self.target_device_idx)
-                
-        check = self.seed > 0 and isinstance(seeing, BaseValue) and isinstance(wind_direction, BaseValue) and isinstance(wind_speed, BaseValue)
-        if not check:
-            raise ValueError(errmsg)
-          
-        # super().build_stream()
-        return check
 

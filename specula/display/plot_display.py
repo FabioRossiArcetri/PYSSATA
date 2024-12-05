@@ -77,7 +77,4 @@ class PlotDisplay(BaseProcessingObj):
         # plt.draw()
         # plt.pause(0.01)
 
-    def run_check(self, time_step, errmsg=None):
-        value = self.inputs['value'].get(self.target_device_idx)
-        return value is not None and self._history is not None
 

@@ -137,3 +137,5 @@ dmypy.json
 *.nsys-rep
 *.sqlite
 
+# SPECULA calibs
+main/scao/calib/*

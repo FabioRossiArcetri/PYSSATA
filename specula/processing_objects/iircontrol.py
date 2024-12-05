@@ -277,7 +277,4 @@ class IIRControl(BaseProcessingObj):
 #        if self._verbose:
 #            print(f"first {min(6, len(self._out_comm.value))} output comm values: {self._out_comm.value[:min(6, len(self._out_comm.value))]}")
     
-    def run_check(self, time_step, errmsg=""):
-        self.prepare_trigger(0)
-#        super().build_stream()
-        return True
+

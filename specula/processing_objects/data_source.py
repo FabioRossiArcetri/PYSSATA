@@ -48,6 +48,7 @@ class DataSource(BaseProcessingObj):
             self.loadFromFile(aout)
         for k in self.storage.keys():
             if not self.obj_type[k] is 'BaseValue':
+                # TODO replace with import_class like in simul.py
                 self.outputs[k] = globals().get(self.obj_type[k]).from_header(self.headers[k])
             else:
                 self.outputs[k] = BaseValue()
@@ -136,9 +137,6 @@ class DataSource(BaseProcessingObj):
             self.outputs[k].set_value(self.outputs[k].xp.array(self.storage[k][self.current_time]))
             self.outputs[k].generation_time = self.current_time
         
-    def run_check(self, time_step, errmsg=''):
-        return True
-
     def finalize(self):
         pass
         
