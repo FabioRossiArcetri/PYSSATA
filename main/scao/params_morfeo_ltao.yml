@@ -124,6 +124,7 @@ sh1:
   subap_on_diameter: 68                      # Number of subapertures in diameter
   wavelengthInNm:    589                     # [nm] Pyramid wavelength
   fov_ovs_coeff:     1.6                     # Force phase interpolation to a multiple of 68
+  convolGaussSpotSize: 1.8
   inputs:
     in_ef: 'prop.out_ngs1_source_ef'
   outputs:  ['out_i']
@@ -136,6 +137,7 @@ sh2:
   subap_on_diameter: 68                      # Number of subapertures in diameter
   wavelengthInNm:    589                     # [nm] Pyramid wavelength
   fov_ovs_coeff:     1.6                     # Force phase interpolation to a multiple of 68
+  convolGaussSpotSize: 1.8
   inputs:
     in_ef: 'prop.out_ngs2_source_ef'
   outputs:  ['out_i']
@@ -148,6 +150,7 @@ sh3:
   subap_on_diameter: 68                      # Number of subapertures in diameter
   wavelengthInNm:    589                     # [nm] Pyramid wavelength
   fov_ovs_coeff:     1.6                     # Force phase interpolation to a multiple of 68
+  convolGaussSpotSize: 1.8
   inputs:
     in_ef: 'prop.out_ngs3_source_ef'
   outputs:  ['out_i']
@@ -160,6 +163,7 @@ sh4:
   subap_on_diameter: 68                      # Number of subapertures in diameter
   wavelengthInNm:    589                     # [nm] Pyramid wavelength
   fov_ovs_coeff:     1.6                     # Force phase interpolation to a multiple of 68
+  convolGaussSpotSize: 1.8
   inputs:
     in_ef: 'prop.out_ngs4_source_ef'
   outputs:  ['out_i']
@@ -172,6 +176,7 @@ sh5:
   subap_on_diameter: 68                      # Number of subapertures in diameter
   wavelengthInNm:    589                     # [nm] Pyramid wavelength
   fov_ovs_coeff:     1.6                     # Force phase interpolation to a multiple of 68
+  convolGaussSpotSize: 1.8
   inputs:
     in_ef: 'prop.out_ngs5_source_ef'
   outputs:  ['out_i']
@@ -184,6 +189,7 @@ sh6:
   subap_on_diameter: 68                      # Number of subapertures in diameter
   wavelengthInNm:    589                     # [nm] Pyramid wavelength
   fov_ovs_coeff:     1.6                     # Force phase interpolation to a multiple of 68
+  convolGaussSpotSize: 1.8
   inputs:
     in_ef: 'prop.out_ngs6_source_ef'
   outputs:  ['out_i']
