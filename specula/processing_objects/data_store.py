@@ -92,28 +92,6 @@ class DataStore(BaseProcessingObj):
                 break            
         self.tn_dir = prefix        
 
-
-    def restore(self, filename, params=None):
-        data = loadmat(filename)
-        self.storage = data.get('data', {})
-        if 'params' in data:
-            if params is not None:
-                params.update(data['params'])
-            else:
-                self.storage['params'] = data['params']
-
-    def restore_tracknum(self, tn, dir='.', params=None, no_phi=False):
-        tndir = os.path.join(dir, tn)
-        if os.path.isdir(tndir):
-            self.restore(os.path.join(tndir, 'old_format.mat'))
-        else:
-            for filename in os.listdir(tndir):
-                if filename.endswith('.fits') and not no_phi and 'Phi' in filename:
-                    continue
-                name = filename.split('.')[0]
-                data = loadmat(os.path.join(tndir, filename))
-                self.storage[name] = data
-
     def get(self, name):
         return self.storage[name]
 
