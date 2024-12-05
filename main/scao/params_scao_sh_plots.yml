@@ -42,7 +42,7 @@ atmo:
   class:                'AtmoEvolution'
   L0:                   40                   # [m] Outer scale
   heights:              [119.] #,837,3045,12780]), # [m] layer heights at 0 zenith angle
-  Cn2:                  [0.70] #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
+  Cn2:                  [1.0] #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
   source_dict_ref:      ['on_axis_source']
   inputs:
     seeing: 'seeing.output'
@@ -62,8 +62,8 @@ prop:
   
 sh:
   class:             'SH'
-  subap_wanted_fov:  1.2                     # Requested field-of-view [arcsec]
-  sensor_pxscale:    0.15                     # Pixel scale in arcsec/pix
+  subap_wanted_fov:  2.4                     # Requested field-of-view [arcsec]
+  sensor_pxscale:    0.4                     # Pixel scale in arcsec/pix
   subap_npx:         6                       # Output sampling [usually corresponding to CCD pixels]
   subap_on_diameter: 20                      # Number of subapertures in diameter
   wavelengthInNm:    750                     # [nm] Pyramid wavelength
@@ -186,7 +186,7 @@ pixels_disp:
   window:           15
   title:            "Pixels"
   disp_factor:      1
-  sh_as_pyr:        true
+  sh_as_pyr:        false
   subapdata_object:  'scao_subaps_n20_th0.5'
 
 data_store:

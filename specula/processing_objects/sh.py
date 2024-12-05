@@ -409,8 +409,6 @@ class SH(BaseProcessingObj):
                 subap_kern_fft = self._kernelobj.kernels[idx_list, :, :]
                 psf_fft = self.xp.fft.fft2(psf_shifted, axes=(1, 2))
                 psf = self.xp.fft.ifft2(psf_fft * subap_kern_fft, axes=(1, 2)).real
-                psf = self.xp.fft.fftshift(psf, axes=(1, 2))
-
                 psf *= self._fp_mask
             else:
                 psf = self.xp.fft.fftshift(psf_shifted, axes=(1, 2))
