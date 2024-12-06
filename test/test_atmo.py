@@ -65,6 +65,3 @@ class TestAtmo(unittest.TestCase):
         ef_onaxis = cpuArray(prop.outputs['out_on_axis_source_ef'])
         ef_offaxis = cpuArray(prop.outputs['out_lgs1_source_ef'])
         
-
-if __name__ == '__main__':
-    unittest.main()
