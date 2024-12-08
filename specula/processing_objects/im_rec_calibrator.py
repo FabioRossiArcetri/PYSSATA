@@ -56,3 +56,19 @@ class ImRecCalibrator(BaseProcessingObj):
         if self._rec_filename:
             rec = im.generate_rec(self._nmodes)
             rec.save(os.path.join(self._data_dir, self._rec_filename))
+
+    def setup(self, loop_dt, loop_niters):
+        super().setup(loop_dt, loop_niters)
+
+        if self._im_filename:
+            im_path = os.path.join(self._data_dir, self._im_filename)
+            if not im_path.endswith('.fits'):
+                im_path += '.fits'
+            if os.path.exists(im_path):
+                raise FileExistsError(f'IM file {im_path} already exists, please remove it')
+        if self._rec_filename:
+            rec_path = os.path.join(self._data_dir, self._rec_filename)
+            if not rec_path.endswith('.fits'):
+                rec_path += '.fits'
+            if os.path.exists(rec_path):
+                raise FileExistsError(f'REC file {rec_path} already exists, please remove it')
