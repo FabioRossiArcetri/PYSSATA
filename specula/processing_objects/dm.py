@@ -16,7 +16,8 @@ class DM(BaseProcessingObj):
                  type_str: str=None,
                  nmodes: int=None,
                  nzern: int=None,
-                 start_mode: int=None,
+                 start_mode: int=0,
+                 input_offset: int=0,
                  idx_modes = None,
                  npixels: int=None,
                  obsratio: float=None,
@@ -56,11 +57,13 @@ class DM(BaseProcessingObj):
             self.m2c = None
             self.m2c_commands = None
 
+        self.input_offset = input_offset # TODO not implemented
+
         # Default sign is -1 to take into account the reflection in the propagation
         self.sign = sign
         self.inputs['in_command'] = InputValue(type=BaseValue)
         self.outputs['out_layer'] = self.layer
-
+        
     def trigger_code(self):
         input_commands = self.local_inputs['in_command'].value
         if self.m2c is not None:
