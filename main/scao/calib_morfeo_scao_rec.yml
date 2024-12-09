@@ -45,7 +45,7 @@ calibrator:
 #   sh_as_pyr:        true
 #   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'
 
-remove: ['atmo', 'rec']
+remove: ['atmo', 'rec', 'control']
  
 
 

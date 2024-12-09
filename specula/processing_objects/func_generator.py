@@ -121,10 +121,11 @@ class FuncGenerator(BaseProcessingObj):
 
     def get_time_hist_at_current_time(self):
         t = self.current_time
-        i = int(np.round(t / self.loop_dt))
+        i = int(np.round(t / self._loop_dt))
         return self.xp.array(self.time_hist[i])
 
     def setup(self, loop_dt, loop_niters):
+        super().setup(loop_dt, loop_niters)
         if self.vib:
             self.vib.set_niters(loop_niters + 1)
             self.vib.set_samp_freq(1.0 / self.t_to_seconds(loop_dt))
