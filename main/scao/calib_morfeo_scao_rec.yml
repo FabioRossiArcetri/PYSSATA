@@ -20,10 +20,14 @@ dm_override:
   inputs:
       in_command: 'pushpull.output'
 
+sh_lgs1_override:
+  convolGaussSpotSize: 1.8
+
 detector1_override:
   photon_noise:      False
   readout_noise:     False
-  
+
+
 calibrator:
   class: 'ImRecCalibrator'
   nmodes: 4519
