@@ -306,9 +306,11 @@ class SH(BaseProcessingObj):
             if os.path.exists(kernel_fn):
                 self._kernelobj = GaussianConvolutionKernel.restore(kernel_fn, target_device_idx=self.target_device_idx)
             else:
+                print('Calculating kernel...')
                 self._kernelobj.calculate_lgs_map()
+                self._kernelobj.save(kernel_fn)
+                print('Done')
 
-            self._kernelobj.save(kernel_fn)
 
     def trigger(self):
         
