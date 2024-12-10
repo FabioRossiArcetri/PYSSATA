@@ -1,6 +1,7 @@
 import numpy as np
 from numba import jit
 
+from specula.data_objects.iirfilter import IIRFilter
 from specula.base_processing_obj import BaseProcessingObj
 from specula.connections import InputValue
 from specula.base_value import BaseValue
@@ -13,6 +14,7 @@ def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_d
     global gxp, gdtype
 #        nfilter = _iirfilter.num.shape[0]
 #        ninput = input.size
+    xp = np
     comm = input*0
 #        if nfilter < ninput:
 #            raise ValueError(f"Error: IIR filter needs no more than {nfilter} coefficients ({ninput} given)")
@@ -94,14 +96,26 @@ def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_d
 
 
 class IIRControl(BaseProcessingObj):
-    '''Infinite Impulse Response filter based Time Control'''
-    def __init__(self, iirfilter, delay=0,
-                target_device_idx=None,
-                precision=None
-                ):
+    '''Infinite Impulse Response filter based Time Control
+    
+    Set *integration* to False to disable integration, regardless
+    of wha the input IIRFilter object contains
+    '''
+    def __init__(self, iirfilter: IIRFilter,
+                 delay: int=0,
+                 integration: bool=True,
+                 offset: int=None,
+                 og_shaper=None,
+                 target_device_idx=None,
+                 precision=None
+                 ):
         global gxp, gdtype    
+
         self._verbose = True
-        self._iirfilter = iirfilter
+        self.iirfilter = iirfilter
+        self.integration = integration
+        if integration is False:
+            raise NotImplementedError('IIRControl: integration=False is not implemented yet')
         
         super().__init__(target_device_idx=target_device_idx, precision=precision)        
 
@@ -112,22 +126,22 @@ class IIRControl(BaseProcessingObj):
         else:
             self.trigger_function = trigger_function
 
-        self._delay = delay if delay is not None else 0
+        self.delay = delay if delay is not None else 0
         self._n = iirfilter.nfilter
         self._type = iirfilter.num.dtype
-        self.set_state_buffer_length(int(np.ceil(self._delay)) + 1)
+        self.set_state_buffer_length(int(np.ceil(self.delay)) + 1)
         
         # Initialize state vectors
         self._ist = self.xp.zeros_like(iirfilter.num)
         self._ost = self.xp.zeros_like(iirfilter.den)
 
-        self._out_comm = BaseValue(target_device_idx=target_device_idx)
+        self.out_comm = BaseValue(target_device_idx=target_device_idx)
         self.inputs['delta_comm'] = InputValue(type=BaseValue)
-        self.outputs['out_comm'] = self._out_comm
+        self.outputs['out_comm'] = self.out_comm
 
         self._opticalgain = None
-        self._og_shaper = None
-        self._offset = None
+        self._og_shaper = og_shaper
+        self._offset = offset
         self._bootstrap_ptr = None
         self._modal_start_time = None
         self._time_gmt_imm = None
@@ -137,15 +151,15 @@ class IIRControl(BaseProcessingObj):
         self._StepIsNotGood = False
         self._start_time = 0
 
-        self._outFinite = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
-        self._idx_finite = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
+        self._outFinite = self.xp.zeros(self.iirfilter.nfilter, dtype=self.dtype)
+        self._idx_finite = self.xp.zeros(self.iirfilter.nfilter, dtype=self.dtype)
 
 
     def set_state_buffer_length(self, total_length):
         self._total_length = total_length
         if self._n is not None and self._type is not None:
-            self._state = self.xp.zeros((self._n, self._total_length), dtype=self.dtype)
-            self._comm = self.xp.zeros((self._n, 1), dtype=self.dtype)
+            self.state = self.xp.zeros((self._n, self._total_length), dtype=self.dtype)
+            self.comm = self.xp.zeros((self._n, 1), dtype=self.dtype)  # TODO not used?
 
     def auto_params_management(self, main_params, control_params, detector_params, dm_params, slopec_params):
         result = control_params.copy()
@@ -162,44 +176,8 @@ class IIRControl(BaseProcessingObj):
         return result
 
     @property
-    def delay(self):
-        return self._delay
-
-    @property
     def last_state(self):
-        return self._state[:, 0]
-
-    @property
-    def state(self):
-        return self._state
-
-    @property
-    def comm(self):
-        return self._comm
-
-    @state.setter
-    def state(self, state):
-        self._state = state
-
-    @property
-    def iirfilter(self):
-        return self._iirfilter
-
-    @iirfilter.setter
-    def iirfilter(self, value):
-        self._iirfilter = value
-
-    @property
-    def out_comm(self):
-        return self._out_comm
-
-    @property
-    def delay(self):
-        return self._delay
-
-    @delay.setter
-    def delay(self, value):
-        self._delay = value
+        return self.state[:, 0]
 
     def set_modal_start_time(self, modal_start_time):
         modal_start_time_ = self.xp.array(modal_start_time, dtype=self.dtype)
@@ -260,21 +238,21 @@ class IIRControl(BaseProcessingObj):
 
 # this is probably useless
 #        n_delta_comm = self.delta_comm.size
-#        if n_delta_comm < self._iirfilter.nfilter:
-#            self.delta_comm = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
+#        if n_delta_comm < self.iirfilter.nfilter:
+#            self.delta_comm = self.xp.zeros(self.iirfilter.nfilter, dtype=self.dtype)
 #            self.delta_comm[:n_delta_comm] = self.local_inputs['delta_comm'].value
 
         if self._offset is not None:
             self.delta_comm[:self._offset.shape[0]] += self._offset
 
     def trigger_code(self):
-        self._out_comm.value, self._state = self.trigger_function(self.delta_comm, self._outFinite, self._ist, self._ost, 
-                                                       self._iirfilter.num, self._iirfilter.den, self._delay, 
-                                                       self._state, self._total_length)
+        self.out_comm.value, self.state = self.trigger_function(self.delta_comm, self._outFinite, self._ist, self._ost, 
+                                                       self.iirfilter.num, self.iirfilter.den, self.delay, 
+                                                       self.state, self._total_length)
 
-        self._out_comm.generation_time = self.current_time
+        self.out_comm.generation_time = self.current_time
 
 #        if self._verbose:
-#            print(f"first {min(6, len(self._out_comm.value))} output comm values: {self._out_comm.value[:min(6, len(self._out_comm.value))]}")
+#            print(f"first {min(6, len(self.out_comm.value))} output comm values: {self.out_comm.value[:min(6, len(self.out_comm.value))]}")
     
 
