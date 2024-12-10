@@ -64,4 +64,33 @@ class TestAtmo(unittest.TestCase):
             
         ef_onaxis = cpuArray(prop.outputs['out_on_axis_source_ef'])
         ef_offaxis = cpuArray(prop.outputs['out_lgs1_source_ef'])
-        
+
+    @cpu_and_gpu
+    def test_that_wrong_Cn2_total_is_detected(self, target_device_idx, xp):
+
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        on_axis_source = Source(polar_coordinate=[0.0, 0.0], magnitude=8, wavelengthInNm=750)
+        lgs1_source = Source( polar_coordinate=[45.0, 0.0], height=90000, magnitude=5, wavelengthInNm=589)
+
+        with self.assertRaises(ValueError):
+            atmo = AtmoEvolution(L0=23,  # [m] Outer scale
+                                pixel_pupil=160,
+                                pixel_pitch=0.05,
+                                data_dir=data_dir,
+                                heights = [30.0000, 26500.0], # [m] layer heights at 0 zenith angle
+                                Cn2 = [0.2, 0.2], # Cn2 weights (total must be eq 1)
+                                source_dict = {'on_axis_source': on_axis_source,
+                                                'lgs1_source': lgs1_source},
+                                target_device_idx=target_device_idx)
+
+        # Total is 1, no exception raised.
+        atmo = AtmoEvolution(L0=23,  # [m] Outer scale
+                            pixel_pupil=160,
+                            pixel_pitch=0.05,
+                            data_dir=data_dir,
+                            heights = [30.0000, 26500.0], # [m] layer heights at 0 zenith angle
+                            Cn2 = [0.5, 0.5], # Cn2 weights (total must be eq 1)
+                            source_dict = {'on_axis_source': on_axis_source,
+                                            'lgs1_source': lgs1_source},
+                            target_device_idx=target_device_idx)
+            
