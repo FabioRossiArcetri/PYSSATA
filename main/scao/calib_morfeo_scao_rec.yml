@@ -27,6 +27,8 @@ detector1_override:
   photon_noise:      False
   readout_noise:     False
 
+sh_lgs1_override:
+  convolGaussSpotSize: 1.8
 
 calibrator:
   class: 'ImRecCalibrator'
