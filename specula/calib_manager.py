@@ -27,6 +27,7 @@ class CalibManager():
             'ShSubapCalibrator': 'subapdata/',
             'rec': 'rec/',
             'recmat': 'rec/',
+            'intmat': 'im/',
             'ImRecCalibrator': 'rec/',
             'MultiImRecCalibrator': 'rec/',
             'im': 'im/',
