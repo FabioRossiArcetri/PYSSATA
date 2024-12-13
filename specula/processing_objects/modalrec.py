@@ -86,8 +86,7 @@ class Modalrec(BaseProcessingObj):
         if self.polc:
             self.out_comm = BaseValue('output commands from modal reconstructor', target_device_idx=target_device_idx)
             self.inputs['in_commands'] = InputValue(type=BaseValue, optional=True)
-            self.inputs['in_commands_list'] = InputList(type=BaseValue, optional=True)
-            self.outputs['out_comm'] = self.out_comm
+            self.inputs['in_commands_list'] = InputList(type=BaseValue, optional=True)            
 
     def trigger_code(self):
         if self.recmat.recmat is None:

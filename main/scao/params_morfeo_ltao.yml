@@ -336,7 +336,7 @@ rec:
   inputs:
     in_slopes_list:        ['slopec1.out_slopes','slopec2.out_slopes','slopec3.out_slopes','slopec4.out_slopes','slopec5.out_slopes','slopec6.out_slopes']
     in_commands: 'control.out_comm:-1'
-  outputs:  ['out_modes', 'out_pseudo_ol_modes', 'out_comm' ] # 
+  outputs:  ['out_modes', 'out_pseudo_ol_modes'] # 
 
 
 control:
