@@ -11,6 +11,10 @@ gxp = None
 gdtype = None
 
 def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_den, delay, state, total_length):
+    '''
+    TODO this function uses a global variables for xp and dtype, because NUMBA is unabled
+    to compile if they are given as parameters instead.
+    '''
     global gxp, gdtype
 #        nfilter = _iirfilter.num.shape[0]
 #        ninput = input.size
