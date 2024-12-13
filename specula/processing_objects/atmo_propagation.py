@@ -60,6 +60,8 @@ class AtmoPropagation(BaseProcessingObj):
 
     def doFresnel_setup(self):
    
+        raise NotImplementedError('Fresnel propagation is not implemented')
+
         if not self.propagators:
                         
             layer_list = self.local_inputs['layer_list']

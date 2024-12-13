@@ -158,6 +158,8 @@ class AtmoEvolution(BaseProcessingObj):
 
                 # Square phasescreens
                 if self.make_cycle:
+                    raise NotImplementedError('make_cycle is not implemented')
+
                     pixel_square_phasescreens = self.pixel_square_phasescreens - self.pixel_pupil
                     ps_cycle = get_layers(1, pixel_square_phasescreens, pixel_square_phasescreens * self.pixel_pitch,
                                           500e-9, 1, L0=self.L0[0], par=par, START=start, SEED=seed, DIR=self.data_dir,

@@ -2,14 +2,13 @@ import numbers
 import numpy as np
 
 from specula import cpuArray
-from specula import float_dtype
 
 from functools import cache
 from scipy.special import factorial
 from specula.lib.mask import CircularMask
 
 
-class ZernikeGenerator(object):
+class ZernikeGenerator():
     '''
     Generator of Zernike polynomials and their derivatives
 

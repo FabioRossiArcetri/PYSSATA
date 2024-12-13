@@ -1,6 +1,7 @@
 import numpy as np
 from specula.lib.make_mask import make_mask
 from specula.lib.make_xy import make_xy
+from specula.lib.modal_pushpull_signal import modal_pushpull_signal
 
 from specula.calib_manager import CalibManager
 from specula.base_processing_obj import BaseProcessingObj
@@ -30,9 +31,6 @@ ExtendedSource = IdealWFS = IdealWFSSlopec = IntControlOpt = IntControlAutoGain 
 LUTControl = IntControlMap = MatFilter = Kernel = LIFT = ModalAnalysisWFS = ModalRecNN = ModalRecNNMulti = AVC
 IIRControlState = IntControlMat = LIFT_SH_Slopec = M2CRec = ModalAnalysis = ModalAnalysisSlopec = AVC
 ModalRecNNPython = ModalRecCured = ModalRecDisplay = ShShift = ShTilt = PyrTilt = OptGainControl =AVC
-
-def modal_pushpull_signal(*args, **kwargs):
-    pass
 
 def zern2phi(*args, **kwargs):
     pass
