@@ -28,6 +28,7 @@ class CalibManager():
             'rec': 'rec/',
             'recmat': 'rec/',
             'intmat': 'im/',
+            'projmat': 'proj/',
             'ImRecCalibrator': 'rec/',
             'MultiImRecCalibrator': 'rec/',
             'im': 'im/',

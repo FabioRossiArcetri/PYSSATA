@@ -71,18 +71,17 @@ class Modalrec(BaseProcessingObj):
         self.projmat = projmat
         self.intmat = intmat
         self.polc = polc
-        self.layer_modes_list = None
+        # self.layer_modes_list = None
         self.past_step_list = []
 
         self.modes = BaseValue('output modes from modal reconstructor', target_device_idx=target_device_idx)
-        self.pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor', target_device_idx=target_device_idx)
-        self.modes_first_step = BaseValue('output (no projection) modes from modal reconstructor', target_device_idx=target_device_idx)
+        self.pseudo_ol_modes = BaseValue('output POL modes from modal reconstructor', target_device_idx=target_device_idx)        
 
         self.inputs['in_slopes'] = InputValue(type=Slopes, optional=True)
         self.inputs['in_slopes_list'] = InputList(type=Slopes, optional=True)
         self.outputs['out_modes'] = self.modes
         self.outputs['out_pseudo_ol_modes'] = self.pseudo_ol_modes
-        self.outputs['out_modes_first_step'] = self.modes_first_step
+        
         
         if self.polc:
             self.out_comm = BaseValue('output commands from modal reconstructor', target_device_idx=target_device_idx)
@@ -90,7 +89,7 @@ class Modalrec(BaseProcessingObj):
             self.inputs['in_commands_list'] = InputList(type=BaseValue, optional=True)
             self.outputs['out_comm'] = self.out_comm
 
-    def trigger_code(self): # , slope_ptr=None
+    def trigger_code(self):
         if self.recmat.recmat is None:
             print("WARNING: modalrec skipping reconstruction because recmat is NULL")
             return
@@ -101,53 +100,47 @@ class Modalrec(BaseProcessingObj):
             slopes = self.xp.hstack([x.slopes for x in slopes_list])
         else:
             slopes = slopes.slopes
+            
+        if self.polc:
+            commandsobj = self.local_inputs['in_commands']
+            commands_list = self.local_inputs['in_commands_list']
+            if commandsobj is None:
+                commandsobj = commands_list
+                commands = self.xp.hstack([x.commands for x in commands_list])
+            else:
+                commands = self.xp.array( commandsobj.value, dtype=self.dtype)
 
-        if self.modes_first_step.generation_time != self.current_time:
-            if self.polc:
-                commandsobj = self.local_inputs['in_commands']
-                commands_list = self.local_inputs['in_commands_list']
-                if commandsobj is None:
-                    commandsobj = commands_list
-                    commands = self.xp.hstack([x.commands for x in commands_list])
-                else:
-                    commands = self.xp.array( commandsobj.value, dtype=self.dtype)
-                pseudo_ol_slopes = Slopes(slopes.size)
-
-                if commandsobj is None or commands.shape == ():
-                    comm_slopes = self.xp.zeros_like(pseudo_ol_slopes.slopes)
+            # this is true on the first step only
+            if commandsobj is None or commands.shape == ():
+                comm_slopes = self.xp.zeros_like(slopes)
+                if self.projmat is None:
                     commands = self.xp.zeros(self.recmat.recmat.shape[0])
                 else:
-                    comm_slopes = self.intmat._intmat @ commands
-
-                pseudo_ol_slopes.slopes += comm_slopes
-                pseudo_ol_slopes.generation_time = self.current_time
-                self.pseudo_ol_modes.value = self.recmat.recmat @ pseudo_ol_slopes.slopes
-                self.pseudo_ol_modes.generation_time = self.current_time
-                self.modes_first_step.value = self.pseudo_ol_modes.value - commands
-
+                    commands = self.xp.zeros(self.projmat.recmat.shape[0])
             else:
-                self.modes_first_step.value = self.recmat.recmat @ slopes
-            self.modes_first_step.generation_time = self.current_time
-            if self.layer_modes_list is not None:
-                for i, idx_list in enumerate(self.layer_idx_list):
-                    self.layer_modes_list[i].value = self.modes_first_step.value[idx_list]
-                    self.layer_modes_list[i].generation_time = self.current_time
-
-        if self.projmat is None:
-            if self.verbose:
-                n = len(self.modes_first_step.value)
-                print(f"(no projmat) first {min(6, n)} residual values: {self.modes_first_step.value[:min(5, n)]}")
-            self.modes.value = self.modes_first_step.value
-            self.modes.generation_time = self.modes_first_step.generation_time
-        else:
-            mp = self.compute_modes(self.projmat, self.modes_first_step.ptr_value)
-            if self.verbose:
-                print(f"first {min(6, len(mp))} residual values after projection: {mp[:min(5, len(mp))]}")
-            self.modes.value = mp
-            self.modes.generation_time = self.current_time
-
-        if self.polc and not commands is None:
+                comm_slopes = self.intmat._intmat @ commands
+            slopes += comm_slopes
+            self.pseudo_ol_modes.value = self.recmat.recmat @ slopes
+            self.pseudo_ol_modes.generation_time = self.current_time
+            if self.projmat is None:
+                self.modes.value = self.pseudo_ol_modes.value
+            else:
+                self.modes.value = self.projmat.recmat @ self.pseudo_ol_modes.value
             self.modes.value -= commands
+            
+        else:
+            self.modes.value = self.recmat.recmat @ slopes
+
+        self.modes.generation_time = self.current_time
+
+        #if self.layer_modes_list is not None:
+        #    for i, idx_list in enumerate(self.layer_idx_list):
+        #        self.layer_modes_list[i].value = self.modes_first_step.value[idx_list]
+        #        self.layer_modes_list[i].generation_time = self.current_time
+
+
+        #if self.polc and not commands is None:
+        #    self.modes.value -= commands
 
     def setup(self, loop_dt, loop_niters):
         super().setup(loop_dt, loop_niters)
