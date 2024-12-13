@@ -12,7 +12,7 @@ from specula.processing_objects.func_generator import FuncGenerator
 from specula.processing_objects.atmo_evolution import AtmoEvolution
 from specula.processing_objects.atmo_propagation import AtmoPropagation
 
-from specula_testlib import cpu_and_gpu
+from test.specula_testlib import cpu_and_gpu
 
 
 class TestAtmo(unittest.TestCase):
