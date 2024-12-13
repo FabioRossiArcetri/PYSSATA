@@ -102,7 +102,7 @@ rec:
   recmat_object:      'scao_recmat'         # reconstruction matrix tag
   inputs:
     in_slopes:        'slopec.out_slopes'
-  outputs:  ['out_modes', 'out_pseudo_ol_modes', 'out_modes_first_step']
+  outputs:  ['out_modes', 'out_pseudo_ol_modes']
 
 
 control:
