@@ -42,7 +42,7 @@ atmo:
   class:                'AtmoEvolution'
   L0:                   40                   # [m] Outer scale
   heights:              [119.] #,837,3045,12780]), # [m] layer heights at 0 zenith angle
-  Cn2:                  [0.70] #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
+  Cn2:                  [1.00] #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
   source_dict_ref:      ['on_axis_source']
   inputs:
     seeing: 'seeing.output'
