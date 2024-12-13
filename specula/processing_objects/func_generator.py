@@ -5,6 +5,12 @@ from specula.base_value import BaseValue
 from specula.base_processing_obj import BaseProcessingObj
 from specula.lib.modal_pushpull_signal import modal_pushpull_signal
 
+
+# TODO
+class Vibrations():
+    pass
+
+
 class FuncGenerator(BaseProcessingObj):
     def __init__(self, func_type='SIN', nmodes=None, time_hist=None, psd=None, fr_psd=None, continuous_psd=None, 
                 constant=None, amp=None, freq=None, offset=None, vect_amplitude=None, 
