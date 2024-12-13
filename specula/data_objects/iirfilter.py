@@ -254,7 +254,7 @@ class IIRFilter(BaseDataObj):
         '''Build an IIRFilter object from a gain value/vector
         and an optional forgetting factor value/vector'''
 
-        gain = np.array(gain) * 0.4
+        gain = np.array(gain)
         n = len(gain)
 
         if ff is None:
