@@ -209,6 +209,15 @@ class CircularMask(BaseMask):
             a circular mask included in the mask of `maskedArray`
 
         '''
+        raise NotImplementedError('CircularMask.fromMaskedArray is not implemented')
+    
+        # TODO declarations intended to remove warnings
+        class ImageMoments:
+            pass
+        feature = object()
+        measure = object()
+        draw = object()
+
         assert isinstance(maskedArray, xp.ma.masked_array)
         shape = maskedArray.shape
         if method == CircularMask.FITTING_METHOD_IMAGE_MOMENTS:
@@ -307,9 +316,14 @@ class CircularMask(BaseMask):
         return circularMask
 
     def regionOfInterest(self):
+        raise NotImplementedError('CircularMask.regionOfInterest is not implemented')
+
         centerX = int(self.center()[1])
         centerY = int(self.center()[0])
         radius = int(self.radius())
+        # TODO declarations intended to remove warnings
+        class RegionOfInterest:
+            pass
         return RegionOfInterest(centerX - radius, centerX + radius,
                                 centerY - radius, centerY + radius)
 

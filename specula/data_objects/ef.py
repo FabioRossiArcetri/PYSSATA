@@ -90,7 +90,7 @@ class ElectricField(BaseDataObj):
         hdr = self.get_fits_header()
         A = self.A        
         hdu_A = fits.PrimaryHDU(A, header=hdr)
-        hdu_phase = fits.ImageHDU(phaseInNm)
+        hdu_phase = fits.ImageHDU(self.phaseInNm)
         hdul = fits.HDUList([hdu_A, hdu_phase])
         hdul.writeto(filename, overwrite=True)
 

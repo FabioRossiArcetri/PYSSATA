@@ -1,20 +1,43 @@
 import numpy as np
+from specula.lib.make_mask import make_mask
 from specula.lib.make_xy import make_xy
 
-from specula.loop_control import LoopControl
 from specula.calib_manager import CalibManager
 from specula.base_processing_obj import BaseProcessingObj
 from specula.data_objects.ifunc import IFunc
+from specula.data_objects.m2c import M2C
+from specula.data_objects.lenslet import Lenslet
 
 from specula.processing_objects.modulated_pyramid import ModulatedPyramid
 from specula.processing_objects.processing_container import ProcessingContainer
 from specula.processing_objects.int_control import IntControl
 from specula.processing_objects.func_generator import FuncGenerator
+from specula.processing_objects.base_operation import BaseOperation
 
 from specula import xp
 from specula import global_precision
 from specula import float_dtype_list
 from specula import complex_dtype_list
+
+
+# Definitions intended to remove warnings
+class AVC:
+    pass
+
+AveSlopes = AtmoReadCube = Ch2ndControl = Demodulate = DerPreControl = DisturbanceM1Elt = DisturbanceMap = AVC
+Disturbance = DM_M2C = EFGenerator = EFProduct = EFResize = EFShift = EFSpatialFilter = EFVariance = EFZoom = AVC
+ExtendedSource = IdealWFS = IdealWFSSlopec = IntControlOpt = IntControlAutoGain = IntControlState = IIRControl = AVC
+LUTControl = IntControlMap = MatFilter = Kernel = LIFT = ModalAnalysisWFS = ModalRecNN = ModalRecNNMulti = AVC
+IIRControlState = IntControlMat = LIFT_SH_Slopec = M2CRec = ModalAnalysis = ModalAnalysisSlopec = AVC
+ModalRecNNPython = ModalRecCured = ModalRecDisplay = ShShift = ShTilt = PyrTilt = OptGainControl =AVC
+
+def modal_pushpull_signal(*args, **kwargs):
+    pass
+
+def zern2phi(*args, **kwargs):
+    pass
+
+verbose = False
 
 
 class Factory:
@@ -627,6 +650,7 @@ class Factory:
         carrierAmplitude = self.extract(params, 'carrierAmplitudeInNm', default=0.0)
         carrierFrequency = self.extract(params, 'carrierFrequency', default=0.0)
 
+        phase2modes_tag = self.extract(params, 'phase2modes_tag', default=None)
         mask = None
         if pupil_mask_tag:
             if phase2modes_tag:
@@ -693,7 +717,7 @@ class Factory:
                 modal_pushpull_signal(nmodes, amplitude=amp, vect_amplitude=vect_amplitude, linear=linear, 
                                     min_amplitude=min_amplitude, ncycles=ncycles)
                 vect_amplitude0 = vect_amplitude[:repeat_amp_mode]
-                for i in range(ceil(nmodes / repeat_amp_mode)):
+                for i in range(np.ceil(nmodes / repeat_amp_mode)):
                     vect_amplitude[i*repeat_amp_mode:min((i+1)*repeat_amp_mode, nmodes)] = vect_amplitude0[:min(repeat_amp_mode, nmodes - i*repeat_amp_mode)]
                 amp = None
 
@@ -739,6 +763,7 @@ class Factory:
 
         doNotBuildRecProp = self.extract(params, 'doNotBuildRecProp', default=None)
         notSeenByLgs = self.extract(params, 'notSeenByLgs', default=None)
+        phase2modes_tag = self.extract(params, 'phase2modes_tag', default=None)
 
         mask = None
         if pupil_mask_tag:
@@ -1629,7 +1654,8 @@ class Factory:
             map_aberr = xp.zeros(sMaskAber, dtype=aberr_coeff.dtype)
             map_aberr[ifuncIdx_aberr] = map_aberr_2d
 
-        subapdata = self._cm.read_subaps(params['subapdata_tag'])
+        subapdata_tag = params['subapdata_tag']
+        subapdata = self._cm.read_subaps(subapdata_tag)
         if subapdata is None:
             print(f'subapdata_tag: {subapdata_tag} is not valid in factory.get_lift.')
 
@@ -2087,42 +2113,6 @@ class Factory:
         modalrec_cured.apply_properties(params)
         return modalrec_cured
 
-    def get_modalrec_display(self, modalrec, window=None):
-        """
-        Create a modalrec_display processing object.
-
-        Parameters:
-        modalrec (objref): `modalrec` object to display
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        ModalRecDisplay: modalrec_display object
-        """
-        disp = ModalRecDisplay(modalrec=modalrec)
-        if window is not None:
-            disp.window = window
-            window += 1
-        self.apply_global_params(disp)
-        return disp
-
-    def get_modes_display(self, modes, window=None):
-        """
-        Create a modes_display processing object.
-
-        Parameters:
-        modes (objref): A `base_value` object with the mode vector
-        window (int, optional): Window number to use, will be incremented in output
-
-        Returns:
-        ModesDisplay: modes_display object
-        """
-        disp = ModesDisplay(modes=modes)
-        if window is not None:
-            disp.window = window
-            window += 1
-        self.apply_global_params(disp)
-        return disp
-
     def get_removes_highfreq(self, pupil, mod_params, dm_params, phase2modes=None, ifunc=None):
         """
         Gets a processing container which removes high spatial frequency
@@ -2287,7 +2277,7 @@ class Factory:
 
         height = self.extract(params, 'height', default=float('inf'))
         if hasattr(self._main, 'zenithAngleInDeg'):
-            airmass = 1. / np.cos(self._main.zenithAngleInDeg / 180. * pi)
+            airmass = 1. / np.cos(self._main.zenithAngleInDeg / 180. * np.pi)
         else:
             airmass = 1.
         height *= airmass
