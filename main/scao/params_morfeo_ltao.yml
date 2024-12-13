@@ -339,7 +339,7 @@ rec:
 control:
   class:             'IntControl'
   delay:             2                      # Total temporal delay in time steps
-  int_gain_data:     'g0.40_4519'  
+  int_gain_data:     'g0.20_4519'
   inputs:
       delta_comm: 'rec.out_modes'     
   outputs:  ['out_comm']

@@ -12,29 +12,22 @@ gdtype = None
 
 def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_den, delay, state, total_length):
     '''
-    TODO this function uses a global variables for xp and dtype, because NUMBA is unabled
+    1) this function uses a global variables for xp and dtype, because NUMBA is unable
     to compile if they are given as parameters instead.
+    
+    2) the xp.isfinite() is used to detect modes that must not be time-filtered
+       during this step (they are supposed to be set to NaN instead),
+       This feature is not used by SPECULA yet and it is probably better to find
+       an entirely different way, like for example add a mask vector to the modes vector,
+       to make it possible an implemention that does not rely on variable-length arrays
+       (for easier GPU implementation).
     '''
     global gxp, gdtype
-#        nfilter = _iirfilter.num.shape[0]
-#        ninput = input.size
-    xp = np
     comm = input*0
-#        if nfilter < ninput:
-#            raise ValueError(f"Error: IIR filter needs no more than {nfilter} coefficients ({ninput} given)")
 
-#        if ninput == 1:
-#            if xp.isfinite(input):
-#                temp_input = input
-#                temp_ist = _ist
-#                temp_ost = _ost
-#                temp_num = _iirfilter.num
-#                temp_den = _iirfilter.den
-#            else:
-#                return output
-#        else:
     gxp.isfinite(input, _outFinite)
 
+    # Extract modes that need to be time-filtered
     _idx_finite = gxp.where(_outFinite)[0]
     temp_input = input[_idx_finite]
     temp_ist = _ist[_idx_finite]
@@ -48,24 +41,21 @@ def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_d
     n_input = temp_input.size
     no = sden[1]
     ni = snum[1]
+
     # Delay the vectors
     temp_ost = gxp.concatenate((temp_ost[:, 1:], gxp.zeros((sden[0], 1), dtype=gdtype)), axis=1)
     temp_ist = gxp.concatenate((temp_ist[:, 1:], gxp.zeros((sden[0], 1), dtype=gdtype)), axis=1)
+
     # New input
     temp_ist[:n_input, ni - 1] = temp_input
+
     # New output
     factor = 1/temp_den[:, no - 1]
     temp_ost[:, no - 1] = factor * gxp.sum(temp_num * temp_ist, axis=1)
     temp_ost[:, no - 1] -= factor * gxp.sum(temp_den[:, :no - 1] * temp_ost[:, :no - 1], axis=1)
     temp_output = temp_ost[:n_input, no - 1]
-    # return output, ost, ist
-    # online_filter_nojit
 
-#        if ninput == 1:
-#            output = temp_output
-#            _ost = temp_ost
-#            _ist = temp_ist
-#        else:
+    # Put back time-filtered modes
     comm[_idx_finite] = temp_output
     _ost[_idx_finite] = temp_ost
     _ist[_idx_finite] = temp_ist
@@ -83,6 +73,8 @@ def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_d
     else:
         comm = (remainder_delay * state[:, int(np.ceil(delay))] + (1 - remainder_delay) * state[:, int(np.ceil(delay))-1])
 
+#    TODO offset not implemented yet
+#
 #    if offset is not None and gxp.all(comm == 0):
 #        comm[:self._offset.shape[0]] += offset
 #        print("WARNING (IIRCONTROL): self.newc is a null vector, applying offset.")
@@ -117,10 +109,17 @@ class IIRControl(BaseProcessingObj):
 
         self._verbose = True
         self.iirfilter = iirfilter
+        
         self.integration = integration
         if integration is False:
             raise NotImplementedError('IIRControl: integration=False is not implemented yet')
         
+        if og_shaper is not None:
+            raise NotImplementedError('OG Shaper not implementd yet')
+
+        if offset != None:
+            raise NotImplementedError('Offset not implemented yet')
+
         super().__init__(target_device_idx=target_device_idx, precision=precision)        
 
         gxp = self.xp
@@ -158,7 +157,6 @@ class IIRControl(BaseProcessingObj):
         self._outFinite = self.xp.zeros(self.iirfilter.nfilter, dtype=self.dtype)
         self._idx_finite = self.xp.zeros(self.iirfilter.nfilter, dtype=self.dtype)
 
-
     def set_state_buffer_length(self, total_length):
         self._total_length = total_length
         if self._n is not None and self._type is not None:
@@ -194,6 +192,9 @@ class IIRControl(BaseProcessingObj):
         self.delta_comm = self.local_inputs['delta_comm'].value
 
         return
+
+        ##############################
+        # Start of unused code
 
         if self._opticalgain is not None:
             if self._opticalgain.value > 0:
@@ -250,13 +251,15 @@ class IIRControl(BaseProcessingObj):
             self.delta_comm[:self._offset.shape[0]] += self._offset
 
     def trigger_code(self):
+        '''
+        self.trigger_function is factored out because
+        for the CPU case it can be jit-compiled with NUMBA.
+        For GPU the graph is not implemented yet.
+        '''
         self.out_comm.value, self.state = self.trigger_function(self.delta_comm, self._outFinite, self._ist, self._ost, 
                                                        self.iirfilter.num, self.iirfilter.den, self.delay, 
                                                        self.state, self._total_length)
 
         self.out_comm.generation_time = self.current_time
-
-#        if self._verbose:
-#            print(f"first {min(6, len(self.out_comm.value))} output comm values: {self.out_comm.value[:min(6, len(self.out_comm.value))]}")
     
 
