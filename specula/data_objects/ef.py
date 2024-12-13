@@ -60,7 +60,7 @@ class ElectricField(BaseDataObj):
 
     def square_modulus(self, wavelengthInNm):
         ef = self.ef_at_lambda(wavelengthInNm)
-        return self.xp.real( ef *xp.conj(ef) )
+        return self.xp.real( ef * self.xp.conj(ef) )
 
     def sub_ef(self, xfrom=None, xto=None, yfrom=None, yto=None, idx=None):
         if idx is not None:
@@ -98,7 +98,7 @@ class ElectricField(BaseDataObj):
     def from_header(hdr):    
         version = hdr['VERSION']
         if version != 1:
-            raise ValueError(f"Error: unknown version {version} in file {filename}")
+            raise ValueError(f"Error: unknown version {version} in header")
         dimx = hdr['DIMX']
         dimy = hdr['DIMY']
         pitch = hdr['PIXPITCH']

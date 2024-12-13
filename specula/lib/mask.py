@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 
 class BaseMask():
     '''
+    TODO this is code copied from Arte.
+    Should become a SPECULA DataObject if it is used.
     '''
 
     def __init__(self, mask_array):
@@ -67,6 +69,9 @@ class BaseMask():
 
 class CircularMask(BaseMask):
     '''
+    TODO this is code copied from Arte.
+    Should become a SPECULA DataObject if it is used.
+    
     Represent a circular mask
 
     A `~numpy.array` representing a circular pupil. Frame shape, pupil radius
@@ -221,7 +226,7 @@ class CircularMask(BaseMask):
                 else:
                     again *= 0.9
         elif method == CircularMask.FITTING_METHOD_RANSAC:
-            img = xp.asarray(maskedArray.mask.astype(float) * -1 + 1, dtype=self.dtype)
+            img = xp.asarray(maskedArray.mask.astype(float) * -1 + 1, dtype=float)
             img[img > 0] = 128
             edge = img.copy()
             edge = feature.canny(img, keywords.pop('sigmaCanny', 2))
@@ -248,7 +253,7 @@ class CircularMask(BaseMask):
             circularMask = CircularMask(img.shape, r, [cx,cy])
 
         elif method == CircularMask.FITTING_METHOD_CENTER_OF_GRAVITY:
-            img = xp.asarray(maskedArray.mask.astype(int) * -1 + 1, dtype=self.dtype)
+            img = xp.asarray(maskedArray.mask.astype(int) * -1 + 1, dtype=int)
             regions = measure.regionprops(img)
             bubble = regions[0]
             y0, x0 = bubble.centroid
@@ -259,7 +264,7 @@ class CircularMask(BaseMask):
             
         elif method == CircularMask.FITTING_METHOD_CORRELATION:
             
-            img = xp.asarray(maskedArray.mask.astype(int) * -1 + 1, dtype=self.dtype)
+            img = xp.asarray(maskedArray.mask.astype(int) * -1 + 1, dtype=int)
             regions = measure.regionprops(img)
             bubble = regions[0]
 
@@ -326,6 +331,9 @@ class CircularMask(BaseMask):
 
 class AnnularMask(CircularMask):
     '''
+    TODO this is code copied from Arte.
+    Should become a SPECULA DataObject if it is used.
+
     Inheritance of CircularMask class to provide an annular mask
 
     Added inRadius parameter, radius of central obstruction.

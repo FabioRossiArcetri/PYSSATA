@@ -1,4 +1,5 @@
 import numpy as np
+from specula.lib.make_xy import make_xy
 
 from specula.loop_control import LoopControl
 from specula.calib_manager import CalibManager
@@ -2268,7 +2269,7 @@ class Factory:
         optgaincontrol.apply_properties(params)
         return optgaincontrol
 
-     def get_source_field(self, params):
+    def get_source_field(self, params):
         """
         Builds a list of `source` objects arranged on a regular grid.
 
@@ -2286,7 +2287,7 @@ class Factory:
 
         height = self.extract(params, 'height', default=float('inf'))
         if hasattr(self._main, 'zenithAngleInDeg'):
-            airmass = 1. / cos(self._main.zenithAngleInDeg / 180. * pi)
+            airmass = 1. / np.cos(self._main.zenithAngleInDeg / 180. * pi)
         else:
             airmass = 1.
         height *= airmass
