@@ -10,7 +10,7 @@ from specula import cpuArray
 
 from specula.data_objects.ef import ElectricField
 from specula.processing_objects.sh import SH
-from specula_testlib import cpu_and_gpu
+from test.specula_testlib import cpu_and_gpu
 
 
 class TestSH(unittest.TestCase):

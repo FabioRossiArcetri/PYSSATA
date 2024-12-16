@@ -4,7 +4,8 @@ from specula.base_data_obj import BaseDataObj
 
 from astropy.io import fits
 
-class IIRFilter(BaseDataObj):
+
+class IIRFilterData(BaseDataObj):
     def __init__(self, ordnum, ordden, num, den, target_device_idx=None, precision=None):
         super().__init__(target_device_idx=target_device_idx, precision=precision)
         self.ordnum = self.xp.array(ordnum, dtype=int)
@@ -209,7 +210,7 @@ class IIRFilter(BaseDataObj):
             ordden = hdul['ORDDEN'].data
             num = hdul['NUM'].data
             den = hdul['DEN'].data
-            return IIRFilter(ordnum, ordden, num, den, target_device_idx=target_device_idx)
+            return IIRFilterData(ordnum, ordden, num, den, target_device_idx=target_device_idx)
 
     def get_fits_header(self):
         # TODO
@@ -251,7 +252,7 @@ class IIRFilter(BaseDataObj):
 
     @staticmethod
     def from_gain_and_ff(gain, ff=None, target_device_idx=None):
-        '''Build an IIRFilter object from a gain value/vector
+        '''Build an IIRFilterData object from a gain value/vector
         and an optional forgetting factor value/vector'''
 
         gain = np.array(gain)
@@ -278,6 +279,6 @@ class IIRFilter(BaseDataObj):
             den[i, 1] = 1
             ord_den[i] = 2
         
-        return IIRFilter(ord_num, ord_den, num, den, target_device_idx=target_device_idx)
+        return IIRFilterData(ord_num, ord_den, num, den, target_device_idx=target_device_idx)
 
 

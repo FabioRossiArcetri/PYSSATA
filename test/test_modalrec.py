@@ -11,7 +11,7 @@ from specula.processing_objects.modalrec import Modalrec
 from specula.data_objects.slopes import Slopes
 from specula.data_objects.recmat import Recmat
 
-from specula_testlib import cpu_and_gpu
+from test.specula_testlib import cpu_and_gpu
 
 class TestModalrec(unittest.TestCase):
 

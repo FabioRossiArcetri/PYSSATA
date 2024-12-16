@@ -1,7 +1,7 @@
 import numpy as np
 from numba import jit
 
-from specula.data_objects.iirfilter import IIRFilter
+from specula.data_objects.iir_filter_data import IIRFilterData
 from specula.base_processing_obj import BaseProcessingObj
 from specula.connections import InputValue
 from specula.base_value import BaseValue
@@ -10,7 +10,7 @@ from specula.lib.calc_loop_delay import calc_loop_delay
 gxp = None
 gdtype = None
 
-def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_den, delay, state, total_length):
+def trigger_function(input, _outFinite, _ist, _ost, _iir_filter_data_num, _iir_filter_data_den, delay, state, total_length):
     '''
     1) this function uses a global variables for xp and dtype, because NUMBA is unable
     to compile if they are given as parameters instead.
@@ -32,8 +32,8 @@ def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_d
     temp_input = input[_idx_finite]
     temp_ist = _ist[_idx_finite]
     temp_ost = _ost[_idx_finite]
-    temp_num = _iirfilter_num[_idx_finite, :]
-    temp_den = _iirfilter_den[_idx_finite, :]
+    temp_num = _iir_filter_data_num[_idx_finite, :]
+    temp_den = _iir_filter_data_den[_idx_finite, :]
 
     # online_filter_nojit
     sden = temp_den.shape
@@ -91,13 +91,13 @@ def trigger_function(input, _outFinite, _ist, _ost, _iirfilter_num, _iirfilter_d
     return comm, state
 
 
-class IIRControl(BaseProcessingObj):
+class IIRFilter(BaseProcessingObj):
     '''Infinite Impulse Response filter based Time Control
     
     Set *integration* to False to disable integration, regardless
     of wha the input IIRFilter object contains
     '''
-    def __init__(self, iirfilter: IIRFilter,
+    def __init__(self, iir_filter_data: IIRFilterData,
                  delay: int=0,
                  integration: bool=True,
                  offset: int=None,
@@ -108,11 +108,11 @@ class IIRControl(BaseProcessingObj):
         global gxp, gdtype    
 
         self._verbose = True
-        self.iirfilter = iirfilter
+        self.iir_filter_data = iir_filter_data
         
         self.integration = integration
         if integration is False:
-            raise NotImplementedError('IIRControl: integration=False is not implemented yet')
+            raise NotImplementedError('IIRFilter: integration=False is not implemented yet')
         
         if og_shaper is not None:
             raise NotImplementedError('OG Shaper not implementd yet')
@@ -130,13 +130,13 @@ class IIRControl(BaseProcessingObj):
             self.trigger_function = trigger_function
 
         self.delay = delay if delay is not None else 0
-        self._n = iirfilter.nfilter
-        self._type = iirfilter.num.dtype
+        self._n = iir_filter_data.nfilter
+        self._type = iir_filter_data.num.dtype
         self.set_state_buffer_length(int(np.ceil(self.delay)) + 1)
         
         # Initialize state vectors
-        self._ist = self.xp.zeros_like(iirfilter.num)
-        self._ost = self.xp.zeros_like(iirfilter.den)
+        self._ist = self.xp.zeros_like(iir_filter_data.num)
+        self._ost = self.xp.zeros_like(iir_filter_data.den)
 
         self.out_comm = BaseValue(target_device_idx=target_device_idx)
         self.inputs['delta_comm'] = InputValue(type=BaseValue)
@@ -154,8 +154,8 @@ class IIRControl(BaseProcessingObj):
         self._StepIsNotGood = False
         self._start_time = 0
 
-        self._outFinite = self.xp.zeros(self.iirfilter.nfilter, dtype=self.dtype)
-        self._idx_finite = self.xp.zeros(self.iirfilter.nfilter, dtype=self.dtype)
+        self._outFinite = self.xp.zeros(self.iir_filter_data.nfilter, dtype=self.dtype)
+        self._idx_finite = self.xp.zeros(self.iir_filter_data.nfilter, dtype=self.dtype)
 
     def set_state_buffer_length(self, total_length):
         self._total_length = total_length
@@ -243,8 +243,8 @@ class IIRControl(BaseProcessingObj):
 
 # this is probably useless
 #        n_delta_comm = self.delta_comm.size
-#        if n_delta_comm < self.iirfilter.nfilter:
-#            self.delta_comm = self.xp.zeros(self.iirfilter.nfilter, dtype=self.dtype)
+#        if n_delta_comm < self.iir_filter_data.nfilter:
+#            self.delta_comm = self.xp.zeros(self.iir_filter_data.nfilter, dtype=self.dtype)
 #            self.delta_comm[:n_delta_comm] = self.local_inputs['delta_comm'].value
 
         if self._offset is not None:
@@ -257,7 +257,7 @@ class IIRControl(BaseProcessingObj):
         For GPU the graph is not implemented yet.
         '''
         self.out_comm.value, self.state = self.trigger_function(self.delta_comm, self._outFinite, self._ist, self._ost, 
-                                                       self.iirfilter.num, self.iirfilter.den, self.delay, 
+                                                       self.iir_filter_data.num, self.iir_filter_data.den, self.delay, 
                                                        self.state, self._total_length)
 
         self.out_comm.generation_time = self.current_time

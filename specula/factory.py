@@ -7,7 +7,7 @@ from specula.data_objects.ifunc import IFunc
 
 from specula.processing_objects.modulated_pyramid import ModulatedPyramid
 from specula.processing_objects.processing_container import ProcessingContainer
-from specula.processing_objects.int_control import IntControl
+from specula.processing_objects.int_control import Integrator
 from specula.processing_objects.func_generator import FuncGenerator
 
 from specula import xp
@@ -1069,7 +1069,7 @@ class Factory:
         offset: Offset value
 
         Returns:
-        IntControl: Int Control processing object
+        Integrator: Int Control processing object
         """
         params = self.ensure_dictionary(params)
 
@@ -1080,9 +1080,9 @@ class Factory:
         og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
 
         if params.get('opt_dt', 0) == 1:
-            intc = IntControlOpt(gain, ff=ff, delay=delay)
+            intc = IntegratorOpt(gain, ff=ff, delay=delay)
         else:
-            intc = IntControl(gain, ff=ff, delay=delay)
+            intc = Integrator(gain, ff=ff, delay=delay)
 
         if offset is not None:
             intc.offset = offset
@@ -1103,7 +1103,7 @@ class Factory:
         offset: Offset value
 
         Returns:
-        IntControlAutoGain: Int Control AutoGain processing object
+        IntegratorAutoGain: Int Control AutoGain processing object
         """
         params = self.ensure_dictionary(params)
 
@@ -1115,7 +1115,7 @@ class Factory:
         stepsBeforeChange = self.extract(params, 'stepsBeforeChange', default=None)
         gainLength = self.extract(params, 'gainLength', default=None)
 
-        intc = IntControlAutoGain(gain_vect, gainLength, stepsBeforeChange, ff=ff, delay=delay)
+        intc = IntegratorAutoGain(gain_vect, gainLength, stepsBeforeChange, ff=ff, delay=delay)
 
         if offset is not None:
             intc.offset = offset
@@ -1136,7 +1136,7 @@ class Factory:
         offset: Offset value
 
         Returns:
-        IntControlState: Int Control State processing object
+        IntegratorState: Int Control State processing object
         """
         params = self.ensure_dictionary(params)
 
@@ -1146,7 +1146,7 @@ class Factory:
         og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None)
         og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
 
-        intc = IntControlState(gain, ff=ff, delay=delay)
+        intc = IntegratorState(gain, ff=ff, delay=delay)
 
         if offset is not None:
             intc.offset = offset
@@ -1167,7 +1167,7 @@ class Factory:
         offset: Offset value
 
         Returns:
-        IIRControl: IIR Control processing object
+        IIRFilter: IIR Control processing object
         """
         params = self.ensure_dictionary(params)
 
@@ -1175,9 +1175,9 @@ class Factory:
         og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None)
         og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
         iir_tag = params.pop('iir_tag')
-        iirfilter = self._cm.read_iirfilter(iir_tag)
+        iir_filter_data = self._cm.read_iir_filter_data(iir_tag)
 
-        iirc = IIRControl(iirfilter, delay=delay)
+        iirc = IIRFilter(iir_filter_data, delay=delay)
 
         if offset is not None:
             iirc.offset = offset
@@ -1198,7 +1198,7 @@ class Factory:
         offset: Offset value
 
         Returns:
-        IIRControlState: IIR Control State processing object
+        IIRFilterState: IIR Control State processing object
         """
         params = self.ensure_dictionary(params)
 
@@ -1206,9 +1206,9 @@ class Factory:
         og_shaper_tag = self.extract(params, 'og_shaper_tag', default=None)
         og_shaper = self._cm.read_data(og_shaper_tag) if og_shaper_tag else None
         iir_tag = params.pop('iir_tag')
-        iirfilter = self._cm.read_iirfilter(iir_tag)
+        iir_filter_data = self._cm.read_iir_filter_data(iir_tag)
 
-        iirc = IIRControlState(iirfilter, delay=delay)
+        iirc = IIRFilterState(iir_filter_data, delay=delay)
 
         if offset is not None:
             iirc.offset = offset
@@ -1266,7 +1266,7 @@ class Factory:
         offset: Offset value
 
         Returns:
-        IntControlMat: Int Control Mat processing object
+        IntegratorMat: Int Control Mat processing object
         """
         params = self.ensure_dictionary(params)
 
@@ -1288,7 +1288,7 @@ class Factory:
         if B is None and gain is not None:
             B = xp.diag(gain)
 
-        intc = IntControlMat(A, B, delay=delay)
+        intc = IntegratorMat(A, B, delay=delay)
 
         if offset is not None:
             intc.offset = offset
