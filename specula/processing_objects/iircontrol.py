@@ -1,5 +1,11 @@
 import numpy as np
-from numba import jit
+
+import sys
+if sys.version_info < (3, 13):
+    from numba import jit
+else:
+    def jit(x, *args, **kwargs):
+        return x
 
 from specula.base_processing_obj import BaseProcessingObj
 from specula.connections import InputValue
