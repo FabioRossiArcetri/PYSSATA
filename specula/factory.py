@@ -22,15 +22,13 @@ from specula import complex_dtype_list
 
 
 # Definitions intended to remove warnings
-class AVC:
-    pass
 
-AveSlopes = AtmoReadCube = Ch2ndControl = Demodulate = DerPreControl = DisturbanceM1Elt = DisturbanceMap = AVC
-Disturbance = DM_M2C = EFGenerator = EFProduct = EFResize = EFShift = EFSpatialFilter = EFVariance = EFZoom = AVC
-ExtendedSource = IdealWFS = IdealWFSSlopec = IntControlOpt = IntControlAutoGain = IntControlState = IIRControl = AVC
-LUTControl = IntControlMap = MatFilter = Kernel = LIFT = ModalAnalysisWFS = ModalRecNN = ModalRecNNMulti = AVC
-IIRControlState = IntControlMat = LIFT_SH_Slopec = M2CRec = ModalAnalysis = ModalAnalysisSlopec = AVC
-ModalRecNNPython = ModalRecCured = ModalRecDisplay = ShShift = ShTilt = PyrTilt = OptGainControl =AVC
+AveSlopes = AtmoReadCube = Ch2ndControl = Demodulate = DerPreControl = DisturbanceM1Elt = DisturbanceMap = object
+Disturbance = DM_M2C = EFGenerator = EFProduct = EFResize = EFShift = EFSpatialFilter = EFVariance = EFZoom = object
+ExtendedSource = IdealWFS = IdealWFSSlopec = IntControlOpt = IntControlAutoGain = IntControlState = IIRControl = object
+LUTControl = IntControlMap = MatFilter = Kernel = LIFT = ModalAnalysisWFS = ModalRecNN = ModalRecNNMulti = object
+IIRControlState = IntControlMat = LIFT_SH_Slopec = M2CRec = ModalAnalysis = ModalAnalysisSlopec = AVC = object
+ModalRecNNPython = ModalRecCured = ModalRecDisplay = ShShift = ShTilt = PyrTilt = OptGainControl = object
 
 def zern2phi(*args, **kwargs):
     pass
