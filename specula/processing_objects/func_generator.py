@@ -5,6 +5,12 @@ from specula.base_value import BaseValue
 from specula.base_processing_obj import BaseProcessingObj
 from specula.lib.modal_pushpull_signal import modal_pushpull_signal
 
+
+# TODO
+class Vibrations():
+    pass
+
+
 class FuncGenerator(BaseProcessingObj):
     def __init__(self, func_type='SIN', nmodes=None, time_hist=None, psd=None, fr_psd=None, continuous_psd=None, 
                 constant=None, amp=None, freq=None, offset=None, vect_amplitude=None, 
@@ -50,6 +56,8 @@ class FuncGenerator(BaseProcessingObj):
             pass
 
         elif self.type == 'VIB_HIST':
+            raise NotImplementedError('VIB_HIST type is not implemented')
+        
             if nmodes is None:
                 raise ValueError('NMODES keyword is mandatory for type VIB_HIST')
             if time_hist is None:
@@ -57,6 +65,8 @@ class FuncGenerator(BaseProcessingObj):
             self.vib = Vibrations(nmodes, time_hist=time_hist)
 
         elif self.type == 'VIB_PSD':
+            raise NotImplementedError('VIB_PSD type is not implemented')
+
             if nmodes is None:
                 raise ValueError('NMODES keyword is mandatory for type VIB_PSD')
             if psd is None and continuous_psd is None:

@@ -144,6 +144,8 @@ class ShSlopec(Slopec):
 
     def calc_slopes_for(self, accumulated=False):
         """
+        TODO Obsoleted by calc_slopes_nofor(). Remove this method?
+
         Calculate slopes using a for loop over subapertures.
 
         Parameters:
@@ -185,7 +187,7 @@ class ShSlopec(Slopec):
             idx = self.subap_idx[i, :]
             subap = pixels[idx].reshape(np_sub, np_sub)
 
-            if self.weight_from_accumulated and self.accumulated_pixels is not None and t >= self.accumulation_dt:
+            if self.weight_from_accumulated and self.accumulated_pixels is not None and self.current_time >= self.accumulation_dt:
                 accumulated_pixels_weight = self.accumulated_pixels[idx].reshape(np_sub, np_sub)
                 accumulated_pixels_weight -= self.xp.min(accumulated_pixels_weight)
                 max_temp = self.xp.max(accumulated_pixels_weight)
@@ -328,7 +330,7 @@ class ShSlopec(Slopec):
             raise NotImplementedError('weight_from_accumulated is not implemented')
         
             n_weight_applied = 0
-            if self.accumulated_pixels is not None and t >= self.accumulation_dt:
+            if self.accumulated_pixels is not None and self.current_time >= self.accumulation_dt:
                 accumulated_pixels_weight = self.accumulated_pixels[self.subap_idx].T
                 accumulated_pixels_weight -= self.xp.min(accumulated_pixels_weight, axis=1, keepdims=True)
                 max_temp = self.xp.max(accumulated_pixels_weight, axis=1)

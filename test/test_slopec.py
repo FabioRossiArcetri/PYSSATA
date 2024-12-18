@@ -12,7 +12,7 @@ from specula.data_objects.pixels import Pixels
 from specula.data_objects.pupdata import PupData
 from specula.processing_objects.pyr_slopec import PyrSlopec
 
-from specula_testlib import cpu_and_gpu
+from test.specula_testlib import cpu_and_gpu
 
 class TestSlopec(unittest.TestCase):
    

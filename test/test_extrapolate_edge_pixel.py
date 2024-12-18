@@ -11,7 +11,7 @@ from astropy.io import fits
 from specula import cpuArray
 from specula.lib.extrapolate_edge_pixel import extrapolate_edge_pixel
 
-from specula_testlib import cpu_and_gpu
+from test.specula_testlib import cpu_and_gpu
 
 class TestExtrapolateEdgePixel(unittest.TestCase):
 

@@ -1,5 +1,6 @@
 
 
+import tempfile
 import specula
 specula.init(0)  # Default target device
 
@@ -14,7 +15,7 @@ class TestImRecCalibrator(unittest.TestCase):
 
     def test_existing_im_file_is_detected(self):
 
-        data_dir = '/tmp'
+        data_dir = tempfile.gettempdir()
         im_filename = 'test_im.fits'
         im_path = os.path.join(data_dir, im_filename)
         open(im_path, 'a').close()
@@ -30,7 +31,7 @@ class TestImRecCalibrator(unittest.TestCase):
         
     def test_existing_rec_file_is_detected(self):
 
-        data_dir = '/tmp'
+        data_dir = tempfile.gettempdir()
         rec_filename = 'test_rec.fits'
         rec_path = os.path.join(data_dir, rec_filename)
         open(rec_path, 'a').close()
@@ -46,7 +47,7 @@ class TestImRecCalibrator(unittest.TestCase):
 
     def test_existing_im_file_is_not_detected_if_not_requested(self):
 
-        data_dir = '/tmp'
+        data_dir = tempfile.gettempdir()
         im_filename = 'test_im.fits'
         rec_filename = 'test_rec.fits'
         im_path = os.path.join(data_dir, im_filename)

@@ -125,17 +125,17 @@ class IIRControl(BaseProcessingObj):
         self.inputs['delta_comm'] = InputValue(type=BaseValue)
         self.outputs['out_comm'] = self._out_comm
 
-        self._opticalgain = None
-        self._og_shaper = None
-        self._offset = None
-        self._bootstrap_ptr = None
-        self._modal_start_time = None
-        self._time_gmt_imm = None
-        self._gain_gmt_imm = None
-        self._do_gmt_init_mod_manager = False
-        self._skipOneStep = False
-        self._StepIsNotGood = False
-        self._start_time = 0
+        self._opticalgain = None  # TODO
+        self._og_shaper = None  # TODO
+        self._offset = None  # TODO
+        self._bootstrap_ptr = None  # TODO
+        self._modal_start_time = None  # TODO
+        self._time_gmt_imm = None  # TODO
+        self._gain_gmt_imm = None  # TODO
+        self._do_gmt_init_mod_manager = False  # TODO
+        self._skipOneStep = False  # TODO
+        self._StepIsNotGood = False  # TODO
+        self._start_time = 0  # TODO
 
         self._outFinite = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
         self._idx_finite = self.xp.zeros(self._iirfilter.nfilter, dtype=self.dtype)
@@ -252,6 +252,10 @@ class IIRControl(BaseProcessingObj):
                     self.delta_comm *= bootstrap_scale[idx]
                 else:
                     print("no scale factor applied")
+
+        # Avoid warnings        
+        def gmt_init_mod_manager(*args, **kwargs):
+            pass
 
         if self._do_gmt_init_mod_manager:
             time_idx = self._time_gmt_imm if self._time_gmt_imm is not None else self.xp.zeros(0, dtype=self.dtype)
