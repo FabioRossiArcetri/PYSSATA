@@ -25,10 +25,11 @@ from specula import complex_dtype_list
 
 AveSlopes = AtmoReadCube = Ch2ndControl = Demodulate = DerPreControl = DisturbanceM1Elt = DisturbanceMap = object
 Disturbance = DM_M2C = EFGenerator = EFProduct = EFResize = EFShift = EFSpatialFilter = EFVariance = EFZoom = object
-ExtendedSource = IdealWFS = IdealWFSSlopec = IntControlOpt = IntControlAutoGain = IntControlState = IIRControl = object
-LUTControl = IntControlMap = MatFilter = Kernel = LIFT = ModalAnalysisWFS = ModalRecNN = ModalRecNNMulti = object
-IIRControlState = IntControlMat = LIFT_SH_Slopec = M2CRec = ModalAnalysis = ModalAnalysisSlopec = AVC = object
+ExtendedSource = IdealWFS = IdealWFSSlopec = IntegratorOpt = IntegratorAutoGain = IntegratorState = IIRControl = object
+LUTControl = MatFilter = Kernel = LIFT = ModalAnalysisWFS = ModalRecNN = ModalRecNNMulti = object
+IIRControlState = IntegratorMat = LIFT_SH_Slopec = M2CRec = ModalAnalysis = ModalAnalysisSlopec = AVC = object
 ModalRecNNPython = ModalRecCured = ModalRecDisplay = ShShift = ShTilt = PyrTilt = OptGainControl = object
+IIRFilter = IIRFilterState = object
 
 def zern2phi(*args, **kwargs):
     pass
