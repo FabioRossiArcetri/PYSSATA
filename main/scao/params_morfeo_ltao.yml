@@ -328,6 +328,8 @@ slopec6:
 
 rec:
   class:              'Modalrec'
+#  recmat_object:      'maory_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.50_mn1000_ce'         # reconstruction matrix tag£
+  #recmat_object:      'MORFEO_LTAO'         # reconstruction matrix tag
   recmat_object: '/raid1/guido/PASSATA/MAORYC/rec/20241127_110943.0/recmat'
   intmat_object: '/raid1/guido/PASSATA/MAORYC/im/MORFEO_IM_LTAO'
   projmat_object: '/raid1/guido/PASSATA/MAORYC/rec/p20241127_110943.0/projmat1'
@@ -367,12 +369,31 @@ psf:
       in_ef:  'prop.out_on_axis_source_ef'
   outputs:  ['out_psf', 'out_sr']
 
-# sc1_disp:
-#  class:            'SlopecDisplay'
-#  inputs:
-#    slopes:       'slopec1.out_slopes'
-#    subapdata:    'slopec1.out_subapdata'
-#  disp_factor:      1
+sc1_disp:
+ class:            'SlopecDisplay'
+ inputs:
+   slopes:       'slopec1.out_slopes'
+   subapdata:    'slopec1.out_subapdata'
+ disp_factor:      1
+
+sr_disp:
+  class:            'PlotDisplay'
+  inputs:
+    value:       'psf.out_sr'
+  window:           11
+  title:            'SR'
+
+
+# pixels_disp:
+#   class:            'PixelsDisplay'
+#   inputs:
+#     pixels:      "detector1.out_pixels"
+#   window:           25
+#   title:            "Pixels"
+#   disp_factor:      1
+#   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'
+#  sh_as_pyr:        true
+
 
 # psf_disp:
 #  class:            'PsfDisplay'
@@ -382,12 +403,7 @@ psf:
 #  title:            'PSF'
 #  disp_factor:      1
 
-# sr_disp:
-#   class:            'PlotDisplay'
-#   inputs:
-#     value:       'psf.out_sr'
-#   window:           11
-#   title:            'SR'
+
 
 # cmd_disp:
 #   class:            'ModesDisplay'
@@ -412,12 +428,3 @@ psf:
 #   title:            'PHASE ON AXIS'
 #   disp_factor:      2
 
-# pixels_disp:
-#   class:            'PixelsDisplay'
-#   inputs:
-#     pixels:      "detector1.out_pixels"
-#   window:           25
-#   title:            "Pixels"
-#   disp_factor:      1
-#   sh_as_pyr:        true
-#   subapdata_object:  'morfeo_np_ps480p0.080_shs68x68_wl589_fv16.1_np14_th0.25'

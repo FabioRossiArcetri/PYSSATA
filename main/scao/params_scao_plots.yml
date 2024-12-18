@@ -4,7 +4,7 @@ main:
   root_dir:          './calib/SCAO'         # Root directory for calibration manager
   pixel_pupil:       160                    # Linear dimension of pupil phase array
   pixel_pitch:       0.05                   # [m] Pitch of the pupil phase array
-  total_time:        0.010                  # [s] Total simulation running time
+  total_time:        1.000                  # [s] Total simulation running time
   time_step:         0.001                  # [s] Simulation time step
 
 
@@ -42,7 +42,7 @@ atmo:
   class:                'AtmoEvolution'
   L0:                   40                   # [m] Outer scale
   heights:              [119.] #,837,3045,12780]), # [m] layer heights at 0 zenith angle
-  Cn2:                  [0.70] #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
+  Cn2:                  [1.0] #,0.06,0.14,0.10]), # Cn2 weights (total must be eq 1)
   source_dict_ref:      ['on_axis_source']
   inputs:
     seeing: 'seeing.output'
@@ -140,39 +140,39 @@ psf:
       in_ef:  'prop.out_on_axis_source_ef'
   outputs:  ['out_psf', 'out_sr']
 
-sc_disp:
-  class:            'SlopecDisplay'
-  inputs:
-    slopes:       'slopec.out_slopes'
-    pupdata:      'slopec.out_pupdata'
-  disp_factor:      4
-sr_disp:
-  class:            'PlotDisplay'
-  inputs:
-    value:       'psf.out_sr'
-  window:           11
-  title:            'SR'
-ph_disp:
-  class:            'PhaseDisplay'
-  inputs:
-    phase:       "prop.out_on_axis_source_ef"
-  window:           12
-  title:            'PUPIL PHASE'
-  disp_factor:      2
-dm_disp:
-  class:            'PhaseDisplay'
-  inputs:
-    phase:       "dm.out_layer"
-  window:           13
-  title:            'DM'
-  disp_factor:      2
-psf_disp:
-  class:            'PsfDisplay'
-  inputs:
-    psf:       "psf.out_psf"
-  window:           14
-  title:            'PSF'
-  disp_factor:      2
+# sc_disp:
+#   class:            'SlopecDisplay'
+#   inputs:
+#     slopes:       'slopec.out_slopes'
+#     pupdata:      'slopec.out_pupdata'
+#   disp_factor:      4
+# sr_disp:
+#   class:            'PlotDisplay'
+#   inputs:
+#     value:       'psf.out_sr'
+#   window:           11
+#   title:            'SR'
+# ph_disp:
+#   class:            'PhaseDisplay'
+#   inputs:
+#     phase:       "prop.out_on_axis_source_ef"
+#   window:           12
+#   title:            'PUPIL PHASE'
+#   disp_factor:      2
+# dm_disp:
+#   class:            'PhaseDisplay'
+#   inputs:
+#     phase:       "dm.out_layer"
+#   window:           13
+#   title:            'DM'
+#   disp_factor:      2
+# psf_disp:
+#   class:            'PsfDisplay'
+#   inputs:
+#     psf:       "psf.out_psf"
+#   window:           14
+#   title:            'PSF'
+#   disp_factor:      2
 
 data_store:
   class:             'DataStore'
