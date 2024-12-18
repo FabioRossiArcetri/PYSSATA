@@ -340,9 +340,9 @@ rec:
 
 
 control:
-  class:             'IntControl'
+  class:             'Integrator'
   delay:             2                      # Total temporal delay in time steps
-  int_gain_data:     '/raid1/guido/PASSATA/MAORYC/data/g0.20_4519'
+  int_gain_data:     'g0.20_4519'
   inputs:
       delta_comm: 'rec.out_modes'     
   outputs:  ['out_comm']

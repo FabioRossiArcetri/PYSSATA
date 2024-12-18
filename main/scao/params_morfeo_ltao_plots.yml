@@ -332,7 +332,7 @@ rec:
 
 
 control:
-  class:             'IntControl'
+  class:             'Integrator'
   delay:             2                      # Total temporal delay in time steps
   int_gain_data:     'g0.40_4519'  
   inputs:
