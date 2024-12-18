@@ -24,6 +24,11 @@ class PupData(BaseDataObj):
         tmp[:, 2], tmp[:, 3] = indpup[:, 3], indpup[:, 2]
         return tmp
 
+    @property
+    def display_map(self):
+        mask = self.single_mask()
+        return self.xp.where(mask.flat)[0]
+
     def single_mask(self):
         f = self.xp.zeros(self.framesize, dtype=self.dtype)
         f.flat[self.ind_pup[:, 0]] = 1
