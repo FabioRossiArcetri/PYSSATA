@@ -158,14 +158,15 @@ class AtmoEvolution(BaseProcessingObj):
 
                 # Square phasescreens
                 if self.make_cycle:
-                    pixel_square_phasescreens = self.pixel_square_phasescreens - self.pixel_pupil
-                    ps_cycle = get_layers(1, pixel_square_phasescreens, pixel_square_phasescreens * self.pixel_pitch,
-                                          500e-9, 1, L0=self.L0[0], par=par, START=start, SEED=seed, DIR=self.data_dir,
-                                          FILE=filename, no_sha=True, verbose=self.verbose)
-                    ps_cycle = self.xp.vstack([ps_cycle, ps_cycle[:, :self.pixel_pupil]])
-                    ps_cycle = self.xp.hstack([ps_cycle, ps_cycle[:self.pixel_pupil, :]])
+                    raise NotImplementedError('make_cycle is not implemented')
 
-                    square_phasescreens = [ps_cycle * 4 * self.xp.pi]  # 4 * π is added to get the correct amplitude
+                    #pixel_square_phasescreens = self.pixel_square_phasescreens - self.pixel_pupil
+                    #ps_cycle = get_layers(1, pixel_square_phasescreens, pixel_square_phasescreens * self.pixel_pitch,
+                    #                      500e-9, 1, L0=self.L0[0], par=par, START=start, SEED=seed, DIR=self.data_dir,
+                    #                      FILE=filename, no_sha=True, verbose=self.verbose)
+                    #ps_cycle = self.xp.vstack([ps_cycle, ps_cycle[:, :self.pixel_pupil]])
+                    #ps_cycle = self.xp.hstack([ps_cycle, ps_cycle[:self.pixel_pupil, :]])
+                    #square_phasescreens = [ps_cycle * 4 * self.xp.pi]  # 4 * π is added to get the correct amplitude
                 else:
                     if hasattr(self.L0, '__len__'):
                         L0 = self.L0[0]

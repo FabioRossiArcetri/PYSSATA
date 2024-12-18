@@ -132,6 +132,7 @@ class IIRFilterData(BaseDataObj):
     def RTF(self, mode, fs, freq=None, tf=None, dm=None, nw=None, dw=None, verbose=False, title=None, overplot=False, **extra):
         plotTitle = title if title else '!17Rejection Transfer Function'
         tf = self.plot_iirfilter_tf(self._num[mode, :], self._den[mode, :], fs, dm=dm, nw=nw, dw=dw, freq=freq, noplot=True, verbose=verbose)
+        import matplotlib.pyplot as plt
         if overplot:
             color = extra.get('color', 255)
             plt.plot(freq, tf, color=color, **extra)
@@ -145,6 +146,7 @@ class IIRFilterData(BaseDataObj):
     def NTF(self, mode, fs, freq=None, tf=None, dm=None, nw=None, dw=None, verbose=False, title=None, overplot=False, **extra):
         plotTitle = title if title else '!17Noise Transfer Function'
         tf = self.plot_iirfilter_tf(self.num[mode, :], self.den[mode, :], fs, dm=dm, nw=nw, dw=dw, freq=freq, noplot=True, verbose=verbose)
+        import matplotlib.pyplot as plt
         if overplot:
             color = extra.get('color', 255)
             plt.plot(freq, tf, color=color, **extra)

@@ -47,7 +47,7 @@ class DataSource(BaseProcessingObj):
         for aout in outputs:            
             self.loadFromFile(aout)
         for k in self.storage.keys():
-            if not self.obj_type[k] is 'BaseValue':
+            if not isinstance(self.obj_type[k], 'BaseValue'):
                 # TODO replace with import_class like in simul.py
                 self.outputs[k] = globals().get(self.obj_type[k]).from_header(self.headers[k])
             else:

@@ -60,7 +60,7 @@ class ElectricField(BaseDataObj):
 
     def square_modulus(self, wavelengthInNm):
         ef = self.ef_at_lambda(wavelengthInNm)
-        return self.xp.real( ef *xp.conj(ef) )
+        return self.xp.real( ef * self.xp.conj(ef) )
 
     def sub_ef(self, xfrom=None, xto=None, yfrom=None, yto=None, idx=None):
         if idx is not None:
@@ -90,7 +90,7 @@ class ElectricField(BaseDataObj):
         hdr = self.get_fits_header()
         A = self.A        
         hdu_A = fits.PrimaryHDU(A, header=hdr)
-        hdu_phase = fits.ImageHDU(phaseInNm)
+        hdu_phase = fits.ImageHDU(self.phaseInNm)
         hdul = fits.HDUList([hdu_A, hdu_phase])
         hdul.writeto(filename, overwrite=True)
 
@@ -98,7 +98,7 @@ class ElectricField(BaseDataObj):
     def from_header(hdr):    
         version = hdr['VERSION']
         if version != 1:
-            raise ValueError(f"Error: unknown version {version} in file {filename}")
+            raise ValueError(f"Error: unknown version {version} in header")
         dimx = hdr['DIMX']
         dimy = hdr['DIMY']
         pitch = hdr['PIXPITCH']

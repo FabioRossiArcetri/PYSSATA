@@ -397,7 +397,7 @@ class SH(BaseProcessingObj):
                 self._wf3[:, :congrid_np_sub, :congrid_np_sub] = ef * self._tltf[self.xp.newaxis, :, :]
 
             if self._debugOutput:
-                tempefcpu[i * fft_size:(i + 1) * fft_size, j * fft_size:(j + 1) * fft_size] = self._wf3
+                tempefcpu[xslice.start * fft_size : xslice.stop * fft_size, yslice.start * fft_size: yslice.stop * fft_size] = self._wf3
 
             # PSF generation
             with show_in_profiler('FFT'):
