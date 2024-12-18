@@ -15,7 +15,7 @@ from specula.base_value import BaseValue
 from specula.connections import InputValue
 from specula.data_objects.ef import ElectricField
 from specula.data_objects.ifunc import IFunc
-from specula.data_objects.iirfilter import IIRFilter
+from specula.data_objects.iir_filter_data import IIRFilterData
 from specula.data_objects.intensity import Intensity
 from specula.data_objects.intmat import Intmat
 from specula.data_objects.layer import Layer

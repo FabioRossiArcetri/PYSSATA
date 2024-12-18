@@ -305,7 +305,7 @@ subtract_ref:
   outputs: ['out_value']
 
 iir_lgs:
-  class:             'TempIIRFilter'
+  class:             'IIRFilter'
   num_coeffs:        [0, 0, 0, 0, 0]
   den_coeffs:        [0, 0, 0, 0, 0]
   inputs:
@@ -330,7 +330,7 @@ modal_combination:
     out_vector: ['out_vector']
 
 modal_integrator:
-  class:        'IntControl'
+  class:        'Integrator'
   delay:             2                      # Total temporal delay in time steps
   int_gain_data:     'g0.40_4519'            # TODO  
   inputs:
@@ -393,7 +393,7 @@ tomo_polc_ngs:
   outputs:  ['out_modes', 'out_pseudo_ol_modes']
 
 iir_ngs:
-  class:             'TempIIRFilter'
+  class:             'IIRFilter'
   num_coeffs:        [0, 0, 0, 0, 0]
   den_coeffs:        [0, 0, 0, 0, 0]
   inputs:
@@ -418,7 +418,7 @@ rec_focus:
   outputs:  ['out_modes', 'out_pseudo_ol_modes']
 
 iir_focus:
-  class:             'TempIIRFilter'
+  class:             'IIRFilter'
   num_coeffs:        [0, 0, 0, 0, 0]
   den_coeffs:        [0, 0, 0, 0, 0]
   inputs:
@@ -439,7 +439,7 @@ tomo_polc_ref:
   outputs:  ['out_modes', 'out_pseudo_ol_modes']
 
 iir_ref:
-  class:             'TempIIRFilter'
+  class:             'IIRFilter'
   num_coeffs:        [0, 0, 0, 0, 0]
   den_coeffs:        [0, 0, 0, 0, 0]
   inputs:
@@ -447,7 +447,7 @@ iir_ref:
   outputs:  ['out_comm']
 
 control_ref: 
-  class:             'IntControl'
+  class:             'Integrator'
   delay:             2                      # Total temporal delay in time steps
   int_gain_data:     'g0.40_4519'  # 'g0.01_100'   # TODO
   inputs:
@@ -459,7 +459,7 @@ control_ref:
 # -------------
 
 iir_lift:
-  class:             'TempIIRFilter'
+  class:             'IIRFilter'
   num_coeffs:        [0, 0, 0, 0, 0]
   den_coeffs:        [0, 0, 0, 0, 0]
   inputs:
