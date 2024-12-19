@@ -311,7 +311,6 @@ class SH(BaseProcessingObj):
                 self._kernelobj.save(kernel_fn)
                 print('Done')
 
-
     def trigger(self):
         
         in_ef = self.local_inputs['in_ef']
