@@ -140,39 +140,39 @@ psf:
       in_ef:  'prop.out_on_axis_source_ef'
   outputs:  ['out_psf', 'out_sr']
 
-# sc_disp:
-#   class:            'SlopecDisplay'
-#   inputs:
-#     slopes:       'slopec.out_slopes'
-#     pupdata:      'slopec.out_pupdata'
-#   disp_factor:      4
-# sr_disp:
-#   class:            'PlotDisplay'
-#   inputs:
-#     value:       'psf.out_sr'
-#   window:           11
-#   title:            'SR'
-# ph_disp:
-#   class:            'PhaseDisplay'
-#   inputs:
-#     phase:       "prop.out_on_axis_source_ef"
-#   window:           12
-#   title:            'PUPIL PHASE'
-#   disp_factor:      2
-# dm_disp:
-#   class:            'PhaseDisplay'
-#   inputs:
-#     phase:       "dm.out_layer"
-#   window:           13
-#   title:            'DM'
-#   disp_factor:      2
-# psf_disp:
-#   class:            'PsfDisplay'
-#   inputs:
-#     psf:       "psf.out_psf"
-#   window:           14
-#   title:            'PSF'
-#   disp_factor:      2
+sc_disp:
+  class:            'SlopecDisplay'
+  inputs:
+    slopes:       'slopec.out_slopes'
+    pupdata:      'slopec.out_pupdata'
+  disp_factor:      4
+sr_disp:
+  class:            'PlotDisplay'
+  inputs:
+    value:       'psf.out_sr'
+  window:           11
+  title:            'SR'
+ph_disp:
+  class:            'PhaseDisplay'
+  inputs:
+    phase:       "prop.out_on_axis_source_ef"
+  window:           12
+  title:            'PUPIL PHASE'
+  disp_factor:      2
+dm_disp:
+  class:            'PhaseDisplay'
+  inputs:
+    phase:       "dm.out_layer"
+  window:           13
+  title:            'DM'
+  disp_factor:      2
+psf_disp:
+  class:            'PsfDisplay'
+  inputs:
+    psf:       "psf.out_psf"
+  window:           14
+  title:            'PSF'
+  disp_factor:      2
 
 data_store:
   class:             'DataStore'
