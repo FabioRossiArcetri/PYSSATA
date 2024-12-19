@@ -2,4 +2,4 @@ numpy
 scipy
 astropy
 matplotlib
-numba
+numba; python_version < "3.13"

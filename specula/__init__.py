@@ -2,7 +2,7 @@ import numpy as np
 import os
 import functools
 from functools import wraps
-from numba import jit as numbajit
+#from numba import jit as numbajit # Not used at the moment
 
 cpu_float_dtype_list = [np.float64, np.float32]
 cpu_complex_dtype_list = [np.complex128, np.complex64]
@@ -155,7 +155,7 @@ def fuse(kernel_name=None):
         return wrapper
     return decorator
 
-cpujit = numbajit
+# cpujit = numbajit # Not used at the moment
 
 #def cpujit(nopython=True):
 #    def decorator(f):

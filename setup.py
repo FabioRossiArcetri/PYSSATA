@@ -81,7 +81,7 @@ setup(name=NAME,
                         "scipy",
                         "astropy",
                         "matplotlib",
-                        "numba"
+                        "numba; python_version<'3.13'"
                         ],
       include_package_data=True,
       test_suite='test',
